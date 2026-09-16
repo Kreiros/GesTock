@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronograma Capstone - Proyecto GesTock (Re-baselining Opción 1)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+  body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #F1F5F9;
+    padding: 30px;
+    color: #334155;
+  }
+  .gantt-container {
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    padding: 25px;
+    overflow-x: auto;
+  }
+  .header-section {
+    text-align: center;
+    margin-bottom: 25px;
+  }
+  .gantt-title {
+    font-weight: 700;
+    font-size: 22px;
+    color: #1E3A8A;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .gantt-subtitle {
+    font-size: 14px;
+    color: #64748B;
+    font-weight: 500;
+  }
+  .toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  button {
+    background: #1E3A8A;
+    color: #FFFFFF;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #0284C7;
+  }
+  .gantt-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    text-align: left;
+    min-width: 1200px;
+  }
+  .gantt-table th, .gantt-table td {
+    border: 1px solid #E2E8F0;
+    padding: 10px 8px;
+    vertical-align: middle;
+  }
+  .bg-primary {
+    background-color: #1E3A8A;
+    color: #FFFFFF;
+    text-align: center;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .phase-cell {
+    background-color: #F8FAFC;
+    font-weight: 700;
+    color: #1E3A8A;
+    text-align: center;
+    border-right: 2px solid #1E3A8A !important;
+  }
+  .task-text {
+    font-weight: 500;
+    color: #0F172A;
+  }
+  .deliverable-text {
+    font-size: 11px;
+    color: #059669;
+    font-weight: 500;
+  }
+  .center {
+    text-align: center;
+  }
+  .vertical-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    height: 90px;
+    padding: 5px 0;
+    width: 25px;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  .filled {
+    background-color: #06B6D4;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  }
+  .completed {
+    background-color: #10B981; /* Verde esmeralda para hitos ya completados a la fecha */
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  }
+  .current-col {
+    background-color: #FEF3C7 !important; /* Resalta semana actual */
+    color: #92400E !important;
+    font-weight: 800;
+  }
+  .gantt-table tbody tr:hover {
+    background-color: #F8FAFC;
+  }
+  .badge-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .status-done { background: #DCFCE7; color: #166534; }
+  .status-next { background: #E0F2FE; color: #0369A1; }
+  .status-pending { background: #F1F5F9; color: #475569; }
+</style>
+</head>
+<body>
+
+  <div class="gantt-container">
+    <div class="toolbar">
+      <button onclick="window.print()">🖨️ Imprimir / Guardar en PDF</button>
+    </div>
+
+    <div class="header-section">
+      <div class="gantt-title">Planificación Estratégica: GesTock (SaaS Offline-First)</div>
+      <div class="gantt-subtitle">Diagrama de Gantt - Actualización de Línea Base (Re-baselining Opción 1 - Semestre 18 Semanas)</div>
+      <div style="margin-top: 6px; font-size: 12px; color: #059669; font-weight: 600;">Fecha de Corte: 14/09/2026 - 16/09/2026 (Semana 6 de 18)</div>
+    </div>
+
+    <table class="gantt-table">
+      <thead>
+        <tr class="bg-primary">
+          <th style="width: 7%;">Fase del Proyecto</th>
+          <th style="width: 22%;">Hito / Tarea Técnica</th>
+          <th style="width: 14%;">Entregable Principal</th>
+          <th style="width: 7%;">Responsable</th>
+          <th style="width: 5%;">Tiempo</th>
+          
+          <!-- Columnas de Semanas (18 Semanas) -->
+          <th class="vertical-text bg-primary">10/08/2026</th>
+          <th class="vertical-text bg-primary">17/08/2026</th>
+          <th class="vertical-text bg-primary">24/08/2026</th>
+          <th class="vertical-text bg-primary">31/08/2026</th>
+          <th class="vertical-text bg-primary">07/09/2026</th>
+          <th class="vertical-text bg-primary current-col">14/09/2026 (HOY)</th>
+          <th class="vertical-text bg-primary">21/09/2026</th>
+          <th class="vertical-text bg-primary">28/09/2026</th>
+          <th class="vertical-text bg-primary">05/10/2026</th>
+          <th class="vertical-text bg-primary">12/10/2026</th>
+          <th class="vertical-text bg-primary">19/10/2026</th>
+          <th class="vertical-text bg-primary">26/10/2026</th>
+          <th class="vertical-text bg-primary">02/11/2026</th>
+          <th class="vertical-text bg-primary">09/11/2026</th>
+          <th class="vertical-text bg-primary">16/11/2026</th>
+          <th class="vertical-text bg-primary">23/11/2026</th>
+          <th class="vertical-text bg-primary">30/11/2026</th>
+          <th class="vertical-text bg-primary">07/12/2026</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- FASE 1 -->
+        <tr>
+          <td rowspan="3" class="phase-cell">Fase 1:<br>Planificación e<br>Ingeniería<br>(20%)</td>
+          <td class="task-text">Levantamiento de requerimientos, diseño de encuestas y validación de modelo de aplicación híbrida (Offline-first SaaS) en mercado objetivo.</td>
+          <td class="deliverable-text">Documento de Requerimientos<br><span class="badge-status status-done">COMPLETADO</span></td>
+          <td class="center">Equipo Dev</td>
+          <td class="center">2 Sem</td>
+          <td class="completed"></td><td class="completed"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr>
+          <td class="task-text">Definición de Stack Tecnológico, diseño de Arquitectura Agnóstica (Persistencia Dual SQLite/PostgreSQL), Modelo Entidad-Relación y Casos de Uso.</td>
+          <td class="deliverable-text">Diagramas UML / MER Corregido<br><span class="badge-status status-done">COMPLETADO</span></td>
+          <td class="center">Equipo Dev</td>
+          <td class="center">1 Sem</td>
+          <td></td><td></td><td class="completed"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr>
+          <td class="task-text">Estructuración de Carta Gantt, elaboración de Informe de Fase 1 y defensa técnica de planificación ante curso.</td>
+          <td class="deliverable-text">Informe Fase 1 Finalizado<br><span class="badge-status status-done">COMPLETADO</span></td>
+          <td class="center">Equipo Dev</td>
+          <td class="center">1 Sem</td>
+          <td></td><td></td><td></td><td class="completed"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+
+        <!-- FASE 2 -->
+        <tr>
+          <td rowspan="6" class="phase-cell">Fase 2:<br>Desarrollo Core,<br>Integración y<br>Validación<br>(50%)</td>
+          <td class="task-text"><strong>Desarrollo Integral del Backend Core</strong>: Persistencia Dual (PostgreSQL/SQLite), Circuit Breaker, Motor Offline-First, Pasarelas de Pago (Transbank/MP/SumUp/RutPay), Facturación DTE (39/33/52/61) y 57 Endpoints RESTful.</td>
+          <td class="deliverable-text">Backend Productivo + 87 Tests Unitarios<br><span class="badge-status status-done">100% CUMPLIDO</span></td>
+          <td class="center">Backend Dev</td>
+          <td class="center">2 Sem</td>
+          <td></td><td></td><td></td><td></td><td class="completed"></td><td class="completed"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr>
+          <td class="task-text"><strong>Desarrollo del Cliente Frontend</strong>: Maquetación responsiva, vistas del Punto de Venta (POS), catálogo táctil, carrito interactivo y selector de medios de pago.</td>
+          <td class="deliverable-text">Cliente Frontend UI (Componentes y Vistas Base)<br><span class="badge-status status-next">PRÓXIMO</span></td>
+          <td class="center">Frontend Dev</td>
+          <td class="center">2 Sem</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td class="filled"></td><td class="filled"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr>
+          <td class="task-text"><strong>Integración Frontend-Backend y Flujo E2E</strong>: Conexión de interfaz a los 57 endpoints RESTful, validación de cobro offline, arqueo de caja (Balance Z) e impresión de ticket térmico 80mm.</td>
+          <td class="deliverable-text">Sistema Híbrido Integrado E2E<br><span class="badge-status status-pending">PLANIFICADO</span></td>
+          <td class="center">Equipo Dev</td>
+          <td class="center">2 Sem</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="filled"></td><td class="filled"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr>
+          <td class="task-text"><strong>Calibración de Módulos Predictivos Avanzados</strong>: Ingesta OCR de facturas (Google Gemini AI), cálculo de velocidad de venta y Punto de Reorden (ROP) automático.</td>
+          <td class="deliverable-text">Motor de Reposición y OCR Calibrado<br><span class="badge-status status-pending">PLANIFICADO</span></td>
+          <td class="center">Equipo Dev</td>
+          <td class="center">1 Sem</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="filled"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr>
+          <td class="task-text" style="background-color: #ECFDF5; border-left: 3px solid #059669;"><strong>Pruebas Piloto en Terreno (UAT)</strong>: Despliegue de prueba en comercio minorista real (Minimarket / Almacén), validación de usabilidad con cajeros y resolución de incidencias.</td>
+          <td class="deliverable-text" style="background-color: #ECFDF5;">Reporte de Pruebas de Campo (UAT)<br><span class="badge-status status-pending">NUEVO HITO DE VALOR</span></td>
+          <td class="center" style="background-color: #ECFDF5;">Equipo Dev</td>
+          <td class="center" style="background-color: #ECFDF5;">2 Sem</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="filled"></td><td class="filled"></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+        <tr>
+          <td class="task-text"><strong>Auditoría Final de QA, Hardening y Documentación</strong>: Pruebas de estrés y resiliencia sin internet, redacción de Memoria de Título y manuales técnicos.</td>
+          <td class="deliverable-text">Código en Producción + Memoria Completa<br><span class="badge-status status-pending">PLANIFICADO</span></td>
+          <td class="center">Equipo Dev</td>
+          <td class="center">2 Sem</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="filled"></td><td class="filled"></td><td></td><td></td><td></td>
+        </tr>
+
+        <!-- FASE 3 -->
+        <tr>
+          <td rowspan="1" class="phase-cell">Fase 3:<br>Cierre y<br>Defensa (30%)</td>
+          <td class="task-text">Preparación de material audiovisual, ensayo de defensa técnica y Presentación Final del Software ante Comisión Evaluadora.</td>
+          <td class="deliverable-text">Aprobación de Título<br><span class="badge-status status-pending">PLANIFICADO</span></td>
+          <td class="center">Equipo Dev</td>
+          <td class="center">3 Sem</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="filled"></td><td class="filled"></td><td class="filled"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
