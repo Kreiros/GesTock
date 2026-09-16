@@ -1,46 +1,46 @@
-﻿erDiagram
+erDiagram
     %% ========================================================
     %% 1. NUCLEO MULTI-TENANT & SAAS CLOUD
     %% ========================================================
-    PLANES_FACTURACION ||--o{ TENANTS : asigna_plan
-    PLANES_FACTURACION ||--o{ HISTORIAL_PLANES : registra_historial
-    TENANTS ||--o{ USUARIOS : agrupa
-    TENANTS ||--o{ HISTORIAL_PLANES : posee
-    TENANTS ||--o{ CONFIGURACION_SISTEMA : personaliza
-    USUARIOS ||--o{ NOTIFICACIONES_TOKENS : genera
+    PLANES_FACTURACION ||--o{ TENANTS : "asigna_plan"
+    PLANES_FACTURACION ||--o{ HISTORIAL_PLANES : "registra_historial"
+    TENANTS ||--o{ USUARIOS : "agrupa"
+    TENANTS ||--o{ HISTORIAL_PLANES : "posee"
+    TENANTS ||--o{ CONFIGURACION_SISTEMA : "personaliza"
+    USUARIOS ||--o{ NOTIFICACIONES_TOKENS : "genera"
 
     %% ========================================================
     %% 2. MODULO DE PROVEEDORES & COMPRAS (CORREGIDO)
     %% ========================================================
-    TENANTS ||--o{ PROVEEDORES : gestiona
-    PROVEEDORES ||--o{ CATALOGO_BORRADORES : propone
-    PROVEEDORES ||--o{ FACTURA_INGRESOS : emite_a
+    TENANTS ||--o{ PROVEEDORES : "gestiona"
+    PROVEEDORES ||--o{ CATALOGO_BORRADORES : "propone"
+    PROVEEDORES ||--o{ FACTURA_INGRESOS : "emite_a"
     
-    FACTURA_INGRESOS ||--|{ DETALLE_FACTURA_INGRESOS : desglosa_en (1:N)
-    PRODUCTOS ||--o{ DETALLE_FACTURA_INGRESOS : comprado_en (1:N)
+    FACTURA_INGRESOS ||--|{ DETALLE_FACTURA_INGRESOS : "desglosa_en"
+    PRODUCTOS ||--o{ DETALLE_FACTURA_INGRESOS : "comprado_en"
 
     %% ========================================================
     %% 3. MODULO DE INVENTARIO & KARDEX DE AUDITORIA
     %% ========================================================
-    TENANTS ||--o{ PRODUCTOS : posee_catalogo
-    PROVEEDORES ||--o{ PRODUCTOS : proveedor_principal
-    PRODUCTOS ||--o{ LOTES : controla_vencimiento
+    TENANTS ||--o{ PRODUCTOS : "posee_catalogo"
+    PROVEEDORES ||--o{ PRODUCTOS : "proveedor_principal"
+    PRODUCTOS ||--o{ LOTES : "controla_vencimiento"
     
-    PRODUCTOS ||--o{ MOVIMIENTOS_INVENTARIO : audita_stock
-    MOVIMIENTOS_INVENTARIO_TIPOS ||--o{ MOVIMIENTOS_INVENTARIO : clasifica_origen
+    PRODUCTOS ||--o{ MOVIMIENTOS_INVENTARIO : "audita_stock"
+    MOVIMIENTOS_INVENTARIO_TIPOS ||--o{ MOVIMIENTOS_INVENTARIO : "clasifica_origen"
 
     %% ========================================================
     %% 4. MODULO DE VENTAS, CAJA & FACTURACION (DTE / SII)
     %% ========================================================
-    USUARIOS ||--o{ SESIONES_CAJA : opera_caja
-    SESIONES_CAJA ||--o{ MOVIMIENTOS_CAJA : entradas_salidas
-    SESIONES_CAJA ||--o{ TRANSACCIONES_VENTA : contiene_ventas
+    USUARIOS ||--o{ SESIONES_CAJA : "opera_caja"
+    SESIONES_CAJA ||--o{ MOVIMIENTOS_CAJA : "entradas_salidas"
+    SESIONES_CAJA ||--o{ TRANSACCIONES_VENTA : "contiene_ventas"
     
-    TRANSACCIONES_VENTA ||--|{ DETALLE_VENTA : desglosa_en (1:N)
-    PRODUCTOS ||--o{ DETALLE_VENTA : se_vende_en (1:N)
+    TRANSACCIONES_VENTA ||--|{ DETALLE_VENTA : "desglosa_en"
+    PRODUCTOS ||--o{ DETALLE_VENTA : "se_vende_en"
     
-    METODOS_PAGO ||--o{ TRANSACCIONES_VENTA : paga_con
-    TRANSACCIONES_VENTA ||--o| DOCUMENTOS_TRIBUTARIOS : genera_dte
+    METODOS_PAGO ||--o{ TRANSACCIONES_VENTA : "paga_con"
+    TRANSACCIONES_VENTA ||--o| DOCUMENTOS_TRIBUTARIOS : "genera_dte"
 
     %% ========================================================
     %% DEFINICION DE ENTIDADES Y ATRIBUTOS
