@@ -40,7 +40,9 @@ gantt
 
 ---
 
-## 3. Enlaces Relacionados
-* [[01 - PROYECTOS/GesTock/INDEX|GesTock Hub Principal]]
-* [[01 - PROYECTOS/GesTock/ARQUITECTURA_SISTEMA|Arquitectura del Sistema]]
-* [[01 - PROYECTOS/GesTock/BASE_DE_DATOS|Modelo de Base de Datos]]
+## 3. Enlaces Relacionados & Nexo de Conocimiento
+* 🧭 **Hub del Proyecto:** [[01 - PROYECTOS/GesTock/INDEX.md|GesTock Hub Principal]]
+* 🌌 **Núcleo Central:** [[00 - HUB & DASHBOARD/🧭 MOC_CENTRAL_NEXO_DE_DATOS.md|MOC Central]]
+* 📚 **Arquitectura:** [[01 - PROYECTOS/GesTock/ARQUITECTURA_SISTEMA.md|Arquitectura del Sistema]]
+* 💾 **Base de Datos:** [[01 - PROYECTOS/GesTock/BASE_DE_DATOS.md|Modelo de Base de Datos]]
+* 🧬 **Conceptos Clave:** [[Arquitectura Offline-First & Sync Engine]] · [[Reabastecimiento Predictivo & Algoritmos de Stock]]

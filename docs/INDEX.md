@@ -12,11 +12,11 @@
 ---
 
 ## 📚 Documentación Técnica del Proyecto
-* [[01 - PROYECTOS/GesTock/ESTADO_ACTUAL_PROYECTO|Estado Actual del Proyecto & Cronograma Gantt]]
-* [[01 - PROYECTOS/GesTock/ARQUITECTURA_SISTEMA|Arquitectura del Sistema Dual & Motor de Sincronización]]
-* [[01 - PROYECTOS/GesTock/BASE_DE_DATOS|Modelo Relacional (MER), Entidades y Migraciones]]
-* [[01 - PROYECTOS/GesTock/MANUAL_FUNCIONALIDADES|Manual de Módulos (POS, DTE, Pagos, OCR & Stock)]]
-* [[01 - PROYECTOS/GesTock/GUIA_DESPLIEGUE|Guía de Despliegue, Variables de Entorno y Docker]]
+* [[01 - PROYECTOS/GesTock/ESTADO_ACTUAL_PROYECTO.md|Estado Actual del Proyecto & Cronograma Gantt]]
+* [[01 - PROYECTOS/GesTock/ARQUITECTURA_SISTEMA.md|Arquitectura del Sistema Dual & Motor de Sincronización]]
+* [[01 - PROYECTOS/GesTock/BASE_DE_DATOS.md|Modelo Relacional (MER), Entidades y Migraciones]]
+* [[01 - PROYECTOS/GesTock/MANUAL_FUNCIONALIDADES.md|Manual de Módulos (POS, DTE, Pagos, OCR & Stock)]]
+* [[01 - PROYECTOS/GesTock/GUIA_DESPLIEGUE.md|Guía de Despliegue, Variables de Entorno y Docker]]
 
 ---
 
