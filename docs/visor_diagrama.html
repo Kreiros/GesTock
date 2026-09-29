@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GesTock - Visor de Arquitectura, Datos y Cronograma</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 20px; color: #38bdf8; }
+    .subtitle { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+    
+    /* Tabs Navigation */
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid #334155; padding-bottom: 8px; }
+    .tab-btn { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 10px 20px; border-radius: 8px 8px 0 0; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .tab-btn.active { background: #0284c7; color: #ffffff; border-color: #0284c7; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Contenedor */
+    .container { background: #1e293b; border-radius: 12px; border: 1px solid #334155; padding: 20px; overflow: auto; min-height: 600px; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    button.tool-btn { background: #0f172a; color: #38bdf8; border: 1px solid #334155; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    button.tool-btn:hover { background: #0284c7; color: white; border-color: #0284c7; }
+    
+    iframe.gantt-frame { width: 100%; height: 750px; border: none; border-radius: 8px; background: #ffffff; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>GesTock - Entregables Técnicos & Planificación Capstone</h1>
+      <div class="subtitle">Modelo de Persistencia Dual & Cronograma Re-baselined (Semana 14/09/2026)</div>
+    </div>
+  </header>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="cambiarTab('tab-erd')">🗄️ 1. Diagrama de Base de Datos (ERD)</button>
+    <button class="tab-btn" onclick="cambiarTab('tab-gantt-table')">📅 2. Carta Gantt Oficial (Opción 1)</button>
+    <button class="tab-btn" onclick="cambiarTab('tab-gantt-mermaid')">📈 3. Diagrama Gantt Mermaid</button>
+  </div>
+
+  <!-- TAB 1: ERD -->
+  <div id="tab-erd" class="tab-content active">
+    <div class="toolbar">
+      <button class="tool-btn" onclick="descargarSVG()">🖼️ Descargar SVG</button>
+      <button class="tool-btn" onclick="window.location.href='diagrama_base_de_datos.svg'">🔍 Abrir SVG Directo</button>
+      <button class="tool-btn" onclick="window.print()">🖨️ Imprimir</button>
+    </div>
+    <div class="container" style="display: flex; justify-content: center;">
+      <div class="mermaid" id="erdTarget">
+erDiagram
+    PLANES_FACTURACION ||--o{ TENANTS : "asigna_plan"
+    PLANES_FACTURACION ||--o{ HISTORIAL_PLANES : "registra_historial"
+    TENANTS ||--o{ USUARIOS : "agrupa"
+    TENANTS ||--o{ HISTORIAL_PLANES : "posee"
+    TENANTS ||--o{ CONFIGURACION_SISTEMA : "personaliza"
+    USUARIOS ||--o{ NOTIFICACIONES_TOKENS : "genera"
+
+    TENANTS ||--o{ PROVEEDORES : "gestiona"
+    PROVEEDORES ||--o{ CATALOGO_BORRADORES : "propone"
+    PROVEEDORES ||--o{ FACTURA_INGRESOS : "emite_a"
+    
+    FACTURA_INGRESOS ||--|{ DETALLE_FACTURA_INGRESOS : "desglosa_en"
+    PRODUCTOS ||--o{ DETALLE_FACTURA_INGRESOS : "comprado_en"
+
+    TENANTS ||--o{ PRODUCTOS : "posee_catalogo"
+    PROVEEDORES ||--o{ PRODUCTOS : "proveedor_principal"
+    PRODUCTOS ||--o{ LOTES : "controla_vencimiento"
+    
+    PRODUCTOS ||--o{ MOVIMIENTOS_INVENTARIO : "audita_stock"
+    MOVIMIENTOS_INVENTARIO_TIPOS ||--o{ MOVIMIENTOS_INVENTARIO : "clasifica_origen"
+
+    USUARIOS ||--o{ SESIONES_CAJA : "opera_caja"
+    SESIONES_CAJA ||--o{ MOVIMIENTOS_CAJA : "entradas_salidas"
+    SESIONES_CAJA ||--o{ TRANSACCIONES_VENTA : "contiene_ventas"
+    
+    TRANSACCIONES_VENTA ||--|{ DETALLE_VENTA : "desglosa_en"
+    PRODUCTOS ||--o{ DETALLE_VENTA : "se_vende_en"
+    
+    METODOS_PAGO ||--o{ TRANSACCIONES_VENTA : "paga_con"
+    TRANSACCIONES_VENTA ||--o| DOCUMENTOS_TRIBUTARIOS : "genera_dte"
+
+    PLANES_FACTURACION {
+        uuid id PK
+        string nombre
+        numeric precio_mensual
+        numeric precio_anual
+        integer descuento_anual
+        boolean activo
+    }
+
+    TENANTS {
+        uuid id PK
+        uuid plan_id FK
+        string rut_empresa
+        string razon_social
+        string estado
+        timestamp created_at
+    }
+
+    USUARIOS {
+        uuid id PK
+        uuid tenant_id FK
+        string nombre
+        string email
+        string password_hash
+        string rol
+        timestamp created_at
+    }
+
+    NOTIFICACIONES_TOKENS {
+        uuid id PK
+        uuid usuario_id FK
+        string tipo
+        string token
+        boolean activo
+        timestamp expiracion
+    }
+
+    HISTORIAL_PLANES {
+        uuid id PK
+        uuid tenant_id FK
+        uuid plan_id FK
+        timestamp fecha_cambio
+        string metodo_pago
+        numeric monto_pagado
+    }
+
+    CONFIGURACION_SISTEMA {
+        uuid id PK
+        uuid tenant_id FK
+        string clave
+        string valor
+        string descripcion
+    }
+
+    PROVEEDORES {
+        uuid id PK
+        uuid tenant_id FK
+        string rut_proveedor
+        string nombre_proveedor
+        string dias_visita
+        string email
+        string telefono
+    }
+
+    CATALOGO_BORRADORES {
+        uuid id PK
+        uuid tenant_id FK
+        uuid proveedor_id FK
+        string estado_revision
+        timestamp fecha_ingreso
+        string notas
+    }
+
+    FACTURA_INGRESOS {
+        uuid id PK
+        uuid tenant_id FK
+        uuid proveedor_id FK
+        string numero_factura
+        date fecha_ingreso
+        string estado
+        string metodo_ingreso
+        numeric total_neto
+        numeric total_iva
+        numeric total_factura
+    }
+
+    DETALLE_FACTURA_INGRESOS {
+        uuid id PK
+        uuid factura_id FK
+        uuid producto_id FK
+        numeric cantidad
+        numeric costo_unitario_neto
+        numeric subtotal
+        string lote
+        date fecha_vencimiento
+        numeric impuesto_ila
+    }
+
+    PRODUCTOS {
+        uuid id PK
+        uuid tenant_id FK
+        uuid proveedor_id FK
+        string codigo_barra
+        string sku
+        string nombre
+        numeric stock_actual
+        numeric stock_minimo
+        numeric precio_compra
+        numeric precio_venta
+        string categoria
+        boolean activo
+    }
+
+    LOTES {
+        uuid id PK
+        uuid producto_id FK
+        string numero_lote
+        numeric cantidad_lote
+        date fecha_vencimiento
+        string estado_sanitario
+    }
+
+    MOVIMIENTOS_INVENTARIO_TIPOS {
+        uuid id PK
+        string codigo
+        string nombre
+        string descripcion
+    }
+
+    MOVIMIENTOS_INVENTARIO {
+        uuid id PK
+        uuid tenant_id FK
+        uuid producto_id FK
+        uuid tipo_movimiento_id FK
+        numeric cantidad
+        numeric saldo_anterior
+        numeric nuevo_saldo
+        uuid id_origen
+        string tipo_origen
+        timestamp fecha_movimiento
+        string usuario_registro
+    }
+
+    SESIONES_CAJA {
+        uuid id PK
+        uuid tenant_id FK
+        uuid usuario_id FK
+        numeric fondo_inicial
+        numeric efectivo_esperado
+        numeric efectivo_real
+        numeric diferencia_cuadratura
+        timestamp fecha_apertura
+        timestamp fecha_cierre
+        string estado
+    }
+
+    MOVIMIENTOS_CAJA {
+        uuid id PK
+        uuid sesion_id FK
+        string tipo_movimiento
+        numeric monto
+        string motivo
+        timestamp fecha
+    }
+
+    TRANSACCIONES_VENTA {
+        uuid id PK
+        uuid tenant_id FK
+        uuid sesion_id FK
+        uuid usuario_id FK
+        uuid metodo_pago_id FK
+        string folio_interno
+        timestamp fecha
+        numeric monto_neto
+        numeric monto_iva
+        integer ley_redondeo
+        numeric total
+        string rut_cliente
+        string estado
+        integer is_dirty
+        string sync_status
+    }
+
+    DETALLE_VENTA {
+        uuid id PK
+        uuid venta_id FK
+        uuid producto_id FK
+        numeric cantidad
+        numeric precio_unitario
+        numeric subtotal
+    }
+
+    METODOS_PAGO {
+        uuid id PK
+        string nombre
+        string pasarela
+        boolean activo
+    }
+
+    DOCUMENTOS_TRIBUTARIOS {
+        uuid id PK
+        uuid venta_id FK
+        integer tipo_dte
+        integer folio_sii
+        timestamp fecha_emision
+        string ted_xml_timbre
+        string estado_sii
+    }
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: GANTT TABLA OFICIAL -->
+  <div id="tab-gantt-table" class="tab-content">
+    <div class="toolbar">
+      <button class="tool-btn" onclick="window.open('cronograma_actualizado.html', '_blank')">↗️ Abrir en Pestaña Completa</button>
+      <button class="tool-btn" onclick="window.print()">🖨️ Imprimir Carta Gantt</button>
+    </div>
+    <iframe class="gantt-frame" src="cronograma_actualizado.html"></iframe>
+  </div>
+
+  <!-- TAB 3: GANTT MERMAID -->
+  <div id="tab-gantt-mermaid" class="tab-content">
+    <div class="toolbar">
+      <button class="tool-btn" onclick="copiarMermaidGantt()">📋 Copiar Código Gantt</button>
+    </div>
+    <div class="container">
+      <div class="mermaid" id="ganttTarget">
+gantt
+    title Planificación Estratégica GesTock - Re-baselining Opción 1
+    dateFormat YYYY-MM-DD
+    axisFormat %d/%m
+    tickInterval 1week
+
+    section Fase 1: Planificación (20%)
+    Levantamiento de Requerimientos y Validación   :done, f1_1, 2026-08-10, 2026-08-24
+    Stack Tecnológico, Arquitectura Dual y MER    :done, f1_2, 2026-08-24, 2026-08-31
+    Carta Gantt e Informe de Fase 1                :done, f1_3, 2026-08-31, 2026-09-07
+
+    section Fase 2: Desarrollo Core e Integraciones (50%)
+    Backend Integral, DB Dual, Sync, Pasarelas y DTE :done, f2_1, 2026-09-07, 2026-09-21
+    Diseño UX/UI y Mockups en Google Stitch        :done, f2_stitch, 2026-09-14, 2026-09-21
+    Desarrollo Cliente Frontend (Vistas POS / UI)  :f2_2, 2026-09-21, 2026-10-05
+    Integración Frontend-Backend y Consumo RESTful :f2_3, 2026-10-05, 2026-10-19
+    Módulos Predictivos Avanzados (Gemini OCR/Contexto) :f2_4, 2026-10-19, 2026-10-26
+    Pruebas Piloto en Terreno (UAT en Almacén Real) :crit, f2_5, 2026-10-26, 2026-11-09
+    Auditoría QA, Hardening Final y Memoria Título :f2_6, 2026-11-09, 2026-11-23
+
+    section Fase 3: Cierre y Defensa (30%)
+    Material Audiovisual, Ensayos y Examen de Título :f3_1, 2026-11-23, 2026-12-14
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (window.mermaid) {
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'dark',
+          securityLevel: 'loose'
+        });
+      }
+    });
+
+    function cambiarTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    function descargarSVG() {
+      const svg = document.querySelector('#erdTarget svg');
+      if (!svg) { alert('El diagrama aún se está dibujando...'); return; }
+      const serializer = new XMLSerializer();
+      const source = serializer.serializeToString(svg);
+      const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'diagrama_base_de_datos_gestock.svg';
+      a.click();
+    }
+
+    function copiarMermaidGantt() {
+      const code = document.getElementById('ganttTarget').innerText;
+      navigator.clipboard.writeText(code).then(() => alert('Código Mermaid Gantt copiado!'));
+    }
+  </script>
+</body>
+</html>
