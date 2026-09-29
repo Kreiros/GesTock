@@ -1,0 +1,409 @@
+﻿================================================================================
+                    GESTOCK - INFORME 2 PARA MARCELO
+        Hallazgos del backend detectados construyendo el frontend
+================================================================================
+
+Fecha: 27 de septiembre de 2026
+De:    David (frontend)
+
+Este informe continua al anterior. Aca va solo lo nuevo, mas un anexo al final
+con lo del primer informe que sigue abierto.
+
+Todo lo que esta aca lo verifique leyendo el codigo del backend y/o consultando
+la base SQLite. No es suposicion. Donde hay evidencia, la dejo escrita.
+
+
+================================================================================
+CONTEXTO: QUE SE CONSTRUYO DESDE EL INFORME ANTERIOR
+================================================================================
+
+Pantallas terminadas en este periodo, todas en modo visual y modo tecnico:
+
+   - Proveedores                    ->  /proveedores
+   - Dashboard y analitica          ->  /dashboard
+   - Configuracion                  ->  /configuracion
+   - Notificaciones                 ->  /notificaciones
+   - Historial / Registro de Ventas ->  /ventas
+   - Respaldo Facturas y SII        ->  /sii
+   - Reabastecimiento ROP           ->  /reabastecimiento
+
+Mas arreglos grandes a Caja POS, Inventario y Cierre de Caja.
+
+YA NO QUEDA NINGUNA PANTALLA PENDIENTE EN EL MENU.
+
+
+================================================================================
+PRIORIDAD 1 - BUGS QUE ENSUCIAN DATOS O BLOQUEAN EL USO
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1  GET /replenishment/suggest ESCRIBE EN LA BASE DE DATOS
+--------------------------------------------------------------------------------
+
+Es el hallazgo mas importante del informe.
+
+QUE PASA:
+   generateSuggestedOrders() hace INSERT INTO purchase_orders por cada proveedor
+   EN CADA LLAMADA. Como la ruta es un GET, cualquier pantalla que consulte el
+   ROP va dejando filas.
+
+ARCHIVO:
+   backend/src/replenishment/replenishment.service.ts, lineas ~377 y ~394
+   (inserta en SQLite y en PostgreSQL)
+   Ruta afectada: routes/replenishment.routes.ts linea 119
+
+EVIDENCIA:
+   En la base local hay 268 ordenes de compra acumuladas, todas generadas por
+   abrir pantallas durante el desarrollo. Entre dos mediciones separadas por una
+   hora de trabajo paso de 238 a 268.
+
+CONSECUENCIAS:
+   - GET /replenishment/purchase-orders no sirve para saber cuando se le pidio
+     de verdad a un proveedor. La "ultima orden" que muestra la ficha del
+     proveedor es en realidad la ultima vez que alguien abrio una pantalla.
+   - La tabla crece sin control.
+
+QUE HARIA YO:
+   Que el GET solo calcule y devuelva, y que la persistencia quede en el
+   POST /replenishment/suggest, que ya existe y hoy no se usa.
+
+MITIGACION QUE YA HICE EN EL FRONTEND:
+   La consulta se cachea 5 minutos, asi navegar entre pantallas deja de disparar
+   inserciones. Es un parche, no la solucion.
+
+
+--------------------------------------------------------------------------------
+1.2  EL REDONDEO DE LA LEY 20.956 SE APLICA A TODOS LOS MEDIOS DE PAGO
+--------------------------------------------------------------------------------
+
+Sigue abierto desde el informe anterior y ahora molesta mas, porque el frontend
+ya quedo correcto: el ticket muestra un monto y el backend guarda otro.
+
+ARCHIVO:
+   backend/src/routes/pos.routes.ts linea 128
+
+       total = aplicarRedondeoChileno(total);   <- antes de mirar el metodo de pago
+
+   La Ley 20.956 rige SOLO PARA EFECTIVO, porque el problema es que no existen
+   monedas de $1 ni $5. Con tarjeta o transferencia se cobra el monto exacto.
+
+REPRODUCCION:
+   Venta de Papas Fritas a $1.899 con TRANSBANK.
+   La pantalla muestra $1.899, el backend guarda $1.900.
+   Verificado en base: detalle_venta.subtotal = 1899
+                       transacciones_venta.total = 1900
+
+ARREGLO:
+   Una linea. Aplicar el redondeo solo si metodo_pago === 'EFECTIVO'.
+
+   Mientras tanto el POS muestra un aviso al cajero cuando el monto va a diferir.
+
+
+--------------------------------------------------------------------------------
+1.3  EL RUT DEL EMISOR SEMBRADO ES INVALIDO
+--------------------------------------------------------------------------------
+
+   76.123.456-7 no pasa la validacion de modulo 11.
+   El digito verificador deberia ser 0, no 7.
+
+   Ese RUT va dentro de CADA XML DTE QUE SE EMITE, asi que el SII lo rechazaria
+   en produccion.
+
+DONDE:
+   Tabla configuracion_sistema, clave sii_rut_emisor
+
+   La pantalla de Configuracion ahora lo avisa y permite corregirlo, pero conviene
+   arreglarlo tambien en la siembra.
+
+
+--------------------------------------------------------------------------------
+1.4  EL LIMITE DE PETICIONES ES MUY BAJO Y ES POR IP
+--------------------------------------------------------------------------------
+
+ARCHIVO:
+   backend/src/middleware/security.middleware.ts linea 37
+
+       windowMs: 15 * 60 * 1000,   // 15 minutos
+       max: 300                    // 20 peticiones por minuto
+
+   Un POS refresca estado todo el rato por definicion. Con el frontend como
+   estaba se topaba el limite y el sistema respondia 429 a todo, dejandolo
+   inutilizable por minutos.
+
+   Ya lo mitigue en el frontend (baje el trafico sostenido de ~11 a 4 peticiones
+   por minuto), asi que hoy alcanza de sobra. Pero quedan dos cosas:
+
+   1) 300 cada 15 minutos queda justo si se agregan mas pantallas.
+
+   2) MAS SERIO: EL LIMITE ES POR IP.
+      Si el local tiene dos o tres cajas detras del mismo router, todas salen con
+      la misma IP publica y SE BLOQUEAN ENTRE ELLAS. Una caja vendiendo deja sin
+      servicio a la otra.
+
+QUE HARIA YO:
+   Limitar por X-Tenant-ID o por device_id, no por IP. Y subir bastante el max.
+
+
+================================================================================
+PRIORIDAD 2 - RESPUESTAS A LAS QUE LES FALTAN CAMPOS
+================================================================================
+
+Son endpoints que funcionan, pero no devuelven datos que si estan en la base y
+que el frontend necesita.
+
+--------------------------------------------------------------------------------
+2.1  GET /pos/transactions        (routes/pos.routes.ts linea 495)
+--------------------------------------------------------------------------------
+
+   FALTA: LIMIT 100 fijo, sin paginacion ni filtros
+   POR QUE IMPORTA:
+      El historial real se pasa de 100 ventas en pocos dias. Hoy los filtros de
+      la pantalla trabajan solo sobre esas 100 y lo aviso en pantalla.
+
+   FALTA: es_devolucion y referencia_venta_id
+   POR QUE IMPORTA:
+      Las columnas EXISTEN EN LA TABLA pero no salen en el SELECT. Hoy reconozco
+      una devolucion por el prefijo DEV- del folio y el monto negativo, y no
+      puedo mostrar a que venta anula cada nota de credito.
+
+   FALTA: producto_id en los items
+   POR QUE IMPORTA:
+      POST /pos/devolucion lo exige, pero el listado solo entrega el SKU. Tengo
+      que cruzarlo contra /pos/inventory para poder hacer una devolucion parcial.
+
+   FALTA: rut_cliente y tipo_documento_tributario
+   POR QUE IMPORTA:
+      Ambos estan en la tabla.
+
+   Lo mas barato de todo: agregar esas columnas al SELECT.
+
+--------------------------------------------------------------------------------
+2.2  GET /pos/inventory
+--------------------------------------------------------------------------------
+
+   Sigue sin devolver proveedor_id (solo proveedor_nombre), asi que el cruce
+   proveedor <-> producto se hace por nombre.
+
+
+================================================================================
+PRIORIDAD 3 - ENDPOINTS QUE FALTAN
+================================================================================
+
+Cosas que quedaron sin construir en el frontend PORQUE NO HAY A QUE APUNTAR.
+
+   CREAR / EDITAR PRODUCTOS
+      No existe ningun POST/PUT/DELETE de productos. El boton "Anadir producto"
+      del Inventario esta deshabilitado. El catalogo solo se escribe por siembra,
+      ingesta OCR, checkout y sync. Tuve que insertar productos a mano en SQLite
+      para poder probar ILA, bolsa reutilizable y redondeo.
+
+   ESCRIBIR lote Y fecha_vencimiento
+      Verificado con grep en todo el backend: esos campos SOLO APARECEN EN SELECT.
+      El backend sabe leerlos y tiene toda la logica del semaforo FEFO lista, pero
+      nada los escribe. Las alertas sanitarias solo cubren lo que cargue a mano.
+
+   CREAR / EDITAR UNA ORDEN DE COMPRA
+      Solo las genera el algoritmo. El pedido por WhatsApp no queda registrado en
+      ninguna parte.
+
+   RECEPCION DE MERCADERIA CONTRA UNA ORDEN
+      La mercaderia entra por la ingesta OCR sin vincularse a la orden que la
+      origino.
+
+   ANULAR UNA VENTA
+      Solo existe devolucion con nota de credito.
+
+   LISTAR DEVOLUCIONES
+      POST /pos/devolucion existe, pero no hay ningun GET.
+
+   MERMAS
+      No existe nada de mermas en todo el sistema.
+
+   TABLA DE NOTIFICACIONES
+      No hay donde registrar que una alerta fue leida. El "visto" de la pantalla
+      de Notificaciones se guarda solo en el equipo.
+
+   ESTADO BORRADOR/PENDIENTE EN FACTURAS
+      factura_ingresos nace siempre PROCESSED, asi que no se puede avisar
+      "factura por revisar".
+
+   FILTRO POR PERIODO EN GET /invoices/
+      Se muestran todas.
+
+   AJUSTE MANUAL DE STOCK
+      Bloquea "Modo Conteo Fisico" y "Auditoria express".
+
+
+================================================================================
+PRIORIDAD 4 - ENDPOINTS QUE RESPONDEN EXITO SIN HACER NADA
+================================================================================
+
+Estos son delicados porque EL USUARIO CREE QUE LA ACCION SE EJECUTO.
+
+--------------------------------------------------------------------------------
+4.1  POST /dte/send-email
+--------------------------------------------------------------------------------
+   Solo hace logger.info y responde exito. No despacha ningun correo.
+
+--------------------------------------------------------------------------------
+4.2  sendPurchaseOrdersBatchEmail  (usado por POST /replenishment/send-email)
+--------------------------------------------------------------------------------
+   ARCHIVO: replenishment/replenishment.service.ts linea ~442
+
+       logger.info('ReplenishmentService',
+         `Simulating automated dispatch of purchase orders email to: ...`)
+
+   Marca las ordenes como estado = 'enviada' en la base y responde
+   "Ordenes de compra enviadas automaticamente a...", pero no manda nada.
+
+   PROBADO:
+      El boton respondio "Ordenes de compra enviadas automaticamente a
+      pedidos@almacendontito.cl (2 ordenes, 3 productos, Total: $70.950)" y en la
+      base se crearon 2 filas en estado 'enviada'. Ningun correo salio.
+
+   En ambos casos el frontend ahora lo advierte explicitamente. Si se va a
+   implementar el envio real, avisame y saco los avisos.
+
+
+================================================================================
+LO QUE ESTA A MEDIAS EN EL MODULO SII
+================================================================================
+
+Esta parte esta MUCHO MAS COMPLETA DE LO QUE ESPERABA. Los 7 bloques de la
+pantalla de Respaldo SII tienen endpoint real y funcionan. Lo que falta para que
+sirva en produccion:
+
+   ENVIO AL SII
+      No existe. Todos los documentos quedan en EMITIDO_LOCAL y los RCOF en
+      PENDIENTE. La emision, firma XMLDSig y timbrado TED si funcionan.
+
+   CAF REALES
+      getOrCreateActiveCaf() llama a provisionTestCaf() cuando no encuentra
+      folios, asi que los rangos 1-5000 son autogenerados, no vienen de un
+      archivo del SII. POST /dte/caf/upload si sabe importar un CAF real desde su
+      XML. No le hice pantalla porque sin un archivo real no hay como probarla.
+
+   TASA PPM
+      Viene fija en 1% (parametro tasaPpm de GET /dte/f29). No hay donde
+      configurarla por tenant.
+
+   LIBRO DE COMPRAS/VENTAS Y ENVIO DEL RCV
+      No existe, solo la pre-liquidacion F29.
+
+   MARCAR QUE FACTURA ENTRO EN QUE F29
+      factura_ingresos guarda PROCESSED y nada mas.
+
+
+================================================================================
+INCONSISTENCIAS DE CONVENCION
+================================================================================
+
+   Las rutas de /dte/* leen tenantId (camelCase).
+   El resto del backend lee tenant_id (snake_case).
+
+   El frontend lo maneja con excepciones explicitas por endpoint, pero es una
+   fuente segura de bugs para quien venga despues. Conviene unificar.
+
+
+================================================================================
+COSAS DEL BACKEND QUE DESCUBRI QUE YA FUNCIONABAN Y NADIE USABA
+================================================================================
+
+Esto es en positivo: habia harto trabajo hecho que no estaba conectado.
+
+   - POST /dte/config acepta modeloEmision y los 9 campos del emisor.
+     El frontend decia "no hay endpoint para editar esto". Era falso.
+     Ya esta conectado.
+
+   - GET /dte/config devuelve un bloque pciDssCompliance que nadie leia.
+     Ahora alimenta una seccion de Configuracion.
+
+   - GET /dte/f29 arma una pre-liquidacion muy completa: separa debito y credito
+     fiscal, contabiliza los vouchers de tarjeta por Res. 176 y resta las notas
+     de credito. Estaba sin usar.
+
+   - POST /pos/devolucion esta muy bien hecho: repone stock, escribe
+     movimientos_inventario, inserta la transaccion DEV- y emite la NC tipo 61
+     con nodo <Referencia>. Soporta devolucion parcial. Nunca se habia usado.
+
+   - POST /dte/certification/run-set corre el set de prueba de la Res. 74
+     completo y los 4 casos pasan. Sirve directo para la defensa.
+
+
+================================================================================
+ANEXO - DEL PRIMER INFORME, QUE SIGUE ABIERTO
+================================================================================
+
+Verificado hoy contra el codigo:
+
+   SIGUE ABIERTO   No hay endpoint para crear/editar productos
+
+   SIGUE ABIERTO   lote y fecha_vencimiento nunca se escriben
+
+   SIGUE ABIERTO   Redondeo aplicado a todos los medios de pago (ver 1.2)
+
+   SIGUE ABIERTO   RutPay se cuenta como EFECTIVO en el cierre de caja
+                   caja/cierre-caja.service.ts linea 219: el else final mete
+                   RutPay en efectivo
+
+   SIGUE ABIERTO   /pos/status no cuenta los cierres de caja pendientes
+                   Hoy la base tiene 14 ventas + 3 cierres sucios, y el endpoint
+                   reporta 14
+
+   SIGUE ABIERTO   GEMINI_API_KEY no configurada
+                   El OCR real no se puede probar, corre siempre el fallback
+
+   SIGUE ABIERTO   /dte/:id/receipt rotula mal todo lo que no sea boleta
+                   Linea 231: el ternario solo cubre 39 y 41 y manda el resto
+                   como "NOTA DE CREDITO". Hay workaround en el frontend
+
+   SIGUE ABIERTO   /dte/:id/receipt no devuelve el ILA
+                   El ILA se deduce en el frontend restando
+
+   SIGUE ABIERTO   POST /dte/send-email es simulacion (ver 4.1)
+
+   SIGUE ABIERTO   Dashboard sin periodo semanal
+                   Solo diario | mensual | historico
+
+   SIGUE ABIERTO   El dia corta a medianoche UTC (21:00 en Chile)
+                   El frontend lo avisa con un chip
+
+   SIGUE ABIERTO   /pos/inventory sin proveedor_id (ver 2.2)
+
+   SIGUE ABIERTO   No hay webhooks, EDI ni WhatsApp Cloud API
+                   El unico canal es el correo, y esta simulado
+
+   RESUELTO        Bug de parametros undefined en el ROP
+                   Con workaround en el frontend: se mandan siempre los 3
+                   parametros explicitos
+
+
+================================================================================
+SUGERENCIA DE ORDEN PARA ATACARLO
+================================================================================
+
+Si tuviera que priorizar:
+
+   1. GET /replenishment/suggest que no escriba (1.1)
+      Es el que ensucia datos.
+
+   2. Redondeo solo para efectivo (1.2)
+      Una linea, y hoy el ticket y la base no coinciden.
+
+   3. Columnas faltantes en /pos/transactions (2.1)
+      Barato y desbloquea harto.
+
+   4. Rate limiter por tenant en vez de por IP (1.4)
+      Si no, con dos cajas no funciona.
+
+   5. RutPay en el cierre de caja
+      Desordena el arqueo de cualquier local que lo use.
+
+   6. CRUD de productos (Prioridad 3)
+      Es lo que mas limita hoy el uso real del sistema.
+
+
+Cualquier cosa que arregles, avisame y lo conecto de inmediato: varias pantallas
+ya tienen el espacio hecho, solo esperando el endpoint.
+
+================================================================================
