@@ -11,6 +11,8 @@ import { TipoDTE } from '../dte/types';
 import { defaultReplenishmentService } from '../replenishment/replenishment.service';
 import { defaultTenantConfigService } from '../config/tenant-config.service';
 
+import { generateChileanBarcode } from '../utils/barcode.utils';
+
 const router = Router();
 const sqlite = defaultSqliteClient;
 
@@ -22,7 +24,7 @@ router.get('/products', (req: Request, res: Response): void => {
   const tenantId = req.query.tenant_id as string;
 
   try {
-    let sql = 'SELECT id, tenant_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_venta, categoria, activo, lote, fecha_vencimiento, impuesto_adicional_codigo, impuesto_adicional_tasa FROM productos WHERE activo = 1';
+    let sql = 'SELECT id, tenant_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, categoria, activo, lote, fecha_vencimiento, impuesto_adicional_codigo, impuesto_adicional_tasa FROM productos WHERE activo = 1';
     const params: unknown[] = [];
 
     if (tenantId) {
@@ -40,6 +42,308 @@ router.get('/products', (req: Request, res: Response): void => {
       message: 'Failed to retrieve products from local database',
       error: error instanceof Error ? error.message : String(error)
     });
+  }
+});
+
+/**
+ * POST /api/v1/pos/products
+ * Crea un nuevo producto en el catálogo local (SQLite) y en la nube (PostgreSQL si está en línea).
+ * Soporta control de caducidades sanitarias (lote, fecha_vencimiento) e impuesto adicional ILA.
+ */
+router.post('/products', async (req: Request, res: Response): Promise<void> => {
+  const {
+    tenant_id = '00000000-0000-0000-0000-000000000001',
+    nombre,
+    sku,
+    codigo_barra,
+    precio_compra = 0,
+    precio_venta = 0,
+    stock_actual = 0,
+    stock_minimo = 0,
+    categoria = 'General',
+    proveedor_id = null,
+    lote = null,
+    fecha_vencimiento = null,
+    impuesto_adicional_codigo = 0,
+    impuesto_adicional_tasa = 0
+  } = req.body;
+
+  if (!nombre || !sku) {
+    res.status(400).json({
+      success: false,
+      message: 'nombre y sku son requeridos para dar de alta un producto'
+    });
+    return;
+  }
+
+  const productId = uuidv4();
+  const finalBarcode = codigo_barra || generateChileanBarcode();
+
+  try {
+    // 1. Insertar en SQLite Local
+    sqlite.execute(
+      `INSERT INTO productos 
+       (id, tenant_id, proveedor_id, codigo_barra, sku, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, categoria, activo, lote, fecha_vencimiento, impuesto_adicional_codigo, impuesto_adicional_tasa, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      [
+        productId,
+        tenant_id,
+        proveedor_id,
+        finalBarcode,
+        sku,
+        nombre,
+        Number(stock_actual) || 0,
+        Number(stock_minimo) || 0,
+        Number(precio_compra) || 0,
+        Number(precio_venta) || 0,
+        categoria,
+        lote,
+        fecha_vencimiento,
+        impuesto_adicional_codigo || 0,
+        impuesto_adicional_tasa || 0
+      ]
+    );
+
+    // 2. Registrar movimiento de inventario si hay stock inicial
+    if (Number(stock_actual) > 0) {
+      sqlite.execute(
+        `INSERT INTO historial_stock 
+         (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
+         VALUES (?, ?, ?, 0, ?, ?, 'alta_inicial', 'Creación manual de producto en catálogo', datetime('now'), 'Sistema POS')`,
+        [uuidv4(), tenant_id, productId, stock_actual, stock_actual]
+      );
+    }
+
+    // 3. Replicar a PostgreSQL si está conectado
+    try {
+      if (await defaultPgClient.healthCheck()) {
+        await defaultPgClient.query(
+          `INSERT INTO productos 
+           (id, tenant_id, proveedor_id, codigo_barra, sku, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, categoria, activo, lote, fecha_vencimiento, impuesto_adicional_codigo, impuesto_adicional_tasa, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 1, $12, $13, $14, $15, now(), now())
+           ON CONFLICT (tenant_id, sku) DO UPDATE SET 
+             nombre = EXCLUDED.nombre,
+             precio_venta = EXCLUDED.precio_venta,
+             precio_compra = EXCLUDED.precio_compra,
+             stock_actual = EXCLUDED.stock_actual,
+             lote = EXCLUDED.lote,
+             fecha_vencimiento = EXCLUDED.fecha_vencimiento,
+             updated_at = now()`,
+          [
+            productId,
+            tenant_id,
+            proveedor_id,
+            finalBarcode,
+            sku,
+            nombre,
+            Number(stock_actual) || 0,
+            Number(stock_minimo) || 0,
+            Number(precio_compra) || 0,
+            Number(precio_venta) || 0,
+            categoria,
+            lote,
+            fecha_vencimiento,
+            impuesto_adicional_codigo || 0,
+            impuesto_adicional_tasa || 0
+          ]
+        );
+      }
+    } catch (pgError) {
+      logger.warn('PosRoutes', 'PostgreSQL offline; producto creado únicamente en SQLite local', { error: pgError });
+    }
+
+    const createdProduct = sqlite.queryOne<any>(
+      `SELECT p.*, pr.nombre_proveedores as proveedor_nombre 
+       FROM productos p 
+       LEFT JOIN proveedores pr ON p.proveedor_id = pr.id 
+       WHERE p.id = ?`,
+      [productId]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Producto creado exitosamente',
+      data: createdProduct
+    });
+  } catch (error) {
+    logger.error('PosRoutes', 'Error creando producto', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al dar de alta el producto',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * PUT /api/v1/pos/products/:id
+ * Actualiza los datos de un producto (precios, stock mínimo, categoría, lote, vencimiento, estado).
+ */
+router.put('/products/:id', async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const {
+    nombre,
+    codigo_barra,
+    precio_compra,
+    precio_venta,
+    stock_minimo,
+    categoria,
+    proveedor_id,
+    lote,
+    fecha_vencimiento,
+    impuesto_adicional_codigo,
+    impuesto_adicional_tasa,
+    activo
+  } = req.body;
+
+  try {
+    const existing = sqlite.queryOne<any>('SELECT * FROM productos WHERE id = ?', [id]);
+    if (!existing) {
+      res.status(404).json({ success: false, message: 'Producto no encontrado' });
+      return;
+    }
+
+    sqlite.execute(
+      `UPDATE productos 
+       SET nombre = COALESCE(?, nombre),
+           codigo_barra = COALESCE(?, codigo_barra),
+           precio_compra = COALESCE(?, precio_compra),
+           precio_venta = COALESCE(?, precio_venta),
+           stock_minimo = COALESCE(?, stock_minimo),
+           categoria = COALESCE(?, categoria),
+           proveedor_id = COALESCE(?, proveedor_id),
+           lote = COALESCE(?, lote),
+           fecha_vencimiento = COALESCE(?, fecha_vencimiento),
+           impuesto_adicional_codigo = COALESCE(?, impuesto_adicional_codigo),
+           impuesto_adicional_tasa = COALESCE(?, impuesto_adicional_tasa),
+           activo = COALESCE(?, activo),
+           updated_at = datetime('now')
+       WHERE id = ?`,
+      [
+        nombre,
+        codigo_barra,
+        precio_compra !== undefined ? Number(precio_compra) : null,
+        precio_venta !== undefined ? Number(precio_venta) : null,
+        stock_minimo !== undefined ? Number(stock_minimo) : null,
+        categoria,
+        proveedor_id,
+        lote,
+        fecha_vencimiento,
+        impuesto_adicional_codigo !== undefined ? Number(impuesto_adicional_codigo) : null,
+        impuesto_adicional_tasa !== undefined ? Number(impuesto_adicional_tasa) : null,
+        activo !== undefined ? (activo ? 1 : 0) : null,
+        id
+      ]
+    );
+
+    // Replicar a PostgreSQL si está conectado
+    try {
+      if (await defaultPgClient.healthCheck()) {
+        await defaultPgClient.query(
+          `UPDATE productos 
+           SET nombre = COALESCE($1, nombre),
+               codigo_barra = COALESCE($2, codigo_barra),
+               precio_compra = COALESCE($3, precio_compra),
+               precio_venta = COALESCE($4, precio_venta),
+               stock_minimo = COALESCE($5, stock_minimo),
+               categoria = COALESCE($6, categoria),
+               proveedor_id = COALESCE($7, proveedor_id),
+               lote = COALESCE($8, lote),
+               fecha_vencimiento = COALESCE($9, fecha_vencimiento),
+               impuesto_adicional_codigo = COALESCE($10, impuesto_adicional_codigo),
+               impuesto_adicional_tasa = COALESCE($11, impuesto_adicional_tasa),
+               activo = COALESCE($12, activo),
+               updated_at = now()
+           WHERE id = $13`,
+          [
+            nombre,
+            codigo_barra,
+            precio_compra !== undefined ? Number(precio_compra) : null,
+            precio_venta !== undefined ? Number(precio_venta) : null,
+            stock_minimo !== undefined ? Number(stock_minimo) : null,
+            categoria,
+            proveedor_id,
+            lote,
+            fecha_vencimiento,
+            impuesto_adicional_codigo !== undefined ? Number(impuesto_adicional_codigo) : null,
+            impuesto_adicional_tasa !== undefined ? Number(impuesto_adicional_tasa) : null,
+            activo !== undefined ? (activo ? 1 : 0) : null,
+            id
+          ]
+        );
+      }
+    } catch {}
+
+    const updated = sqlite.queryOne<any>(
+      `SELECT p.*, pr.nombre_proveedores as proveedor_nombre 
+       FROM productos p 
+       LEFT JOIN proveedores pr ON p.proveedor_id = pr.id 
+       WHERE p.id = ?`,
+      [id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Producto actualizado correctamente',
+      data: updated
+    });
+  } catch (error) {
+    logger.error('PosRoutes', 'Error actualizando producto', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar producto',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * PATCH /api/v1/pos/products/:id/stock
+ * Ajuste manual de inventario (Conteo físico / Auditoría express / Mermas)
+ */
+router.patch('/products/:id/stock', async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { tenant_id = '00000000-0000-0000-0000-000000000001', nuevo_stock, motivo = 'Ajuste manual de conteo físico', usuario_id = 'Cajero' } = req.body;
+
+  if (nuevo_stock === undefined || isNaN(Number(nuevo_stock)) || Number(nuevo_stock) < 0) {
+    res.status(400).json({ success: false, message: 'nuevo_stock debe ser un número mayor o igual a 0' });
+    return;
+  }
+
+  try {
+    const prod = sqlite.queryOne<any>('SELECT stock_actual FROM productos WHERE id = ?', [id]);
+    if (!prod) {
+      res.status(404).json({ success: false, message: 'Producto no encontrado' });
+      return;
+    }
+
+    const prevStock = Number(prod.stock_actual);
+    const targetStock = Number(nuevo_stock);
+    const delta = targetStock - prevStock;
+
+    sqlite.execute('UPDATE productos SET stock_actual = ?, updated_at = datetime("now") WHERE id = ?', [targetStock, id]);
+
+    sqlite.execute(
+      `INSERT INTO historial_stock 
+       (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
+       VALUES (?, ?, ?, ?, ?, ?, 'ajuste_manual', ?, datetime('now'), ?)`,
+      [uuidv4(), tenant_id, id, prevStock, targetStock, delta, motivo, usuario_id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Stock ajustado exitosamente',
+      data: {
+        producto_id: id,
+        stock_anterior: prevStock,
+        stock_nuevo: targetStock,
+        diferencia: delta,
+        motivo
+      }
+    });
+  } catch (error) {
+    logger.error('PosRoutes', 'Error ajustando stock', error);
+    res.status(500).json({ success: false, message: 'Error al ajustar stock' });
   }
 });
 
@@ -120,12 +424,14 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
 
     // 1. Ejecutar venta transaccional en SQLite
     const checkoutResult = sqlite.withTransaction(() => {
-      // Calcular total y unidades aplicando la Ley de Redondeo chilena
+      // Calcular total y unidades. La Ley N° 20.956 rige exclusivamente para pagos en efectivo
       for (const item of items) {
         total += Number(item.precio_unitario) * Number(item.cantidad);
         unidades += Number(item.cantidad);
       }
-      total = aplicarRedondeoChileno(total);
+      if (metodo_pago && String(metodo_pago).trim().toUpperCase() === 'EFECTIVO') {
+        total = aplicarRedondeoChileno(total);
+      }
 
       // Buscar metodo_pago_id o usar un UUID determinista si no existe
       const metodoRow = sqlite.queryOne<{ id: string }>(
@@ -408,7 +714,7 @@ router.get('/inventory', (req: Request, res: Response): void => {
 
   try {
     const products = sqlite.query<any>(
-      `SELECT p.id, p.tenant_id, p.sku, p.codigo_barra, p.nombre, p.stock_actual, p.stock_minimo, 
+      `SELECT p.id, p.tenant_id, p.proveedor_id, p.sku, p.codigo_barra, p.nombre, p.stock_actual, p.stock_minimo, 
               p.precio_compra, p.precio_venta, p.categoria, p.activo, p.updated_at,
               p.origen_creacion, p.factura_origen_folio,
               p.lote, p.fecha_vencimiento, p.impuesto_adicional_codigo, p.impuesto_adicional_tasa,
@@ -498,7 +804,9 @@ router.get('/transactions', (req: Request, res: Response): void => {
   try {
     const sales = sqlite.query<any>(
       `SELECT v.id, v.folio_local_sqlite as folio, v.fecha, v.total, v.unidades, v.estado, 
-              v.sync_status, v.observaciones, u.nombre as cajero_nombre,
+              v.sync_status, v.observaciones, v.es_devolucion, v.referencia_venta_id,
+              v.rut_cliente, v.tipo_documento_tributario, v.monto_ila,
+              u.nombre as cajero_nombre,
               mp.nombre as medio_pago_nombre, mp.pasarela as medio_pago_tipo
        FROM transacciones_venta v
        LEFT JOIN usuarios u ON v.usuario_id = u.id
@@ -510,7 +818,8 @@ router.get('/transactions', (req: Request, res: Response): void => {
 
     const salesWithDetails = sales.map(sale => {
       const details = sqlite.query<any>(
-        `SELECT dv.id, dv.cantidad, dv.precio_unitario, dv.subtotal, p.nombre as producto_nombre, p.sku
+        `SELECT dv.id, dv.producto_id, dv.cantidad, dv.precio_unitario, dv.subtotal, 
+                p.nombre as producto_nombre, p.sku, p.codigo_barra
          FROM detalle_venta dv
          LEFT JOIN productos p ON dv.producto_id = p.id
          WHERE dv.venta_id = ?`,

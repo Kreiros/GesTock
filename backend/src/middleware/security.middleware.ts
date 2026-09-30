@@ -33,12 +33,20 @@ export const corsMiddleware = cors({
 
 /**
  * Limitador de tasa general para endpoints publicos y de consulta
+ * Ajustado a 2000 peticiones por ventana de 15 minutos para permitir navegacion continua en POS
  */
 export const generalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 300, // maximo 300 peticiones por IP
+  max: 2000, // hasta 2000 peticiones
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const tenant = (req.headers['x-tenant-id'] as string) || '';
+    const device = (req.headers['x-device-id'] as string) || '';
+    if (tenant && device) return `${tenant}-${device}`;
+    if (tenant) return `${tenant}-${req.ip || 'local'}`;
+    return req.ip || 'unknown';
+  },
   message: {
     success: false,
     message: 'Limite de peticiones excedido. Por favor intente mas tarde.'
@@ -46,13 +54,20 @@ export const generalRateLimiter = rateLimit({
 });
 
 /**
- * Limitador estricto para operaciones criticas de mutacion (ventas, pagos, DTEs, sync)
+ * Limitador para operaciones criticas de mutacion (ventas, pagos, DTEs, sync)
  */
 export const mutationRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 60, // maximo 60 transacciones por minuto por IP
+  max: 300, // hasta 300 transacciones por minuto
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    const tenant = (req.headers['x-tenant-id'] as string) || '';
+    const device = (req.headers['x-device-id'] as string) || '';
+    if (tenant && device) return `${tenant}-${device}`;
+    if (tenant) return `${tenant}-${req.ip || 'local'}`;
+    return req.ip || 'unknown';
+  },
   message: {
     success: false,
     message: 'Demasiadas operaciones concurrentes de transaccion. Reduzca la frecuencia.'

@@ -372,37 +372,38 @@ export class ReplenishmentService {
 
       createdOrders.push(order);
 
-      // Persistir orden en SQLite
-      try {
-        this.sqliteClient.execute(
-          `INSERT INTO purchase_orders (id, tenant_id, supplier_id, estado, fecha_creacion, total_estimado)
-           VALUES (?, ?, ?, 'sugerida', datetime('now'), ?)`,
-          [orderId, tenantId, finalSupplierId, totalEstimado]
-        );
-        for (const line of orderLines) {
+      // Persistir orden en SQLite y PostgreSQL a menos que se especifique persist === false
+      if (customConfig?.persist !== false) {
+        try {
           this.sqliteClient.execute(
-            `INSERT INTO purchase_order_details (id, purchase_order_id, product_id, cantidad_sugerida, precio_unitario, subtotal)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [uuidv4(), orderId, line.productId, line.cantidadSugerida, line.precioUnitario, line.subtotalEstimado]
+            `INSERT INTO purchase_orders (id, tenant_id, supplier_id, estado, fecha_creacion, total_estimado)
+             VALUES (?, ?, ?, 'sugerida', datetime('now'), ?)`,
+            [orderId, tenantId, finalSupplierId, totalEstimado]
           );
-        }
-      } catch {}
+          for (const line of orderLines) {
+            this.sqliteClient.execute(
+              `INSERT INTO purchase_order_details (id, purchase_order_id, product_id, cantidad_sugerida, precio_unitario, subtotal)
+               VALUES (?, ?, ?, ?, ?, ?)`,
+              [uuidv4(), orderId, line.productId, line.cantidadSugerida, line.precioUnitario, line.subtotalEstimado]
+            );
+          }
+        } catch {}
 
-      // Persistir orden en PostgreSQL
-      try {
-        await this.pgClient.query(
-          `INSERT INTO purchase_orders (id, tenant_id, supplier_id, estado, fecha_creacion, total_estimado)
-           VALUES ($1, $2, $3, 'sugerida', now(), $4)`,
-          [orderId, tenantId, finalSupplierId, totalEstimado]
-        );
-        for (const line of orderLines) {
+        try {
           await this.pgClient.query(
-            `INSERT INTO purchase_order_details (id, purchase_order_id, product_id, cantidad_sugerida, precio_unitario, subtotal)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [uuidv4(), orderId, line.productId, line.cantidadSugerida, line.precioUnitario, line.subtotalEstimado]
+            `INSERT INTO purchase_orders (id, tenant_id, supplier_id, estado, fecha_creacion, total_estimado)
+             VALUES ($1, $2, $3, 'sugerida', now(), $4)`,
+            [orderId, tenantId, finalSupplierId, totalEstimado]
           );
-        }
-      } catch {}
+          for (const line of orderLines) {
+            await this.pgClient.query(
+              `INSERT INTO purchase_order_details (id, purchase_order_id, product_id, cantidad_sugerida, precio_unitario, subtotal)
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [uuidv4(), orderId, line.productId, line.cantidadSugerida, line.precioUnitario, line.subtotalEstimado]
+            );
+          }
+        } catch {}
+      }
     }
 
     // 3. Evaluar envío automático de órdenes de compra por correo

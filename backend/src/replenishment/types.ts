@@ -64,4 +64,5 @@ export interface ReplenishmentConfig {
   analysisDays: number;        // Días de histórico de ventas a analizar (e.g. 7 o 30)
   defaultLeadTimeDays: number; // Días de entrega de proveedor (e.g. 7)
   safetyStockFactor: number;   // Multiplicador de cobertura (e.g. 2.0 para cubrir 2 ciclos de visita)
+  persist?: boolean;           // Si es true, persiste las órdenes en BD; si es false (default), solo calcula y retorna
 }

@@ -349,25 +349,45 @@ export class InvoiceIngestionService {
     try {
       const totalQuantity = invoiceData.items.reduce((acc, curr) => acc + curr.cantidad, 0);
 
-      defaultSqliteClient.execute(
-        `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, whatsapp_contacto, giro, direccion, telefono, dias_visita_proveedores)
-         VALUES (?, ?, ?, ?, 'contacto@proveedor.cl', '+56911223344', ?, ?, ?, ?)
-         ON CONFLICT (tenant_id, rut_proveedor) DO UPDATE SET 
-           giro = COALESCE(proveedores.giro, excluded.giro),
-           direccion = COALESCE(proveedores.direccion, excluded.direccion),
-           telefono = COALESCE(proveedores.telefono, excluded.telefono),
-           dias_visita_proveedores = COALESCE(excluded.dias_visita_proveedores, proveedores.dias_visita_proveedores)`,
-        [
-          supplierId,
-          tenantId,
-          invoiceData.rut_proveedor,
-          invoiceData.razon_social,
-          invoiceData.giro_proveedor || 'Distribución Mayorista',
-          invoiceData.direccion_proveedor || 'Casa Matriz',
-          invoiceData.telefono_proveedor || '+56 2 2345 6789',
-          invoiceData.dias_visita_proveedor || 'Lunes'
-        ]
+      // Reutilizar el ID del proveedor si ya existe para evitar errores de clave foránea en SQLite
+      const existingSupplier = defaultSqliteClient.queryOne<{ id: string }>(
+        'SELECT id FROM proveedores WHERE tenant_id = ? AND rut_proveedor = ? LIMIT 1',
+        [tenantId, invoiceData.rut_proveedor]
       );
+
+      if (existingSupplier) {
+        supplierId = existingSupplier.id;
+        defaultSqliteClient.execute(
+          `UPDATE proveedores 
+           SET giro = COALESCE(?, giro),
+               direccion = COALESCE(?, direccion),
+               telefono = COALESCE(?, telefono),
+               dias_visita_proveedores = COALESCE(?, dias_visita_proveedores)
+           WHERE id = ?`,
+          [
+            invoiceData.giro_proveedor || null,
+            invoiceData.direccion_proveedor || null,
+            invoiceData.telefono_proveedor || null,
+            invoiceData.dias_visita_proveedor || null,
+            supplierId
+          ]
+        );
+      } else {
+        defaultSqliteClient.execute(
+          `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, whatsapp_contacto, giro, direccion, telefono, dias_visita_proveedores)
+           VALUES (?, ?, ?, ?, 'contacto@proveedor.cl', '+56911223344', ?, ?, ?, ?)`,
+          [
+            supplierId,
+            tenantId,
+            invoiceData.rut_proveedor,
+            invoiceData.razon_social,
+            invoiceData.giro_proveedor || 'Distribución Mayorista',
+            invoiceData.direccion_proveedor || 'Casa Matriz',
+            invoiceData.telefono_proveedor || '+56 2 2345 6789',
+            invoiceData.dias_visita_proveedor || 'Lunes'
+          ]
+        );
+      }
 
       defaultSqliteClient.execute(
         `INSERT OR IGNORE INTO factura_ingresos 

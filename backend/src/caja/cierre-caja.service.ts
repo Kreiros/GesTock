@@ -26,6 +26,7 @@ export interface SesionCaja {
   ventas_transbank: number;
   ventas_mercadopago: number;
   ventas_sumup: number;
+  ventas_rutpay?: number;
   total_ingresos_caja: number;
   total_egresos_caja: number;
   total_ventas: number;
@@ -203,6 +204,7 @@ export class CierreCajaService {
     let transbank = 0;
     let mercadopago = 0;
     let sumup = 0;
+    let rutpay = 0;
     let total = 0;
 
     for (const v of ventas) {
@@ -216,8 +218,13 @@ export class CierreCajaService {
         mercadopago += monto;
       } else if (pasarela === 'SUMUP') {
         sumup += monto;
+      } else if (pasarela === 'RUTPAY') {
+        rutpay += monto;
+      } else if (pasarela === 'EFECTIVO' || !pasarela) {
+        efectivo += monto;
       } else {
-        efectivo += monto; // Default Efectivo
+        // Cualquier otra pasarela electrónica no presencial se clasifica como digital
+        rutpay += monto;
       }
     }
 
@@ -249,6 +256,7 @@ export class CierreCajaService {
       ventas_transbank: transbank,
       ventas_mercadopago: mercadopago,
       ventas_sumup: sumup,
+      ventas_rutpay: rutpay,
       total_ingresos_caja: totalIngresos,
       total_egresos_caja: totalEgresos,
       total_ventas: total,
