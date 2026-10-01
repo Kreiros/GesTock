@@ -44,7 +44,10 @@ export class GeminiOcrProvider implements IOcrProvider {
                   }
                 ]
               }
-            ]
+            ],
+            generationConfig: {
+              responseMimeType: 'application/json'
+            }
           })
         }
       );
@@ -55,7 +58,11 @@ export class GeminiOcrProvider implements IOcrProvider {
 
       const jsonResponse = (await response.json()) as any;
       const rawText = jsonResponse?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const parsed = JSON.parse(rawText) as ExtractedInvoiceData;
+      const cleanJson = rawText
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+      const parsed = JSON.parse(cleanJson || '{}') as ExtractedInvoiceData;
 
       return {
         ...parsed,

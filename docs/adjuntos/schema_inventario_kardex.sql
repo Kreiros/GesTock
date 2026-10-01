@@ -1,0 +1,1 @@
+CREATE TABLE test_discord (id INT);

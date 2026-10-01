@@ -348,6 +348,140 @@ router.patch('/products/:id/stock', async (req: Request, res: Response): Promise
 });
 
 /**
+ * POST /api/v1/pos/mermas
+ * Registra una merma o pérdida de stock (vencimiento, daño, rotura, merma operativa)
+ * y actualiza atómicamente el inventario y el historial de movimientos.
+ */
+router.post('/mermas', async (req: Request, res: Response): Promise<void> => {
+  const {
+    tenant_id = '00000000-0000-0000-0000-000000000001',
+    producto_id,
+    cantidad,
+    motivo = 'vencimiento',
+    observaciones = '',
+    usuario_id = 'Cajero'
+  } = req.body;
+
+  if (!producto_id || cantidad === undefined || Number(cantidad) <= 0) {
+    res.status(400).json({
+      success: false,
+      message: 'producto_id y una cantidad positiva son requeridos para registrar una merma'
+    });
+    return;
+  }
+
+  const mermaId = uuidv4();
+  const cant = Number(cantidad);
+
+  try {
+    // 1. Asegurar tabla de mermas en SQLite local
+    sqlite.execute(`
+      CREATE TABLE IF NOT EXISTS mermas (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        producto_id TEXT NOT NULL,
+        cantidad REAL NOT NULL,
+        motivo TEXT NOT NULL,
+        observaciones TEXT,
+        usuario_id TEXT,
+        fecha TEXT NOT NULL,
+        FOREIGN KEY (producto_id) REFERENCES productos(id)
+      )
+    `);
+
+    const prod = sqlite.queryOne<any>('SELECT stock_actual, nombre FROM productos WHERE id = ?', [producto_id]);
+    if (!prod) {
+      res.status(404).json({ success: false, message: 'Producto no encontrado' });
+      return;
+    }
+
+    const prevStock = Number(prod.stock_actual);
+    const nuevoStock = Math.max(0, prevStock - cant);
+
+    // 2. Registrar merma y actualizar stock
+    sqlite.execute(
+      `INSERT INTO mermas (id, tenant_id, producto_id, cantidad, motivo, observaciones, usuario_id, fecha)
+       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [mermaId, tenant_id, producto_id, cant, motivo, observaciones, usuario_id]
+    );
+
+    sqlite.execute('UPDATE productos SET stock_actual = ?, updated_at = datetime("now") WHERE id = ?', [nuevoStock, producto_id]);
+
+    // 3. Registrar en historial de stock
+    sqlite.execute(
+      `INSERT INTO historial_stock 
+       (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
+       VALUES (?, ?, ?, ?, ?, ?, 'merma', ?, datetime('now'), ?)`,
+      [uuidv4(), tenant_id, producto_id, prevStock, nuevoStock, -cant, `Merma: ${motivo} - ${observaciones}`, usuario_id]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Merma registrada exitosamente',
+      data: {
+        id: mermaId,
+        producto_id,
+        producto_nombre: prod.nombre,
+        cantidad: cant,
+        motivo,
+        stock_anterior: prevStock,
+        stock_actual: nuevoStock,
+        fecha: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logger.error('PosRoutes', 'Error registrando merma', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al registrar la merma',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * GET /api/v1/pos/mermas
+ * Lista el historial de mermas registradas con detalles de productos.
+ */
+router.get('/mermas', (req: Request, res: Response): void => {
+  const tenantId = req.query.tenant_id as string;
+
+  try {
+    sqlite.execute(`
+      CREATE TABLE IF NOT EXISTS mermas (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        producto_id TEXT NOT NULL,
+        cantidad REAL NOT NULL,
+        motivo TEXT NOT NULL,
+        observaciones TEXT,
+        usuario_id TEXT,
+        fecha TEXT NOT NULL,
+        FOREIGN KEY (producto_id) REFERENCES productos(id)
+      )
+    `);
+
+    let query = `
+      SELECT m.*, p.nombre as producto_nombre, p.codigo_barra, p.sku
+      FROM mermas m
+      LEFT JOIN productos p ON m.producto_id = p.id
+    `;
+    const params: unknown[] = [];
+    if (tenantId) {
+      query += ' WHERE m.tenant_id = ?';
+      params.push(tenantId);
+    }
+    query += ' ORDER BY m.fecha DESC LIMIT 100';
+
+    const mermas = sqlite.query(query, params);
+    res.status(200).json({ success: true, count: mermas.length, data: mermas });
+  } catch (error) {
+    logger.error('PosRoutes', 'Error consultando mermas', error);
+    res.status(500).json({ success: false, message: 'Error al consultar mermas' });
+  }
+});
+
+/**
  * GET /api/v1/pos/status
  * Semáforo y estado de sincronización del nodo POS
  */

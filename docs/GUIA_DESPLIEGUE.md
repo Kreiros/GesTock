@@ -47,3 +47,9 @@ npm start
 * [[01 - PROYECTOS/GesTock/INDEX|GesTock Hub Principal]]
 * [[PostgreSQL Transaccional vs SQLite Edge]]
 * [[Docker & Dockerfile en Node]]
+
+---
+
+## 🧭 Nexo de Conocimiento
+* **Volver al Hub:** [[01 - PROYECTOS/GesTock/INDEX.md|Index GesTock]]
+* **MOC Central:** [[00 - HUB & DASHBOARD/🧭 MOC_CENTRAL_NEXO_DE_DATOS.md|🧭 MOC Central Nexo de Datos]]

@@ -60,3 +60,9 @@ flowchart TD
 * [[Facturación Electrónica DTE (SII Chile)]]
 * [[Firma Digital XML & Certificados X.509]]
 * [[Payment Gateway Dispatcher Pattern]]
+
+---
+
+## 🧭 Nexo de Conocimiento
+* **Volver al Hub:** [[01 - PROYECTOS/GesTock/INDEX.md|Index GesTock]]
+* **MOC Central:** [[00 - HUB & DASHBOARD/🧭 MOC_CENTRAL_NEXO_DE_DATOS.md|🧭 MOC Central Nexo de Datos]]

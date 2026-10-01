@@ -31,3 +31,9 @@
 * [[Payment Gateway Dispatcher Pattern]]
 * [[OCR Multimodal con Gemini API]]
 * [[Reabastecimiento Predictivo & Algoritmos de Stock]]
+
+---
+
+## 🧭 Nexo de Conocimiento
+* **Volver al Hub:** [[01 - PROYECTOS/GesTock/INDEX.md|Index GesTock]]
+* **MOC Central:** [[00 - HUB & DASHBOARD/🧭 MOC_CENTRAL_NEXO_DE_DATOS.md|🧭 MOC Central Nexo de Datos]]

@@ -44,3 +44,6 @@ Thumbs.db
 
 # Copia local del backend para desarrollo (el backend real esta en backend/)
 back-end/
+
+# Cargas temporales de contexto y chat de la oficina
+.context_uploads/

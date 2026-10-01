@@ -40,3 +40,9 @@ GesTock forma parte del ecosistema de productos de ingeniería de HubLab:
   * [[OCR Multimodal con Gemini API]] · [[Reabastecimiento Predictivo & Algoritmos de Stock]]
 * **Arquitectura & Backend:**
   * [[Multi-Tenancy & Aislamiento de Datos]] · [[RESTful API Architecture]] · [[Control de Acceso Basado en Roles (RBAC)]] · [[Pruebas Unitarias con Jest]]
+
+---
+
+## 🧭 Nexo de Conocimiento & Gravedad Central
+* **MOC Central:** [[00 - HUB & DASHBOARD/🧭 MOC_CENTRAL_NEXO_DE_DATOS.md|🧭 MOC Central Nexo de Datos]]
+* **Hermandad de Proyectos:** [[01 - PROYECTOS/CRM/INDEX.md|CRM CCHIA]] · [[01 - PROYECTOS/SAG-RANK/INDEX.md|SAG RANK]] · [[01 - PROYECTOS/Landing-Page-Hublab/INDEX.md|Landing Page HubLab]]

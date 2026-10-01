@@ -27,6 +27,8 @@ export interface SesionCaja {
   ventas_mercadopago: number;
   ventas_sumup: number;
   ventas_rutpay?: number;
+  total_ila?: number;
+  monto_ila?: number;
   total_ingresos_caja: number;
   total_egresos_caja: number;
   total_ventas: number;
@@ -193,7 +195,7 @@ export class CierreCajaService {
 
     // Consultar las ventas realizadas desde la fecha de apertura de esta sesión
     const ventas = this.sqliteClient.query<any>(
-      `SELECT v.id, v.total, v.metodo_pago_id, mp.pasarela 
+      `SELECT v.id, v.total, v.monto_ila, v.metodo_pago_id, mp.pasarela 
        FROM transacciones_venta v
        LEFT JOIN metodos_pago mp ON v.metodo_pago_id = mp.id
        WHERE v.tenant_id = ? AND v.estado IN ('COMPLETADA', 'PAGADA') AND v.fecha >= ?`,
@@ -205,11 +207,13 @@ export class CierreCajaService {
     let mercadopago = 0;
     let sumup = 0;
     let rutpay = 0;
+    let totalIla = 0;
     let total = 0;
 
     for (const v of ventas) {
       const monto = Number(v.total) || 0;
       total += monto;
+      totalIla += Number(v.monto_ila) || 0;
 
       const pasarela = (v.pasarela || '').toUpperCase();
       if (pasarela === 'TRANSBANK') {
@@ -257,6 +261,8 @@ export class CierreCajaService {
       ventas_mercadopago: mercadopago,
       ventas_sumup: sumup,
       ventas_rutpay: rutpay,
+      total_ila: totalIla,
+      monto_ila: totalIla,
       total_ingresos_caja: totalIngresos,
       total_egresos_caja: totalEgresos,
       total_ventas: total,

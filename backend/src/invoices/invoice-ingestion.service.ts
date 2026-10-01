@@ -18,6 +18,7 @@ export interface IngestionResult {
   used_fallback: boolean;
   ocr_provider: string;
   duration_ms: number;
+  persistido_local?: boolean;
 }
 
 export interface ScannedItemPreview {
@@ -346,6 +347,7 @@ export class InvoiceIngestionService {
 }
 
     // 2. Réplica simultánea en SQLite local para disponibilidad offline inmediata
+    let persistidoLocal = true;
     try {
       const totalQuantity = invoiceData.items.reduce((acc, curr) => acc + curr.cantidad, 0);
 
@@ -463,6 +465,7 @@ export class InvoiceIngestionService {
         );
       }
     } catch (sqliteErr) {
+      persistidoLocal = false;
       logger.warn('InvoiceIngestion', 'Failed to mirror invoice to SQLite local', { sqliteErr });
     }
 
@@ -478,7 +481,8 @@ export class InvoiceIngestionService {
       items_count: invoiceData.items.length,
       used_fallback: usedFallback,
       ocr_provider: ocrProvider,
-      duration_ms: duration
+      duration_ms: duration,
+      persistido_local: persistidoLocal
     };
   }
 
