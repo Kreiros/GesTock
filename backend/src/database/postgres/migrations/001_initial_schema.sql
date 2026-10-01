@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS historial_stock (
     cambio_anterior NUMERIC(14, 2) NOT NULL,
     nuevo_stock NUMERIC(14, 2) NOT NULL,
     cambio NUMERIC(14, 2) NOT NULL,
-    tipo_movimiento VARCHAR(50) NOT NULL CHECK (tipo_movimiento IN ('venta', 'ingreso_factura', 'ajuste')),
+    tipo_movimiento VARCHAR(50) NOT NULL CHECK (tipo_movimiento IN ('venta', 'ingreso_factura', 'ajuste', 'alta_inicial', 'ajuste_manual', 'merma')),
     id_venta_manual UUID,
     motivo VARCHAR(200),
     fecha_movimiento TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -270,3 +270,20 @@ CREATE TABLE IF NOT EXISTS detalle_venta (
 
 CREATE INDEX IF NOT EXISTS idx_detalle_venta_venta ON detalle_venta(venta_id);
 CREATE INDEX IF NOT EXISTS idx_detalle_venta_producto ON detalle_venta(producto_id);
+
+-- ----------------------------------------------------------------------------
+-- 17. Mermas (Stock Shrinkage and Spoilage Log)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS mermas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    producto_id UUID NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    cantidad NUMERIC(14, 2) NOT NULL,
+    motivo VARCHAR(100) NOT NULL,
+    observaciones TEXT,
+    usuario_id VARCHAR(100),
+    fecha TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_mermas_tenant_producto ON mermas(tenant_id, producto_id);
+

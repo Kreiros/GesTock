@@ -126,7 +126,8 @@ router.get('/suggest', async (req: Request, res: Response): Promise<void> => {
     const result = await defaultReplenishmentService.generateSuggestedOrders(tenantId, {
       analysisDays,
       defaultLeadTimeDays: leadTimeDays,
-      safetyStockFactor
+      safetyStockFactor,
+      persist: false
     });
 
     const responseData = formatReplenishmentResponse(result);

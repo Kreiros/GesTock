@@ -33,6 +33,8 @@ export interface ScannedItemPreview {
   es_nuevo: boolean;
   stock_actual: number;
   stock_proyectado: number;
+  lote?: string;
+  fecha_vencimiento?: string;
 }
 
 export interface ScannedInvoicePreview {
@@ -111,7 +113,9 @@ export class InvoiceIngestionService {
         precio_venta_sugerido,
         es_nuevo,
         stock_actual,
-        stock_proyectado
+        stock_proyectado,
+        lote: item.lote,
+        fecha_vencimiento: item.fecha_vencimiento
       };
     });
 
@@ -265,9 +269,11 @@ export class InvoiceIngestionService {
 
           await client.query(
             `UPDATE productos 
-             SET stock_actual = $1, precio_compra = $2, factura_origen_folio = $3, updated_at = now() 
+             SET stock_actual = $1, precio_compra = $2, factura_origen_folio = $3,
+                 lote = COALESCE($6, lote), fecha_vencimiento = COALESCE($7, fecha_vencimiento),
+                 updated_at = now() 
              WHERE id = $4 AND tenant_id = $5`,
-            [newStock, unitPrice, invoiceData.folio_factura, productId, tenantId]
+            [newStock, unitPrice, invoiceData.folio_factura, productId, tenantId, item.lote ?? null, item.fecha_vencimiento ?? null]
           );
         } else {
           productId = uuidv4();
@@ -275,8 +281,8 @@ export class InvoiceIngestionService {
           const barcode = generateChileanBarcode(itemSku);
           await client.query(
             `INSERT INTO productos 
-             (id, tenant_id, proveedor_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, activo, origen_creacion, factura_origen_folio)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 5.0, $8, $9, true, 'FACTURA', $10)`,
+             (id, tenant_id, proveedor_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, activo, origen_creacion, factura_origen_folio, lote, fecha_vencimiento)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 5.0, $8, $9, true, 'FACTURA', $10, $11, $12)`,
             [
               productId,
               tenantId,
@@ -287,7 +293,9 @@ export class InvoiceIngestionService {
               itemCantidad,
               unitPrice,
               salePrice,
-              invoiceData.folio_factura
+              invoiceData.folio_factura,
+              item.lote ?? null,
+              item.fecha_vencimiento ?? null
             ]
           );
         }
@@ -427,8 +435,8 @@ export class InvoiceIngestionService {
           productId = sqliteProd.id;
           prevStock = Number(sqliteProd.stock_actual);
           defaultSqliteClient.execute(
-            "UPDATE productos SET stock_actual = stock_actual + ?, precio_compra = ?, factura_origen_folio = ?, updated_at = datetime('now') WHERE id = ?",
-            [itemCantidad, unitPrice, invoiceData.folio_factura, productId]
+            "UPDATE productos SET stock_actual = stock_actual + ?, precio_compra = ?, factura_origen_folio = ?, lote = COALESCE(?, lote), fecha_vencimiento = COALESCE(?, fecha_vencimiento), updated_at = datetime('now') WHERE id = ?",
+            [itemCantidad, unitPrice, invoiceData.folio_factura, item.lote ?? null, item.fecha_vencimiento ?? null, productId]
           );
         } else {
           productId = uuidv4();
@@ -436,9 +444,9 @@ export class InvoiceIngestionService {
           const barcode = generateChileanBarcode(itemSku);
           defaultSqliteClient.execute(
             `INSERT OR IGNORE INTO productos 
-             (id, tenant_id, proveedor_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, activo, origen_creacion, factura_origen_folio)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 5.0, ?, ?, 1, 'FACTURA', ?)`,
-            [productId, tenantId, supplierId, itemSku, barcode, item.descripcion, itemCantidad, unitPrice, salePrice, invoiceData.folio_factura]
+             (id, tenant_id, proveedor_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, activo, origen_creacion, factura_origen_folio, lote, fecha_vencimiento)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 5.0, ?, ?, 1, 'FACTURA', ?, ?, ?)`,
+            [productId, tenantId, supplierId, itemSku, barcode, item.descripcion, itemCantidad, unitPrice, salePrice, invoiceData.folio_factura, item.lote ?? null, item.fecha_vencimiento ?? null]
           );
         }
 

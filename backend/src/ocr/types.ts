@@ -5,6 +5,8 @@ export interface ExtractedInvoiceItem {
   precio_unitario: number;
   subtotal: number;
   unidad?: string;
+  lote?: string;
+  fecha_vencimiento?: string;
 }
 
 export interface ExtractedInvoiceData {

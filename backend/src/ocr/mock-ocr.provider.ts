@@ -38,14 +38,14 @@ export class MockOcrProvider implements IOcrProvider {
         razon_social: 'Froneri Chile SpA',
         fecha_emision: '2026-09-08',
         items: [
-          { sku: '12366714', descripcion: 'NESTLE Yog Griego Ntr s/Endlz 48x120gCU', cantidad: 6.0, unidad: 'UNI', precio_unitario: 306.0, subtotal: 1836.0 },
-          { sku: '12476886', descripcion: 'GOODNES Defensas Vainilla 48x140gCL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 374.0, subtotal: 2244.0 },
-          { sku: '12476891', descripcion: 'GOODNES Defensas Frutilla 48x140gCL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 374.0, subtotal: 2244.0 },
-          { sku: '12587279', descripcion: 'GOODNES Protein Chirimoya 48x140g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 459.0, subtotal: 2754.0 },
-          { sku: '12623197', descripcion: 'GOODNES Magnesio Frutilla 48x140g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 380.0, subtotal: 2280.0 },
-          { sku: '12617802', descripcion: 'CHANDELLE Crema Chocolate 20x120g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 559.0, subtotal: 3354.0 },
-          { sku: '12617777', descripcion: 'CHANDELLE Crema Manjar 20x120g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 559.0, subtotal: 3354.0 },
-          { sku: '12598740', descripcion: 'NESTLE La Crema Caja 5(6x200cm3) N1 CL', cantidad: 1.0, unidad: 'DSP', precio_unitario: 5616.0, subtotal: 5616.0 }
+          { sku: '12366714', descripcion: 'NESTLE Yog Griego Ntr s/Endlz 48x120gCU', cantidad: 6.0, unidad: 'UNI', precio_unitario: 306.0, subtotal: 1836.0, lote: 'L-FRO-2026-01', fecha_vencimiento: '2026-12-15' },
+          { sku: '12476886', descripcion: 'GOODNES Defensas Vainilla 48x140gCL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 374.0, subtotal: 2244.0, lote: 'L-FRO-2026-02', fecha_vencimiento: '2026-11-20' },
+          { sku: '12476891', descripcion: 'GOODNES Defensas Frutilla 48x140gCL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 374.0, subtotal: 2244.0, lote: 'L-FRO-2026-03', fecha_vencimiento: '2026-11-25' },
+          { sku: '12587279', descripcion: 'GOODNES Protein Chirimoya 48x140g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 459.0, subtotal: 2754.0, lote: 'L-FRO-2026-04', fecha_vencimiento: '2026-12-30' },
+          { sku: '12623197', descripcion: 'GOODNES Magnesio Frutilla 48x140g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 380.0, subtotal: 2280.0, lote: 'L-FRO-2026-05', fecha_vencimiento: '2026-10-31' },
+          { sku: '12617802', descripcion: 'CHANDELLE Crema Chocolate 20x120g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 559.0, subtotal: 3354.0, lote: 'L-FRO-2026-06', fecha_vencimiento: '2026-12-01' },
+          { sku: '12617777', descripcion: 'CHANDELLE Crema Manjar 20x120g CL', cantidad: 6.0, unidad: 'UNI', precio_unitario: 559.0, subtotal: 3354.0, lote: 'L-FRO-2026-07', fecha_vencimiento: '2026-12-05' },
+          { sku: '12598740', descripcion: 'NESTLE La Crema Caja 5(6x200cm3) N1 CL', cantidad: 1.0, unidad: 'DSP', precio_unitario: 5616.0, subtotal: 5616.0, lote: 'L-FRO-2026-08', fecha_vencimiento: '2027-02-28' }
         ],
         total: 28182.0,
         metodo_ingreso: 'OCR_FRONERI_RECOGNIZER',

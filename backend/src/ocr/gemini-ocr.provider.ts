@@ -24,7 +24,7 @@ export class GeminiOcrProvider implements IOcrProvider {
     try {
       // Simulación de llamada HTTP a Google AI Studio API con parsing de JSON estructurado
       const prompt = `Analiza la siguiente factura y extrae los campos en formato JSON estricto:
-      folio_factura, rut_proveedor, razon_social, fecha_emision, total, e items (sku, descripcion, cantidad, precio_unitario, subtotal).`;
+      folio_factura, rut_proveedor, razon_social, fecha_emision, total, e items (sku, descripcion, cantidad, precio_unitario, subtotal, lote, fecha_vencimiento).`;
 
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`,

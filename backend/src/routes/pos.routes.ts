@@ -80,39 +80,41 @@ router.post('/products', async (req: Request, res: Response): Promise<void> => {
   const finalBarcode = codigo_barra || generateChileanBarcode();
 
   try {
-    // 1. Insertar en SQLite Local
-    sqlite.execute(
-      `INSERT INTO productos 
-       (id, tenant_id, proveedor_id, codigo_barra, sku, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, categoria, activo, lote, fecha_vencimiento, impuesto_adicional_codigo, impuesto_adicional_tasa, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
-      [
-        productId,
-        tenant_id,
-        proveedor_id,
-        finalBarcode,
-        sku,
-        nombre,
-        Number(stock_actual) || 0,
-        Number(stock_minimo) || 0,
-        Number(precio_compra) || 0,
-        Number(precio_venta) || 0,
-        categoria,
-        lote,
-        fecha_vencimiento,
-        impuesto_adicional_codigo || 0,
-        impuesto_adicional_tasa || 0
-      ]
-    );
-
-    // 2. Registrar movimiento de inventario si hay stock inicial
-    if (Number(stock_actual) > 0) {
+    // 1. Insertar en SQLite Local envuelto en transacción atómica
+    sqlite.withTransaction(() => {
       sqlite.execute(
-        `INSERT INTO historial_stock 
-         (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
-         VALUES (?, ?, ?, 0, ?, ?, 'alta_inicial', 'Creación manual de producto en catálogo', datetime('now'), 'Sistema POS')`,
-        [uuidv4(), tenant_id, productId, stock_actual, stock_actual]
+        `INSERT INTO productos 
+         (id, tenant_id, proveedor_id, codigo_barra, sku, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, categoria, activo, lote, fecha_vencimiento, impuesto_adicional_codigo, impuesto_adicional_tasa, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        [
+          productId,
+          tenant_id,
+          proveedor_id ?? null,
+          finalBarcode,
+          sku,
+          nombre,
+          Number(stock_actual) || 0,
+          Number(stock_minimo) || 0,
+          Number(precio_compra) || 0,
+          Number(precio_venta) || 0,
+          categoria ?? null,
+          lote ?? null,
+          fecha_vencimiento ?? null,
+          impuesto_adicional_codigo || 0,
+          impuesto_adicional_tasa || 0
+        ]
       );
-    }
+
+      // 2. Registrar movimiento de inventario si hay stock inicial (usando tipo_movimiento 'ajuste' para cumplir el CHECK)
+      if (Number(stock_actual) > 0) {
+        sqlite.execute(
+          `INSERT INTO historial_stock 
+           (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
+           VALUES (?, ?, ?, 0, ?, ?, 'ajuste', 'Alta inicial: Creación manual de producto en catálogo', datetime('now'), 'Sistema POS')`,
+          [uuidv4(), tenant_id, productId, stock_actual, stock_actual]
+        );
+      }
+    });
 
     // 3. Replicar a PostgreSQL si está conectado
     try {
@@ -132,7 +134,7 @@ router.post('/products', async (req: Request, res: Response): Promise<void> => {
           [
             productId,
             tenant_id,
-            proveedor_id,
+            proveedor_id ?? null,
             finalBarcode,
             sku,
             nombre,
@@ -140,9 +142,9 @@ router.post('/products', async (req: Request, res: Response): Promise<void> => {
             Number(stock_minimo) || 0,
             Number(precio_compra) || 0,
             Number(precio_venta) || 0,
-            categoria,
-            lote,
-            fecha_vencimiento,
+            categoria ?? null,
+            lote ?? null,
+            fecha_vencimiento ?? null,
             impuesto_adicional_codigo || 0,
             impuesto_adicional_tasa || 0
           ]
@@ -220,15 +222,15 @@ router.put('/products/:id', async (req: Request, res: Response): Promise<void> =
            updated_at = datetime('now')
        WHERE id = ?`,
       [
-        nombre,
-        codigo_barra,
+        nombre ?? null,
+        codigo_barra ?? null,
         precio_compra !== undefined ? Number(precio_compra) : null,
         precio_venta !== undefined ? Number(precio_venta) : null,
         stock_minimo !== undefined ? Number(stock_minimo) : null,
-        categoria,
-        proveedor_id,
-        lote,
-        fecha_vencimiento,
+        categoria ?? null,
+        proveedor_id ?? null,
+        lote ?? null,
+        fecha_vencimiento ?? null,
         impuesto_adicional_codigo !== undefined ? Number(impuesto_adicional_codigo) : null,
         impuesto_adicional_tasa !== undefined ? Number(impuesto_adicional_tasa) : null,
         activo !== undefined ? (activo ? 1 : 0) : null,
@@ -256,15 +258,15 @@ router.put('/products/:id', async (req: Request, res: Response): Promise<void> =
                updated_at = now()
            WHERE id = $13`,
           [
-            nombre,
-            codigo_barra,
+            nombre ?? null,
+            codigo_barra ?? null,
             precio_compra !== undefined ? Number(precio_compra) : null,
             precio_venta !== undefined ? Number(precio_venta) : null,
             stock_minimo !== undefined ? Number(stock_minimo) : null,
-            categoria,
-            proveedor_id,
-            lote,
-            fecha_vencimiento,
+            categoria ?? null,
+            proveedor_id ?? null,
+            lote ?? null,
+            fecha_vencimiento ?? null,
             impuesto_adicional_codigo !== undefined ? Number(impuesto_adicional_codigo) : null,
             impuesto_adicional_tasa !== undefined ? Number(impuesto_adicional_tasa) : null,
             activo !== undefined ? (activo ? 1 : 0) : null,
@@ -321,14 +323,17 @@ router.patch('/products/:id/stock', async (req: Request, res: Response): Promise
     const targetStock = Number(nuevo_stock);
     const delta = targetStock - prevStock;
 
-    sqlite.execute('UPDATE productos SET stock_actual = ?, updated_at = datetime("now") WHERE id = ?', [targetStock, id]);
+    // Transacción atómica en SQLite Local
+    sqlite.withTransaction(() => {
+      sqlite.execute("UPDATE productos SET stock_actual = ?, updated_at = datetime('now') WHERE id = ?", [targetStock, id]);
 
-    sqlite.execute(
-      `INSERT INTO historial_stock 
-       (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
-       VALUES (?, ?, ?, ?, ?, ?, 'ajuste_manual', ?, datetime('now'), ?)`,
-      [uuidv4(), tenant_id, id, prevStock, targetStock, delta, motivo, usuario_id]
-    );
+      sqlite.execute(
+        `INSERT INTO historial_stock 
+         (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
+         VALUES (?, ?, ?, ?, ?, ?, 'ajuste', ?, datetime('now'), ?)`,
+        [uuidv4(), tenant_id, id, prevStock, targetStock, delta, motivo || 'Ajuste manual de inventario', usuario_id]
+      );
+    });
 
     res.status(200).json({
       success: true,
@@ -397,23 +402,26 @@ router.post('/mermas', async (req: Request, res: Response): Promise<void> => {
 
     const prevStock = Number(prod.stock_actual);
     const nuevoStock = Math.max(0, prevStock - cant);
+    const detalleMotivo = `Merma: ${motivo}${observaciones ? ' - ' + observaciones : ''}`;
 
-    // 2. Registrar merma y actualizar stock
-    sqlite.execute(
-      `INSERT INTO mermas (id, tenant_id, producto_id, cantidad, motivo, observaciones, usuario_id, fecha)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      [mermaId, tenant_id, producto_id, cant, motivo, observaciones, usuario_id]
-    );
+    // 2. Registrar merma y actualizar stock en transacción atómica
+    sqlite.withTransaction(() => {
+      sqlite.execute(
+        `INSERT INTO mermas (id, tenant_id, producto_id, cantidad, motivo, observaciones, usuario_id, fecha)
+         VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [mermaId, tenant_id, producto_id, cant, motivo, observaciones, usuario_id]
+      );
 
-    sqlite.execute('UPDATE productos SET stock_actual = ?, updated_at = datetime("now") WHERE id = ?', [nuevoStock, producto_id]);
+      sqlite.execute("UPDATE productos SET stock_actual = ?, updated_at = datetime('now') WHERE id = ?", [nuevoStock, producto_id]);
 
-    // 3. Registrar en historial de stock
-    sqlite.execute(
-      `INSERT INTO historial_stock 
-       (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
-       VALUES (?, ?, ?, ?, ?, ?, 'merma', ?, datetime('now'), ?)`,
-      [uuidv4(), tenant_id, producto_id, prevStock, nuevoStock, -cant, `Merma: ${motivo} - ${observaciones}`, usuario_id]
-    );
+      // 3. Registrar en historial de stock (tipo_movimiento 'ajuste' para cumplir el CHECK constraint)
+      sqlite.execute(
+        `INSERT INTO historial_stock 
+         (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
+         VALUES (?, ?, ?, ?, ?, ?, 'ajuste', ?, datetime('now'), ?)`,
+        [uuidv4(), tenant_id, producto_id, prevStock, nuevoStock, -cant, detalleMotivo, usuario_id]
+      );
+    });
 
     res.status(201).json({
       success: true,

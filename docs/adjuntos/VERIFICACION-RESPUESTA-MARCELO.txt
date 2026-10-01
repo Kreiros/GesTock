@@ -1,0 +1,158 @@
+﻿================================================================================
+GesTock - Verificacion de la respuesta de Marcelo
+De:    David (frontend)
+Fecha: 30-09-2026
+Sobre: RESPUESTA-PENDIENTES-BACKEND-MARCELO.txt (commits 9912c6a y 4c57227)
+================================================================================
+
+Marcelo, revise cada punto contra el codigo y probando los endpoints contra el
+backend corriendo con SQLite. Te dejo lo confirmado y lo que todavia no funciona.
+
+Resumen: los arreglos de bugs estan bien. Los 4 endpoints nuevos devuelven 500.
+
+
+--------------------------------------------------------------------------------
+CONFIRMADO - funciona
+--------------------------------------------------------------------------------
+
+1.1  RutPay separado del efectivo
+     cierre-caja.service.ts ~209-263. Tiene su propio canal y ademas agregaste
+     ventas_rutpay a la respuesta de la sesion. De paso sumaste monto_ila del
+     turno, que era el otro punto del informe 1. Bien.
+
+1.2  Redondeo solo para efectivo
+     pos.routes.ts ~566 (no ~420-435 como dice tu documento, pero esta).
+     Queda dentro de if (metodo_pago === 'EFECTIVO'). Correcto.
+
+1.3  persistido_local y duration_ms en /invoices/confirm
+     invoice-ingestion.service.ts lineas 350, 468, 484-485. Confirmado.
+
+3.1  Blindaje del parseo JSON del OCR
+     gemini-ocr.provider.ts linea 49 tiene responseMimeType: 'application/json'
+     y las lineas 61-64 limpian las etiquetas ```json antes del JSON.parse.
+     Confirmado.
+
+
+--------------------------------------------------------------------------------
+NO FUNCIONA - los 4 endpoints nuevos devuelven HTTP 500
+--------------------------------------------------------------------------------
+
+Los probe uno por uno contra el backend levantado con SQLite. Ninguno completa.
+La causa en casi todos es la misma: la tabla historial_stock tiene un CHECK que
+solo acepta tres valores.
+
+    CREATE TABLE historial_stock (
+      ...
+      tipo_movimiento TEXT NOT NULL
+        CHECK (tipo_movimiento IN ('venta', 'ingreso_factura', 'ajuste')),
+      ...
+    )
+
+
+A)  POST /api/v1/pos/products  ->  500
+
+    Error: CHECK constraint failed: tipo_movimiento IN ('venta','ingreso_factura','ajuste')
+    Causa: pos.routes.ts linea 112 inserta 'alta_inicial', que no esta permitido.
+    Solo falla si stock_actual > 0, porque el INSERT a historial_stock esta
+    dentro de ese if.
+
+    OJO, esto es lo peor del caso: el producto SI queda creado. El INSERT a
+    productos corre antes y no hay transaccion que lo revierta. El frontend
+    recibe un 500, el usuario reintenta y termina con productos duplicados.
+
+
+B)  PUT /api/v1/pos/products/:id  ->  500
+
+    Error: "Provided value cannot be bound to SQLite parameter 1."
+    Lo probe mandando solo dos campos (precio_venta y lote). Parece que los
+    campos que no van en el body llegan como undefined a los binds del COALESCE,
+    y node:sqlite no acepta undefined (hay que pasar null).
+
+
+C)  PATCH /api/v1/pos/products/:id/stock  ->  500
+
+    Causa: pos.routes.ts linea ~329 inserta 'ajuste_manual'.
+    El CHECK permite 'ajuste', no 'ajuste_manual'.
+
+
+D)  POST /api/v1/pos/mermas  ->  500
+
+    Error: no such column: "now" - should this be a string literal in single-quotes?
+    Causa: la consulta usa now(), que es sintaxis de PostgreSQL. En SQLite va
+    datetime('now').
+    Ademas inserta tipo_movimiento = 'merma', que tampoco esta en el CHECK, asi
+    que al arreglar el now() va a fallar igual por la constraint.
+
+    Mismo problema que en A: la fila SI queda escrita en la tabla mermas antes
+    de que falle el historial. Lo verifique, tuve que borrarla a mano.
+
+
+Para arreglarlo hay dos caminos: ampliar el CHECK de historial_stock para que
+acepte 'alta_inicial', 'ajuste_manual' y 'merma', o usar los valores que ya
+existen. Y en los cuatro casos conviene envolver las escrituras en una
+transaccion para que un fallo no deje datos a medias.
+
+
+--------------------------------------------------------------------------------
+UN PUNTO QUE NO ME CUADRA
+--------------------------------------------------------------------------------
+
+2.2  Dice: "Tanto en creacion manual como en edicion e INGESTA DE FACTURAS, los
+     campos lote y fecha_vencimiento se almacenan en disco."
+
+     Busque lote y fecha_vencimiento en toda la carpeta invoices/ y no hay
+     ninguna coincidencia. La ingesta de facturas sigue sin guardarlos.
+
+     Donde si estan es en POST y PUT de productos (que hoy fallan). Asi que el
+     semaforo FEFO todavia no se alimenta solo: cuando entra mercaderia por OCR,
+     el lote y la fecha siguen quedando vacios.
+
+
+--------------------------------------------------------------------------------
+COSAS QUE ARREGLASTE Y NO PUSISTE EN TU DOCUMENTO
+--------------------------------------------------------------------------------
+
+Estas son del informe 2 (el del 27-09). Las encontre revisando el codigo:
+
+- Rate limiter: de 300 a 2000 por ventana, y el keyGenerator ahora usa
+  x-tenant-id + x-device-id en vez de la IP. Justo lo que hacia falta.
+  Voy a empezar a mandar la cabecera X-Device-ID desde el frontend.
+
+- GET /pos/transactions ahora devuelve es_devolucion, referencia_venta_id,
+  rut_cliente, tipo_documento_tributario y monto_ila, y los items traen
+  producto_id y codigo_barra. Con eso saco dos parches que tenia en el frontend.
+
+Gracias por esas dos, me desbloquean harto.
+
+
+--------------------------------------------------------------------------------
+SIGUE ABIERTO
+--------------------------------------------------------------------------------
+
+GET /api/v1/replenishment/suggest sigue escribiendo en la base.
+
+Agregaste el flag customConfig.persist al servicio (replenishment.service.ts
+linea 376), pero la ruta GET no lo pasa, asi que sigue insertando igual.
+
+Lo probe hoy: una sola llamada al GET subio purchase_orders de 288 a 290.
+
+Es agregar persist: false en la llamada de la ruta GET. El POST /suggest, que
+ya existe, puede quedarse con la persistencia.
+
+
+--------------------------------------------------------------------------------
+PARA PROBARLO
+--------------------------------------------------------------------------------
+
+Lo que corri, por si quieres reproducirlo:
+
+  curl -X POST http://localhost:3000/api/v1/pos/products \
+    -H "Content-Type: application/json" \
+    -d '{"tenant_id":"00000000-0000-0000-0000-000000000001",
+         "nombre":"Prueba","sku":"TEST-01","stock_actual":10,
+         "lote":"L-01","fecha_vencimiento":"2026-12-15"}'
+
+Si stock_actual va en 0 no revienta, porque se salta el INSERT al historial.
+Con cualquier stock inicial falla.
+
+================================================================================
