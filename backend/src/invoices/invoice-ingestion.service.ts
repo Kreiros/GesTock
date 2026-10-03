@@ -222,7 +222,8 @@ export class InvoiceIngestionService {
       }
 
       // Insertar factura en factura_ingresos
-      const totalQuantity = invoiceData.items.reduce((acc, curr) => acc + curr.cantidad, 0);
+      const totalQuantity = invoiceData.items.reduce((acc, curr) => acc + (Number(curr.cantidad) || 0), 0);
+      const invoiceTotal = Number(invoiceData.total ?? (invoiceData as any).total_factura) || 0;
 
       await client.query(
         `INSERT INTO factura_ingresos 
@@ -237,7 +238,7 @@ export class InvoiceIngestionService {
           totalQuantity,
           invoiceData.metodo_ingreso || ocrProvider,
           invoiceData.rut_proveedor,
-          invoiceData.total,
+          invoiceTotal,
           JSON.stringify(invoiceData)
         ]
       );
@@ -357,121 +358,124 @@ export class InvoiceIngestionService {
     // 2. Réplica simultánea en SQLite local para disponibilidad offline inmediata
     let persistidoLocal = true;
     try {
-      const totalQuantity = invoiceData.items.reduce((acc, curr) => acc + curr.cantidad, 0);
+      const invoiceTotal = Number(invoiceData.total ?? (invoiceData as any).total_factura) || 0;
+      const totalQuantity = invoiceData.items.reduce((acc, curr) => acc + (Number(curr.cantidad) || 0), 0);
 
-      // Reutilizar el ID del proveedor si ya existe para evitar errores de clave foránea en SQLite
-      const existingSupplier = defaultSqliteClient.queryOne<{ id: string }>(
-        'SELECT id FROM proveedores WHERE tenant_id = ? AND rut_proveedor = ? LIMIT 1',
-        [tenantId, invoiceData.rut_proveedor]
-      );
-
-      if (existingSupplier) {
-        supplierId = existingSupplier.id;
-        defaultSqliteClient.execute(
-          `UPDATE proveedores 
-           SET giro = COALESCE(?, giro),
-               direccion = COALESCE(?, direccion),
-               telefono = COALESCE(?, telefono),
-               dias_visita_proveedores = COALESCE(?, dias_visita_proveedores)
-           WHERE id = ?`,
-          [
-            invoiceData.giro_proveedor || null,
-            invoiceData.direccion_proveedor || null,
-            invoiceData.telefono_proveedor || null,
-            invoiceData.dias_visita_proveedor || null,
-            supplierId
-          ]
-        );
-      } else {
-        defaultSqliteClient.execute(
-          `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, whatsapp_contacto, giro, direccion, telefono, dias_visita_proveedores)
-           VALUES (?, ?, ?, ?, 'contacto@proveedor.cl', '+56911223344', ?, ?, ?, ?)`,
-          [
-            supplierId,
-            tenantId,
-            invoiceData.rut_proveedor,
-            invoiceData.razon_social,
-            invoiceData.giro_proveedor || 'Distribución Mayorista',
-            invoiceData.direccion_proveedor || 'Casa Matriz',
-            invoiceData.telefono_proveedor || '+56 2 2345 6789',
-            invoiceData.dias_visita_proveedor || 'Lunes'
-          ]
-        );
-      }
-
-      defaultSqliteClient.execute(
-        `INSERT OR IGNORE INTO factura_ingresos 
-         (id, tenant_id, proveedor_id, numero_factura, fecha_ingreso, estado, cantidad, metodo_ingreso, rut_proveedor, total, json_ocr_raw)
-         VALUES (?, ?, ?, ?, ?, 'PROCESSED', ?, ?, ?, ?, ?)`,
-        [
-          invoiceId,
-          tenantId,
-          supplierId,
-          invoiceData.folio_factura,
-          invoiceData.fecha_emision,
-          totalQuantity,
-          invoiceData.metodo_ingreso || ocrProvider,
-          invoiceData.rut_proveedor,
-          invoiceData.total,
-          JSON.stringify(invoiceData)
-        ]
-      );
-
-      for (const item of invoiceData.items) {
-        const itemCantidad = Number(item.cantidad) || 0;
-        const unitPrice = Number(item.precio_unitario) || 0;
-        const salePrice = calcularPrecioVenta(unitPrice, configuredMargin);
-        const itemSku = item.sku || `SKU-AUTO-${uuidv4().slice(0, 8).toUpperCase()}`;
-
-        const sqliteProd = defaultSqliteClient.queryOne<any>(
-          'SELECT id, stock_actual, codigo_barra FROM productos WHERE tenant_id = ? AND sku = ?',
-          [tenantId, itemSku]
+      defaultSqliteClient.withTransaction(() => {
+        // Reutilizar el ID del proveedor si ya existe para evitar errores de clave foránea en SQLite
+        const existingSupplier = defaultSqliteClient.queryOne<{ id: string }>(
+          'SELECT id FROM proveedores WHERE tenant_id = ? AND rut_proveedor = ? LIMIT 1',
+          [tenantId, invoiceData.rut_proveedor]
         );
 
-        let productId: string;
-        let prevStock = 0;
-
-        if (sqliteProd) {
-          productId = sqliteProd.id;
-          prevStock = Number(sqliteProd.stock_actual);
+        if (existingSupplier) {
+          supplierId = existingSupplier.id;
           defaultSqliteClient.execute(
-            "UPDATE productos SET stock_actual = stock_actual + ?, precio_compra = ?, factura_origen_folio = ?, lote = COALESCE(?, lote), fecha_vencimiento = COALESCE(?, fecha_vencimiento), updated_at = datetime('now') WHERE id = ?",
-            [itemCantidad, unitPrice, invoiceData.folio_factura, item.lote ?? null, item.fecha_vencimiento ?? null, productId]
+            `UPDATE proveedores 
+             SET giro = COALESCE(?, giro),
+                 direccion = COALESCE(?, direccion),
+                 telefono = COALESCE(?, telefono),
+                 dias_visita_proveedores = COALESCE(?, dias_visita_proveedores)
+             WHERE id = ?`,
+            [
+              invoiceData.giro_proveedor || null,
+              invoiceData.direccion_proveedor || null,
+              invoiceData.telefono_proveedor || null,
+              invoiceData.dias_visita_proveedor || null,
+              supplierId
+            ]
           );
         } else {
-          productId = uuidv4();
-          prevStock = 0;
-          const barcode = generateChileanBarcode(itemSku);
           defaultSqliteClient.execute(
-            `INSERT OR IGNORE INTO productos 
-             (id, tenant_id, proveedor_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, activo, origen_creacion, factura_origen_folio, lote, fecha_vencimiento)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 5.0, ?, ?, 1, 'FACTURA', ?, ?, ?)`,
-            [productId, tenantId, supplierId, itemSku, barcode, item.descripcion, itemCantidad, unitPrice, salePrice, invoiceData.folio_factura, item.lote ?? null, item.fecha_vencimiento ?? null]
+            `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, whatsapp_contacto, giro, direccion, telefono, dias_visita_proveedores)
+             VALUES (?, ?, ?, ?, 'contacto@proveedor.cl', '+56911223344', ?, ?, ?, ?)`,
+            [
+              supplierId,
+              tenantId,
+              invoiceData.rut_proveedor,
+              invoiceData.razon_social,
+              invoiceData.giro_proveedor || 'Distribución Mayorista',
+              invoiceData.direccion_proveedor || 'Casa Matriz',
+              invoiceData.telefono_proveedor || '+56 2 2345 6789',
+              invoiceData.dias_visita_proveedor || 'Lunes'
+            ]
           );
         }
 
-        const newStock = prevStock + itemCantidad;
-
-        // Registrar en producto_proveedores en SQLite
         defaultSqliteClient.execute(
-          `INSERT INTO producto_proveedores 
-           (id, tenant_id, producto_id, proveedor_id, ultimo_precio_compra, fecha_ultima_compra, folio_ultima_factura, updated_at)
-           VALUES (?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'))
-           ON CONFLICT (tenant_id, producto_id, proveedor_id) 
-           DO UPDATE SET ultimo_precio_compra = excluded.ultimo_precio_compra, 
-                         fecha_ultima_compra = datetime('now'), 
-                         folio_ultima_factura = excluded.folio_ultima_factura,
-                         updated_at = datetime('now')`,
-          [uuidv4(), tenantId, productId, supplierId, unitPrice, invoiceData.folio_factura]
+          `INSERT OR IGNORE INTO factura_ingresos 
+           (id, tenant_id, proveedor_id, numero_factura, fecha_ingreso, estado, cantidad, metodo_ingreso, rut_proveedor, total, json_ocr_raw)
+           VALUES (?, ?, ?, ?, ?, 'PROCESSED', ?, ?, ?, ?, ?)`,
+          [
+            invoiceId,
+            tenantId,
+            supplierId,
+            invoiceData.folio_factura || 'FOLIO-S/N',
+            invoiceData.fecha_emision || new Date().toISOString().slice(0, 10),
+            totalQuantity,
+            invoiceData.metodo_ingreso || ocrProvider || 'CONFIRMED_SCAN',
+            invoiceData.rut_proveedor || 'S/RUT',
+            invoiceTotal,
+            JSON.stringify(invoiceData)
+          ]
         );
 
-        defaultSqliteClient.execute(
-          `INSERT INTO historial_stock 
-           (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
-           VALUES (?, ?, ?, ?, ?, ?, 'ingreso_factura', ?, datetime('now'), 'Ingesta Factura Autorizada')`,
-          [uuidv4(), tenantId, productId, prevStock, newStock, itemCantidad, `Ingreso factura ${invoiceData.folio_factura}`]
-        );
-      }
+        for (const item of invoiceData.items) {
+          const itemCantidad = Number(item.cantidad) || 0;
+          const unitPrice = Number(item.precio_unitario) || 0;
+          const salePrice = calcularPrecioVenta(unitPrice, configuredMargin);
+          const itemSku = item.sku || `SKU-AUTO-${uuidv4().slice(0, 8).toUpperCase()}`;
+
+          const sqliteProd = defaultSqliteClient.queryOne<any>(
+            'SELECT id, stock_actual, codigo_barra FROM productos WHERE tenant_id = ? AND sku = ?',
+            [tenantId, itemSku]
+          );
+
+          let productId: string;
+          let prevStock = 0;
+
+          if (sqliteProd) {
+            productId = sqliteProd.id;
+            prevStock = Number(sqliteProd.stock_actual);
+            defaultSqliteClient.execute(
+              "UPDATE productos SET stock_actual = stock_actual + ?, precio_compra = ?, factura_origen_folio = ?, lote = COALESCE(?, lote), fecha_vencimiento = COALESCE(?, fecha_vencimiento), updated_at = datetime('now') WHERE id = ?",
+              [itemCantidad, unitPrice, invoiceData.folio_factura, item.lote ?? null, item.fecha_vencimiento ?? null, productId]
+            );
+          } else {
+            productId = uuidv4();
+            prevStock = 0;
+            const barcode = generateChileanBarcode(itemSku);
+            defaultSqliteClient.execute(
+              `INSERT OR IGNORE INTO productos 
+               (id, tenant_id, proveedor_id, sku, codigo_barra, nombre, stock_actual, stock_minimo, precio_compra, precio_venta, activo, origen_creacion, factura_origen_folio, lote, fecha_vencimiento)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 5.0, ?, ?, 1, 'FACTURA', ?, ?, ?)`,
+              [productId, tenantId, supplierId, itemSku, barcode, item.descripcion, itemCantidad, unitPrice, salePrice, invoiceData.folio_factura, item.lote ?? null, item.fecha_vencimiento ?? null]
+            );
+          }
+
+          const newStock = prevStock + itemCantidad;
+
+          // Registrar en producto_proveedores en SQLite
+          defaultSqliteClient.execute(
+            `INSERT INTO producto_proveedores 
+             (id, tenant_id, producto_id, proveedor_id, ultimo_precio_compra, fecha_ultima_compra, folio_ultima_factura, updated_at)
+             VALUES (?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'))
+             ON CONFLICT (tenant_id, producto_id, proveedor_id) 
+             DO UPDATE SET ultimo_precio_compra = excluded.ultimo_precio_compra, 
+                           fecha_ultima_compra = datetime('now'), 
+                           folio_ultima_factura = excluded.folio_ultima_factura,
+                           updated_at = datetime('now')`,
+            [uuidv4(), tenantId, productId, supplierId, unitPrice, invoiceData.folio_factura]
+          );
+
+          defaultSqliteClient.execute(
+            `INSERT INTO historial_stock 
+             (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
+             VALUES (?, ?, ?, ?, ?, ?, 'ingreso_factura', ?, datetime('now'), 'Ingesta Factura Autorizada')`,
+            [uuidv4(), tenantId, productId, prevStock, newStock, itemCantidad, `Ingreso factura ${invoiceData.folio_factura}`]
+          );
+        }
+      });
     } catch (sqliteErr) {
       persistidoLocal = false;
       logger.warn('InvoiceIngestion', 'Failed to mirror invoice to SQLite local', { sqliteErr });
@@ -480,12 +484,14 @@ export class InvoiceIngestionService {
     const duration = Date.now() - startTime;
     logger.info('InvoiceIngestionService', `Invoice ${invoiceData.folio_factura} successfully confirmed and ingested in ${duration}ms`);
 
+    const invoiceTotal = Number(invoiceData.total ?? (invoiceData as any).total_factura) || 0;
+
     return {
       invoice_id: invoiceId,
       folio_factura: invoiceData.folio_factura,
       proveedor_id: supplierId,
       rut_proveedor: invoiceData.rut_proveedor,
-      total: invoiceData.total,
+      total: invoiceTotal,
       items_count: invoiceData.items.length,
       used_fallback: usedFallback,
       ocr_provider: ocrProvider,

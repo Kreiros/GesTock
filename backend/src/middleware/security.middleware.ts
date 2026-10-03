@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { logger } from '../utils/logger';
 
 /**
@@ -43,9 +43,10 @@ export const generalRateLimiter = rateLimit({
   keyGenerator: (req: Request) => {
     const tenant = (req.headers['x-tenant-id'] as string) || '';
     const device = (req.headers['x-device-id'] as string) || '';
+    const clientIp = ipKeyGenerator(req.ip || '127.0.0.1');
     if (tenant && device) return `${tenant}-${device}`;
-    if (tenant) return `${tenant}-${req.ip || 'local'}`;
-    return req.ip || 'unknown';
+    if (tenant) return `${tenant}-${clientIp}`;
+    return clientIp;
   },
   message: {
     success: false,
@@ -64,9 +65,10 @@ export const mutationRateLimiter = rateLimit({
   keyGenerator: (req: Request) => {
     const tenant = (req.headers['x-tenant-id'] as string) || '';
     const device = (req.headers['x-device-id'] as string) || '';
+    const clientIp = ipKeyGenerator(req.ip || '127.0.0.1');
     if (tenant && device) return `${tenant}-${device}`;
-    if (tenant) return `${tenant}-${req.ip || 'local'}`;
-    return req.ip || 'unknown';
+    if (tenant) return `${tenant}-${clientIp}`;
+    return clientIp;
   },
   message: {
     success: false,

@@ -105,12 +105,12 @@ router.post('/products', async (req: Request, res: Response): Promise<void> => {
         ]
       );
 
-      // 2. Registrar movimiento de inventario si hay stock inicial (usando tipo_movimiento 'ajuste' para cumplir el CHECK)
+      // 2. Registrar movimiento de inventario si hay stock inicial (alta_inicial)
       if (Number(stock_actual) > 0) {
         sqlite.execute(
           `INSERT INTO historial_stock 
            (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
-           VALUES (?, ?, ?, 0, ?, ?, 'ajuste', 'Alta inicial: Creación manual de producto en catálogo', datetime('now'), 'Sistema POS')`,
+           VALUES (?, ?, ?, 0, ?, ?, 'alta_inicial', 'Alta inicial: Creación manual de producto en catálogo', datetime('now'), 'Sistema POS')`,
           [uuidv4(), tenant_id, productId, stock_actual, stock_actual]
         );
       }
@@ -330,7 +330,7 @@ router.patch('/products/:id/stock', async (req: Request, res: Response): Promise
       sqlite.execute(
         `INSERT INTO historial_stock 
          (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
-         VALUES (?, ?, ?, ?, ?, ?, 'ajuste', ?, datetime('now'), ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, 'ajuste_manual', ?, datetime('now'), ?)`,
         [uuidv4(), tenant_id, id, prevStock, targetStock, delta, motivo || 'Ajuste manual de inventario', usuario_id]
       );
     });
@@ -414,11 +414,11 @@ router.post('/mermas', async (req: Request, res: Response): Promise<void> => {
 
       sqlite.execute("UPDATE productos SET stock_actual = ?, updated_at = datetime('now') WHERE id = ?", [nuevoStock, producto_id]);
 
-      // 3. Registrar en historial de stock (tipo_movimiento 'ajuste' para cumplir el CHECK constraint)
+      // 3. Registrar en historial de stock (tipo_movimiento 'merma')
       sqlite.execute(
         `INSERT INTO historial_stock 
          (id, tenant_id, producto_id, cambio_anterior, nuevo_stock, cambio, tipo_movimiento, motivo, fecha_movimiento, usuario_registro)
-         VALUES (?, ?, ?, ?, ?, ?, 'ajuste', ?, datetime('now'), ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, 'merma', ?, datetime('now'), ?)`,
         [uuidv4(), tenant_id, producto_id, prevStock, nuevoStock, -cant, detalleMotivo, usuario_id]
       );
     });
@@ -486,6 +486,77 @@ router.get('/mermas', (req: Request, res: Response): void => {
   } catch (error) {
     logger.error('PosRoutes', 'Error consultando mermas', error);
     res.status(500).json({ success: false, message: 'Error al consultar mermas' });
+  }
+});
+
+/**
+ * GET /api/v1/pos/stock-history
+ * Consulta el historial de movimientos de inventario con filtros por producto, tipo de movimiento y límites
+ */
+router.get('/stock-history', (req: Request, res: Response): void => {
+  const tenantId = (req.query.tenant_id as string) || '00000000-0000-0000-0000-000000000001';
+  const { producto_id, tipo_movimiento, limit = 100 } = req.query;
+
+  try {
+    let sql = `
+      SELECT h.*, p.nombre as producto_nombre, p.sku, p.codigo_barra
+      FROM historial_stock h
+      LEFT JOIN productos p ON h.producto_id = p.id
+      WHERE h.tenant_id = ?
+    `;
+    const params: unknown[] = [tenantId];
+
+    if (producto_id) {
+      sql += ' AND h.producto_id = ?';
+      params.push(producto_id);
+    }
+    if (tipo_movimiento) {
+      sql += ' AND h.tipo_movimiento = ?';
+      params.push(tipo_movimiento);
+    }
+
+    sql += ' ORDER BY h.fecha_movimiento DESC LIMIT ?';
+    params.push(Number(limit) || 100);
+
+    const history = sqlite.query(sql, params);
+    res.status(200).json({ success: true, count: history.length, data: history });
+  } catch (error) {
+    logger.error('PosRoutes', 'Error consultando historial de stock', error);
+    res.status(500).json({ success: false, message: 'Error al consultar historial de stock' });
+  }
+});
+
+/**
+ * GET /api/v1/pos/products/:id/history
+ * Historial específico de movimientos de un producto por ID
+ */
+router.get('/products/:id/history', (req: Request, res: Response): void => {
+  const { id } = req.params;
+  const tenantId = (req.query.tenant_id as string) || '00000000-0000-0000-0000-000000000001';
+  const { tipo_movimiento, limit = 50 } = req.query;
+
+  try {
+    let sql = `
+      SELECT h.*, p.nombre as producto_nombre, p.sku, p.codigo_barra
+      FROM historial_stock h
+      LEFT JOIN productos p ON h.producto_id = p.id
+      WHERE h.tenant_id = ? AND h.producto_id = ?
+    `;
+    const params: unknown[] = [tenantId, id];
+
+    if (tipo_movimiento) {
+      sql += ' AND h.tipo_movimiento = ?';
+      params.push(tipo_movimiento);
+    }
+
+    sql += ' ORDER BY h.fecha_movimiento DESC LIMIT ?';
+    params.push(Number(limit) || 50);
+
+    const history = sqlite.query(sql, params);
+    res.status(200).json({ success: true, count: history.length, data: history });
+  } catch (error) {
+    logger.error('PosRoutes', 'Error consultando historial del producto', error);
+    res.status(500).json({ success: false, message: 'Error al consultar historial del producto' });
   }
 });
 

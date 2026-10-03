@@ -66,7 +66,9 @@ export class MockOcrProvider implements IOcrProvider {
           cantidad: 24.0,
           unidad: 'UNI',
           precio_unitario: 520.0,
-          subtotal: 12480.0
+          subtotal: 12480.0,
+          lote: 'L-CC-2026-09',
+          fecha_vencimiento: '2026-12-31'
         },
         {
           sku: 'ABA-HAR-1K',
@@ -74,7 +76,9 @@ export class MockOcrProvider implements IOcrProvider {
           cantidad: 15.0,
           unidad: 'UNI',
           precio_unitario: 780.0,
-          subtotal: 11700.0
+          subtotal: 11700.0,
+          lote: 'L-HAR-2026-05',
+          fecha_vencimiento: '2027-03-30'
         }
       ],
       total: 28774.0,

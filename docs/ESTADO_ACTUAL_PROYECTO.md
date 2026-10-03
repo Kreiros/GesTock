@@ -5,10 +5,12 @@
 ---
 
 ## 1. Estado Actual (Fase 2 en Ejecución)
-* **Backend Core:** Finalizado y validado con suites de pruebas unitarias (`tests_unitarias/`).
-* **Base de Datos:** Migraciones para PostgreSQL y SQLite listas y testeadas (`npm run migrate:pg`, `npm run migrate:sqlite`).
+* **Backend Core:** Finalizado y validado con suites de pruebas unitarias (`tests_unitarias/`, 87 tests pasando al 100%).
+* **Base de Datos & Migraciones:** Migración 010 implementada para ampliación del CHECK constraint en `historial_stock` (`alta_inicial`, `ajuste_manual`, `merma`) aplicada tanto en SQLite local como en PostgreSQL cloud.
+* **Ingesta de Facturas (OCR):** Corrección y blindaje atómico de `POST /invoices/confirm` con reconciliación de `total_factura` / `total`, inserción transaccional en SQLite y mock OCR genérico con lotes y vencimiento para semáforo FEFO.
+* **Auditoría & Trazabilidad de Stock:** Endpoints `GET /api/v1/pos/stock-history` y `GET /api/v1/pos/products/:id/history` habilitados para filtrado directo por `tipo_movimiento` desde el Frontend.
+* **Seguridad & Rate Limiting:** Integración de `ipKeyGenerator` en `express-rate-limit` eliminando advertencias y normalizando subredes IPv6.
 * **Módulos Fiscales DTE:** Integración de XML Signer, gestión CAF y reportes RCOF completada.
-* **Pruebas Unitarias:** 100% de tests pasando en pasarelas, reglas criptográficas, matemáticas de stock y circuit breakers.
 
 ---
 
