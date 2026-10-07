@@ -103,7 +103,7 @@ export function TendenciasMercado({ tendencias, cargando }: Props) {
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-        No se puede agregar un producto al catalogo desde aca: el backend no tiene endpoint para crear productos.
+        Para sumar uno de estos al catalogo, usa Añadir producto en Inventario.
       </Typography>
     </Paper>
   )

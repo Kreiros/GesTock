@@ -5,6 +5,12 @@ const API_V1 = '/api/v1'
 
 // rutas del backend que usa el frontend
 export const endpoints = {
+  // pendiente: el backend todavia no expone estas rutas, ver AUTENTICACION-MARCELO.txt
+  auth: {
+    login: `${API_V1}/auth/login`,
+    registro: `${API_V1}/auth/register`,
+    perfil: `${API_V1}/auth/me`,
+  },
   sistema: {
     info: '/api',
     salud: '/health',
@@ -22,6 +28,10 @@ export const endpoints = {
     vencimientos: `${API_V1}/pos/vencimientos`,
     transacciones: `${API_V1}/pos/transactions`,
     devolucion: `${API_V1}/pos/devolucion`,
+    producto: (id: string) => `${API_V1}/pos/products/${id}`,
+    stockProducto: (id: string) => `${API_V1}/pos/products/${id}/stock`,
+    mermas: `${API_V1}/pos/mermas`,
+    historialProducto: (id: string) => `${API_V1}/pos/products/${id}/history`,
   },
   replenishment: {
     sugerir: `${API_V1}/replenishment/suggest`,

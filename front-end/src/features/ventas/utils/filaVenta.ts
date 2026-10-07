@@ -4,20 +4,18 @@ import type { DteEmitido, Transaccion } from '@/features/ventas/types'
 // la venta con su documento tributario ya cruzado
 export type FilaVenta = Transaccion & {
   esDevolucion: boolean
+  folioAnulado: string | null
   dte: DteEmitido | null
-}
-
-// el backend no marca es_devolucion en la lista: se reconoce por el folio y el monto negativo
-function esDevolucion(venta: Transaccion): boolean {
-  return venta.folio.startsWith('DEV-') || venta.total < 0
 }
 
 export function armarFilasVenta(ventas: Transaccion[], dtes: DteEmitido[]): FilaVenta[] {
   const porVenta = new Map(dtes.filter((dte) => dte.venta_id).map((dte) => [dte.venta_id as string, dte]))
+  const folioPorId = new Map(ventas.map((venta) => [venta.id, venta.folio]))
 
   return ventas.map((venta) => ({
     ...venta,
-    esDevolucion: esDevolucion(venta),
+    esDevolucion: venta.es_devolucion === 1,
+    folioAnulado: venta.referencia_venta_id ? (folioPorId.get(venta.referencia_venta_id) ?? null) : null,
     dte: porVenta.get(venta.id) ?? null,
   }))
 }

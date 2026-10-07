@@ -6,6 +6,8 @@ import Chip from '@mui/material/Chip'
 import Button from '@mui/material/Button'
 import SearchIcon from '@mui/icons-material/Search'
 import DownloadIcon from '@mui/icons-material/Download'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteSweepOutlined from '@mui/icons-material/DeleteSweepOutlined'
 import LocalOfferOutlined from '@mui/icons-material/LocalOfferOutlined'
 import Tooltip from '@mui/material/Tooltip'
 import { contarCategorias, TODAS_CATEGORIAS } from '@/features/inventario/utils/categoriasInventario'
@@ -21,6 +23,8 @@ type Props = {
   onExportar: () => void
   cantidadSeleccionada: number
   onImprimirEtiquetas: () => void
+  onAgregar: () => void
+  onVerMermas: () => void
 }
 
 // buscador + categorias (igual que el catalogo visual) + filtro rapido de criticos fefo
@@ -33,6 +37,8 @@ export function BarraHerramientasInventarioTecnico({
   onExportar,
   cantidadSeleccionada,
   onImprimirEtiquetas,
+  onAgregar,
+  onVerMermas,
 }: Props) {
   const categorias = contarCategorias(productos)
   const criticos = contarCriticos(productos)
@@ -59,6 +65,14 @@ export function BarraHerramientasInventarioTecnico({
 
         <Button size="small" startIcon={<DownloadIcon />} onClick={onExportar} disabled={productos.length === 0}>
           Exportar CSV
+        </Button>
+
+        <Button size="small" startIcon={<DeleteSweepOutlined />} onClick={onVerMermas}>
+          Historial de mermas
+        </Button>
+
+        <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={onAgregar}>
+          Alta de producto
         </Button>
 
         <Tooltip title={cantidadSeleccionada > 0 ? '' : 'Marca productos en la tabla para imprimir sus etiquetas'}>

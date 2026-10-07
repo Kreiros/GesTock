@@ -27,6 +27,9 @@ export type SesionCaja = {
   ventas_transbank: number
   ventas_mercadopago: number
   ventas_sumup: number
+  ventas_rutpay: number
+  monto_ila?: number
+  total_ila?: number
   total_ingresos_caja: number
   total_egresos_caja: number
   total_ventas: number

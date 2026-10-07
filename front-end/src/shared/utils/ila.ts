@@ -15,6 +15,23 @@ const NOMBRES: Record<number, string> = {
   [ILA.DESTILADOS]: 'Licores y destilados',
 }
 
+// tasa que fija la ley para cada codigo
+export const TASA_ILA: Record<number, number> = {
+  [ILA.AZUCAR_BAJA]: 10,
+  [ILA.AZUCAR_ALTA]: 18,
+  [ILA.CERVEZA_VINO]: 20.5,
+  [ILA.DESTILADOS]: 31.5,
+}
+
+// opciones del selector en el formulario de producto
+export const OPCIONES_ILA = [
+  { codigo: 0, etiqueta: 'Sin impuesto adicional, solo IVA' },
+  ...Object.values(ILA).map((codigo) => ({
+    codigo: codigo as number,
+    etiqueta: `${NOMBRES[codigo]} (${TASA_ILA[codigo]}%)`,
+  })),
+]
+
 // producto con los campos de impuesto adicional que trae el backend
 export type ConImpuesto = {
   impuesto_adicional_codigo: number | null

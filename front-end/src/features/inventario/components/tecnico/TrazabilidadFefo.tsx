@@ -5,6 +5,7 @@ import Skeleton from '@mui/material/Skeleton'
 import type { GridRowSelectionModel } from '@mui/x-data-grid'
 import { ErrorBox } from '@/shared/components/ui/ErrorBox'
 import { useInventario, useVencimientos } from '@/features/inventario/hooks/useInventario'
+import { useDialogosProducto } from '@/features/inventario/hooks/useDialogosProducto'
 import { TarjetasResumenInventario } from '@/features/inventario/components/visual/TarjetasResumenInventario'
 import { PanelSugerenciaPedido } from '@/features/inventario/components/visual/PanelSugerenciaPedido'
 import { PanelMargenPromedio } from '@/features/inventario/components/visual/PanelMargenPromedio'
@@ -25,6 +26,7 @@ import { filasSeleccionadas, SELECCION_VACIA } from '@/shared/utils/seleccionGri
 export function TrazabilidadFefo() {
   const inventario = useInventario()
   const vencimientos = useVencimientos()
+  const acciones = useDialogosProducto()
 
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState(TODAS_CATEGORIAS)
@@ -75,6 +77,8 @@ export function TrazabilidadFefo() {
             onExportar={() => exportarInventarioCsv(filtrados)}
             cantidadSeleccionada={seleccionados.length}
             onImprimirEtiquetas={() => setImprimiendo(true)}
+            onAgregar={acciones.abrirAgregar}
+            onVerMermas={acciones.abrirHistorialMermas}
           />
 
           <TablaInventarioTecnico
@@ -82,6 +86,10 @@ export function TrazabilidadFefo() {
             cargando={inventario.isPending}
             seleccion={seleccion}
             onCambiarSeleccion={setSeleccion}
+            onEditar={acciones.abrirEditar}
+            onAjustar={acciones.abrirAjuste}
+            onMerma={acciones.abrirMerma}
+            onHistorial={acciones.abrirMovimientos}
           />
         </Box>
 
@@ -95,6 +103,8 @@ export function TrazabilidadFefo() {
       </Box>
 
       {imprimiendo && <DialogoEtiquetas productos={seleccionados} onCerrar={() => setImprimiendo(false)} />}
+
+      {acciones.dialogos}
     </Box>
   )
 }

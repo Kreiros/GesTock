@@ -9,6 +9,9 @@ import type {
   ResultadoIngesta,
 } from '@/features/invoices/types'
 
+// leer una factura con gemini toma cerca de 20 segundos, mas que el resto de llamadas
+const ESPERA_OCR_MS = 60_000
+
 // paso 1: escanear con ocr, no modifica la base de datos
 export async function escanearFactura(archivoBase64: string, nombreArchivo: string, tipoArchivo: string) {
   const { data } = await httpClient.post<{ success: boolean; preview: PrevisualizacionFactura }>(
@@ -19,6 +22,7 @@ export async function escanearFactura(archivoBase64: string, nombreArchivo: stri
       file_name: nombreArchivo,
       mime_type: tipoArchivo,
     },
+    { timeout: ESPERA_OCR_MS },
   )
   return data.preview
 }

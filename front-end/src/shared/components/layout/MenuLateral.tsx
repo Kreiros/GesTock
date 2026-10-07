@@ -9,6 +9,7 @@ import ListItemText from '@mui/material/ListItemText'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
 import Avatar from '@mui/material/Avatar'
+import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Chip from '@mui/material/Chip'
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale'
@@ -22,12 +23,16 @@ import NotificationsIcon from '@mui/icons-material/Notifications'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import GavelIcon from '@mui/icons-material/Gavel'
 import SettingsIcon from '@mui/icons-material/Settings'
+import LogoutIcon from '@mui/icons-material/Logout'
 import { obtenerColoresMenu } from '@/app/theme/theme'
 import { useModoTema } from '@/shared/stores/temaStore'
 import { env } from '@/config/env'
 import { EstadoConexion } from '@/shared/components/layout/EstadoConexion'
 import { useEsModoTecnico } from '@/shared/stores/modoVistaStore'
 import { useNotificaciones } from '@/features/notificaciones/hooks/useNotificaciones'
+import { useUsuario } from '@/features/auth/stores/sesionStore'
+import { useCerrarSesion } from '@/features/auth/hooks/useAuth'
+import { esRutaDeAdmin, nombreRol } from '@/features/auth/utils/permisos'
 
 type Opcion = {
   to: string
@@ -72,9 +77,15 @@ export const ANCHO_MENU = 256
 // menu lateral oscuro
 export function MenuLateral() {
   const esModoTecnico = useEsModoTecnico()
-  const opciones = esModoTecnico ? opcionesTecnico : opcionesVisual
   const coloresMenu = obtenerColoresMenu(useModoTema())
   const { sinVer } = useNotificaciones()
+  const usuario = useUsuario()
+  const cerrarSesion = useCerrarSesion()
+
+  // el cajero no ve las pantallas de administracion
+  const todas = esModoTecnico ? opcionesTecnico : opcionesVisual
+  const opciones =
+    usuario && usuario.rol !== 'admin' ? todas.filter((opcion) => !esRutaDeAdmin(opcion.to)) : todas
 
   return (
     <Box
@@ -170,19 +181,28 @@ export function MenuLateral() {
 
       <Divider sx={{ borderColor: coloresMenu.borde }} />
 
-      {/* cajero */}
+      {/* quien esta usando la caja */}
       <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', px: 2, py: 1.25, flexShrink: 0 }}>
         <Avatar sx={{ width: 30, height: 30, bgcolor: '#334155', fontSize: 13 }}>
-          {env.cajeroNombre.charAt(0)}
+          {(usuario?.nombre ?? env.cajeroNombre).charAt(0)}
         </Avatar>
-        <Box>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {env.cajeroNombre}
+
+        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+            {usuario?.nombre ?? env.cajeroNombre}
           </Typography>
           <Typography variant="caption" sx={{ color: coloresMenu.textoApagado }}>
-            {env.cajeroRol}
+            {usuario ? nombreRol(usuario.rol) : env.cajeroRol}
           </Typography>
         </Box>
+
+        {usuario && (
+          <Tooltip title="Cerrar sesion">
+            <IconButton size="small" onClick={cerrarSesion} sx={{ color: coloresMenu.textoApagado }}>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
     </Box>
   )

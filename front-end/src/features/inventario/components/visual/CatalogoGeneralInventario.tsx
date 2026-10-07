@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Skeleton from '@mui/material/Skeleton'
 import { ErrorBox } from '@/shared/components/ui/ErrorBox'
 import { useInventario, useVencimientos } from '@/features/inventario/hooks/useInventario'
+import { useDialogosProducto } from '@/features/inventario/hooks/useDialogosProducto'
 import { TarjetasResumenInventario } from '@/features/inventario/components/visual/TarjetasResumenInventario'
 import { BarraHerramientasInventario } from '@/features/inventario/components/visual/BarraHerramientasInventario'
 import { TablaInventario } from '@/features/inventario/components/visual/TablaInventario'
@@ -20,6 +21,7 @@ import { exportarInventarioCsv } from '@/features/inventario/utils/exportarCsv'
 export function CatalogoGeneralInventario() {
   const inventario = useInventario()
   const vencimientos = useVencimientos()
+  const acciones = useDialogosProducto()
 
   const [busqueda, setBusqueda] = useState('')
   const [categoria, setCategoria] = useState(TODAS_CATEGORIAS)
@@ -62,14 +64,25 @@ export function CatalogoGeneralInventario() {
         onBuscar={setBusqueda}
         onElegirCategoria={setCategoria}
         onExportar={() => exportarInventarioCsv(filtrados)}
+        onAgregar={acciones.abrirAgregar}
+        onVerMermas={acciones.abrirHistorialMermas}
       />
 
-      <TablaInventario productos={filtrados} cargando={inventario.isPending} />
+      <TablaInventario
+        productos={filtrados}
+        cargando={inventario.isPending}
+        onEditar={acciones.abrirEditar}
+        onAjustar={acciones.abrirAjuste}
+        onMerma={acciones.abrirMerma}
+        onHistorial={acciones.abrirMovimientos}
+      />
 
       <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
         <PanelSugerenciaPedido />
         <PanelMargenPromedio margenPromedio={resumen.margenPromedio} />
       </Box>
+
+      {acciones.dialogos}
     </Box>
   )
 }

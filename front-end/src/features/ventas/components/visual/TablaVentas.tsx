@@ -86,7 +86,14 @@ export function TablaVentas({
 
                 <TableCell sx={{ maxWidth: 320 }}>
                   {venta.esDevolucion ? (
-                    <Chip label="DEVOLUCION" size="small" color="warning" sx={{ fontWeight: 700 }} />
+                    <>
+                      <Chip label="DEVOLUCION" size="small" color="warning" sx={{ fontWeight: 700 }} />
+                      {venta.folioAnulado && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          Anula la venta {venta.folioAnulado}
+                        </Typography>
+                      )}
+                    </>
                   ) : (
                     <Tooltip title={detalleProductos(venta)}>
                       <Typography variant="body2" noWrap>

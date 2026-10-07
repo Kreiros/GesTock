@@ -10,9 +10,14 @@ import { SeccionModeloSii } from '@/features/configuracion/components/SeccionMod
 import { SeccionEmisor } from '@/features/configuracion/components/SeccionEmisor'
 import { SeccionRedondeo } from '@/features/configuracion/components/SeccionRedondeo'
 import { SeccionPciDss } from '@/features/configuracion/components/SeccionPciDss'
+import { useUsuario } from '@/features/auth/stores/sesionStore'
 
 // configuracion del sistema
 export function ConfiguracionPage() {
+  const usuario = useUsuario()
+  // las reglas del negocio las toca solo quien administra
+  const esAdmin = !usuario || usuario.rol === 'admin'
+
   return (
     <Box sx={{ height: '100%', overflowY: 'auto' }}>
       <Migas rutas={['Sistema', 'Configuración']} />
@@ -22,18 +27,25 @@ export function ConfiguracionPage() {
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Preferencias de este equipo y reglas de negocio del local.
+        {esAdmin
+          ? 'Preferencias de este equipo y reglas de negocio del local.'
+          : 'Preferencias de este equipo.'}
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 980 }}>
         <SeccionApariencia />
-        <SeccionMargen />
-        <SeccionCorreo />
-        <SeccionReposicion />
-        <SeccionModeloSii />
-        <SeccionEmisor />
-        <SeccionRedondeo />
-        <SeccionPciDss />
+
+        {esAdmin && (
+          <>
+            <SeccionMargen />
+            <SeccionCorreo />
+            <SeccionReposicion />
+            <SeccionModeloSii />
+            <SeccionEmisor />
+            <SeccionRedondeo />
+            <SeccionPciDss />
+          </>
+        )}
       </Box>
     </Box>
   )

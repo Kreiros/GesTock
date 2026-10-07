@@ -62,12 +62,6 @@ export function SeccionRedondeo() {
           El redondeo aplica <strong>solo al pago en efectivo</strong>. Con tarjeta o transferencia se cobra el monto
           exacto, porque ahi no hay monedas de por medio.
         </Alert>
-
-        <Alert severity="warning">
-          Hoy el backend redondea tambien los pagos con tarjeta, asi que en esos casos el monto que registra puede
-          diferir en unos pesos del que muestra el ticket. La caja avisa cuando pasa. Esta pendiente de corregir en
-          el servidor.
-        </Alert>
       </Box>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>

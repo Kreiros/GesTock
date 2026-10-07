@@ -1,4 +1,5 @@
 // src/features/inventario/components/tecnico/TablaInventarioTecnico.tsx
+import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
@@ -11,9 +12,17 @@ import { EstadoFefoChip } from '@/features/inventario/components/tecnico/EstadoF
 import { OrigenProducto } from '@/features/inventario/components/tecnico/OrigenProducto'
 import { detalleIla, nombreIla, codigoIla } from '@/shared/utils/ila'
 import { calcularMargen } from '@/features/inventario/utils/calculosInventario'
+import { AccionesProducto } from '@/features/inventario/components/compartidos/AccionesProducto'
 import type { FilaFefo } from '@/features/inventario/utils/matrizFefo'
 
-type Props = {
+type Acciones = {
+  onEditar: (producto: FilaFefo) => void
+  onAjustar: (producto: FilaFefo) => void
+  onMerma: (producto: FilaFefo) => void
+  onHistorial: (producto: FilaFefo) => void
+}
+
+type Props = Acciones & {
   productos: FilaFefo[]
   cargando: boolean
   seleccion: GridRowSelectionModel
@@ -21,7 +30,8 @@ type Props = {
 }
 
 // mismas columnas que el catalogo visual (GET /pos/inventory), mas estado fefo y lote/vencimiento
-const columnas: GridColDef<FilaFefo>[] = [
+function armarColumnas(acciones: Acciones): GridColDef<FilaFefo>[] {
+  return [
   {
     field: 'nivel',
     headerName: 'Estado FEFO',
@@ -147,11 +157,42 @@ const columnas: GridColDef<FilaFefo>[] = [
     headerName: 'Origen',
     width: 175,
     renderCell: (parametros) => <OrigenProducto producto={parametros.row} />,
-  },
-]
+    },
+    {
+      field: 'acciones',
+      headerName: '',
+      width: 60,
+      sortable: false,
+      filterable: false,
+      align: 'center',
+      renderCell: (parametros) => (
+        <AccionesProducto
+          onEditar={() => acciones.onEditar(parametros.row)}
+          onAjustar={() => acciones.onAjustar(parametros.row)}
+          onMerma={() => acciones.onMerma(parametros.row)}
+          onHistorial={() => acciones.onHistorial(parametros.row)}
+        />
+      ),
+    },
+  ]
+}
 
 // tabla principal del modo tecnico: TODO el catalogo, con el estado fefo integrado
-export function TablaInventarioTecnico({ productos, cargando, seleccion, onCambiarSeleccion }: Props) {
+export function TablaInventarioTecnico({
+  productos,
+  cargando,
+  seleccion,
+  onCambiarSeleccion,
+  onEditar,
+  onAjustar,
+  onMerma,
+  onHistorial,
+}: Props) {
+  const columnas = useMemo(
+    () => armarColumnas({ onEditar, onAjustar, onMerma, onHistorial }),
+    [onEditar, onAjustar, onMerma, onHistorial],
+  )
+
   return (
     <Box sx={{ height: 560 }}>
       <DataGrid

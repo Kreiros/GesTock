@@ -1,5 +1,7 @@
 // src/features/dashboard/components/visual/UltimasTransacciones.tsx
+import { Link } from 'react-router'
 import Paper from '@mui/material/Paper'
+import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
@@ -81,9 +83,9 @@ export function UltimasTransacciones({ transacciones, cargando }: Props) {
         ))}
       </Box>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-        La pantalla de Historial de Ventas todavia no esta construida.
-      </Typography>
+      <Button component={Link} to="/ventas" size="small" sx={{ mt: 1 }}>
+        Ver todas las ventas
+      </Button>
     </Paper>
   )
 }
