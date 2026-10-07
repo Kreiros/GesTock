@@ -15,6 +15,7 @@ import configRoutes from './routes/config.routes';
 import supplierRoutes from './routes/supplier.routes';
 import { dteRouter } from './routes/dte.routes';
 import { dashboardRouter } from './routes/dashboard.routes';
+import authRoutes from './routes/auth.routes';
 import { logger } from './utils/logger';
 
 import {
@@ -22,6 +23,7 @@ import {
   generalRateLimiter,
   mutationRateLimiter,
   validateTenantAndAuth,
+  rbacAuthMiddleware,
   globalErrorHandler
 } from './middleware/security.middleware';
 
@@ -59,6 +61,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Middleware de validacion de Tenant ID y autenticacion para clientes externos
 app.use('/api/v1', validateTenantAndAuth);
+app.use('/api/v1', rbacAuthMiddleware);
 
 // Servir frontend estatico del POS
 const publicDir = fs.existsSync(path.resolve(process.cwd(), 'backend/public'))
@@ -67,6 +70,7 @@ const publicDir = fs.existsSync(path.resolve(process.cwd(), 'backend/public'))
 app.use(express.static(publicDir));
 
 // Montaje de rutas de modulos de negocio
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/pos', posRoutes);
 app.use('/api/v1/sync', syncRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
