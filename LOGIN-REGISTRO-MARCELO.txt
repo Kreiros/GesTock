@@ -80,23 +80,38 @@ la ajusto.
      El password_hash NUNCA debe ir en la respuesta.
 
 
-3.2  POST /api/v1/auth/register
+3.2  POST /api/v1/auth/register   (CAMBIO IMPORTANTE)
 
-     recibe:
+     Ya no es un registro publico. Sacamos el formulario de crear cuenta del
+     login: en una caja no corresponde que cualquiera se haga una cuenta.
+
+     Ahora el admin crea las cuentas de los cajeros desde Configuracion. O sea
+     este endpoint PIDE TOKEN y el rol del token tiene que ser admin.
+
+     recibe (con Authorization: Bearer <jwt de un admin>):
        { "tenant_id": "...", "nombre": "...", "email": "...",
          "password": "...", "rol": "cajero" }
 
-     responde 201 con la misma forma que el login (token + usuario), asi la
-     persona queda dentro al terminar de crear la cuenta.
+     responde 201 SOLO con el usuario, sin token:
+       { "success": true, "data": { "usuario": { id, tenant_id, nombre, email, rol } } }
 
-     409 si el correo ya existe en ese tenant (tienes el UNIQUE que lo detecta).
-     400 si falta algun campo o la clave es muy corta.
+     Ojo con esto: antes devolvia token para que la persona quedara dentro al
+     crear su cuenta. Ahora NO, porque quien crea la cuenta es el admin y tiene
+     que seguir conectado como admin. Si devuelves token, lo ignoro.
 
-     De mi lado valido que la clave tenga al menos 8 caracteres y que las dos
-     escrituras coincidan, pero eso es solo ayuda visual. La validacion que vale
-     es la tuya, porque cualquiera puede llamar la API sin pasar por mi pantalla.
+     401 si no viene token, 403 si el token no es de un admin,
+     409 si el correo ya existe en ese tenant, 400 si falta algo.
 
-     La clave se guarda con bcrypt, nunca en texto plano.
+
+3.2.1  GET /api/v1/auth/users   (NUEVO)
+
+     Lista la gente del local para mostrarla en Configuracion. Tambien pide
+     token de admin.
+
+     responde 200:
+       { "success": true, "data": [ { id, tenant_id, nombre, email, rol }, ... ] }
+
+     Sin password_hash, obviamente.
 
 
 3.3  GET /api/v1/auth/me
@@ -170,7 +185,9 @@ Cuando los siembres, pasame los dos correos y las dos claves para poder probar.
 - Guarda la sesion en el navegador para no pedir la clave en cada recarga.
 - Al cerrar sesion limpia tambien la cache de datos, para que el siguiente
   usuario no alcance a ver nada del anterior.
-- Pantallas: login, registro con seleccion de rol, y boton de salir en el menu.
+- Pantallas: login y boton de salir en el menu. El registro publico se saco.
+- En Configuracion hay una seccion "Personas del local" donde el admin ve la
+  lista y crea cuentas con un boton. Esa seccion solo le aparece al admin.
 
 Reparto de pantallas que quedo:
 
