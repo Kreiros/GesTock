@@ -188,8 +188,21 @@ export class PostgresClient {
     } catch (error) {
       if (timer) clearTimeout(timer);
       this.tripCircuit();
+      let motivo = '';
+      if (error instanceof Error) {
+        motivo = error.message;
+        if ('errors' in error && Array.isArray((error as any).errors)) {
+          const innerErrors = (error as any).errors
+            .map((e: any) => (e instanceof Error ? e.message : String(e)))
+            .filter(Boolean)
+            .join('; ');
+          if (innerErrors) motivo = innerErrors;
+        }
+      } else {
+        motivo = String(error);
+      }
       logger.warn('PostgresClient', 'Sonda de conectividad con PostgreSQL Cloud fallida', {
-        motivo: error instanceof Error ? error.message : String(error)
+        motivo: motivo || 'Conexión rechazada o timeout de red'
       });
       return false;
     }
