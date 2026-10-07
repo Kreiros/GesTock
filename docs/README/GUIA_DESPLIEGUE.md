@@ -113,6 +113,13 @@ npm run migrate:pg       # Crea las 29 tablas en PostgreSQL (si el servidor est�
 # 3. Iniciar el servidor backend en modo desarrollo
 npm run dev
 ```
+*Salida esperada:*
+```text
+[InitDB] Starting automated database initialization and migration check...
+[InitDB] SQLite database is up to date.
+[InitDB] Demo initial dataset seeded successfully in SQLite.
+[Server] Gestock backend server running on port 3000
+```
 
 ### Paso 2: Inicialización del Frontend React 19 (Cliente Moderno)
 En una terminal separada:
@@ -126,7 +133,13 @@ npm install
 # Iniciar servidor de desarrollo Vite
 npm run dev
 ```
-*Disponible en `http://localhost:5173/`.*
+*Salida esperada:*
+```text
+  VITE v8.3.0  ready in 450 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+```
 
 ---
 

@@ -20,7 +20,7 @@ Está dirigida al comercio minorista independiente chileno (minimarkets, botille
 - **Bases de Datos & Persistencia Dual:**
   - **PostgreSQL 16+ (Nube Central SaaS):** Persistencia multi-tenant particionada por `tenant_id`, soporte ACID completo, consolidación fiscal y analítica.
   - **SQLite 3 (Borde Local Offline-First):** Persistencia embebida en terminal con `PRAGMA foreign_keys = ON`, banderas `is_dirty` y latencia en checkout < 15 ms.
-  - **Control de Esquema:** 29 tablas relacionales gestionadas mediante 10 migraciones DDL secuenciales y tabla permanente de control `_migrations`.
+  - **Control de Esquema:** 29 tablas relacionales gestionadas mediante 10 migraciones DDL secuenciales y tabla persistente `_migrations`.
 - **Inteligencia Artificial & Servicios Externos:** Google Gemini AI API (`gemini-3.5-flash` con fallback determinista en `pdf-parse`), pasarelas de pago sandbox (Transbank Webpay, Mercado Pago, SumUp, RutPay).
 - **Infraestructura & Contenedores:** Docker, Docker Compose multi-stage build.
 - **Testing & Calidad:** Jest (15 suites de integración + 6 suites unitarias = **158 pruebas automatizadas** con 100% de aprobación).
@@ -158,13 +158,12 @@ La plataforma adopta el patrón arquitectónico **Dual-Core Híbrido Desacoplado
    evitando tormentas de peticiones (*Thundering Herd*) sobre el servidor central.
 5. **Seguridad y Control de Acceso:** Autenticación JWT (`HS256`, 24h), contraseñas Bcrypt salt 10, sanitización estricta de parámetros SQL (`$1` en PG, `?` en SQLite) y Rate Limiting granular por `X-Device-ID` e IPv6.
 
-> Los diagramas completos (MER, Casos de Uso, Secuencia, Clases, Despliegue), especificaciones formales y manuales se encuentran disponibles en la carpeta [`docs/`](./):
-> - [Documento de Arquitectura de Software (DAS v2.2)](./ARQUITECTURA_SISTEMA.md)
-> - [Diagrama Entidad-Relación SVG](./diagrama_base_de_datos.svg)
-> - [Modelo de Base de Datos](./BASE_DE_DATOS.md)
-> - [Guía de Despliegue y Operaciones](./GUIA_DESPLIEGUE.md)
-> - [Estado Actual y Carta Gantt](./ESTADO_ACTUAL_PROYECTO.md)
-> - [Artefacto Formal Word (.docx)](./arquitectura_sistema.docx)
+> Los diagramas completos (MER, Casos de Uso, Secuencia, Clases, Despliegue), especificaciones formales y manuales se encuentran disponibles en la carpeta [`docs/`](../):
+> - [Documento de Arquitectura de Software (DAS v2.2)](../ARQUITECTURA_SISTEMA.md)
+> - [Diagrama Entidad-Relación SVG](../diagrama_base_de_datos.svg)
+> - [Modelo de Base de Datos](../BASE_DE_DATOS.md)
+> - [Estado Actual y Carta Gantt](../ESTADO_ACTUAL_PROYECTO.md)
+> - [Artefacto Formal Word (.docx)](../arquitectura_sistema.docx)
 
 ---
 
