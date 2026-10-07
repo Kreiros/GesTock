@@ -17,6 +17,8 @@
 * [[01 - PROYECTOS/GesTock/BASE_DE_DATOS.md|Modelo Relacional (MER), Entidades y Migraciones]]
 * [[01 - PROYECTOS/GesTock/MANUAL_FUNCIONALIDADES.md|Manual de Módulos (POS, DTE, Pagos, OCR & Stock)]]
 * [[01 - PROYECTOS/GesTock/GUIA_DESPLIEGUE.md|Guía de Despliegue, Variables de Entorno y Docker]]
+* [[01 - PROYECTOS/GesTock/INFORME_BATERIA_PRUEBAS_FRONTEND.md|Informe Técnico Dual de Batería de Pruebas Frontend & Reglas de Contrato (.md / .docx)]]
+* [[01 - PROYECTOS/GesTock/INFORME_BATERIA_PRUEBAS_BACKEND.md|Informe Técnico Dual de Batería de Pruebas Backend: Integración & Unitarias (.md / .docx)]]
 
 ---
 
