@@ -1,0 +1,26 @@
+﻿==============================================================================
+GesTock - Reporte de pruebas de endpoints
+Fecha:   07-10-2026, 7:47:39 p. m.
+Backend: http://localhost:3000
+Tenant:  00000000-0000-0000-0000-000000000001
+==============================================================================
+
+Autenticacion: login, usuarios y permisos
+------------------------------------------------------------------------------
+  OK     rechaza credenciales inventadas con 401
+  OK     rechaza la clave incorrecta con 401
+  OK     el mensaje es el mismo exista o no el correo  (si difieren, se puede averiguar que correos estan registrados)
+  OK     sin token no deja consultar el inventario  (llego 401)
+  OK     POST /auth/login entra con las credenciales correctas  (91 ms)
+  OK     devuelve el token
+  OK     devuelve el usuario con su rol  (admin)
+  OK     NUNCA devuelve la clave guardada  (exponer el hash es una filtracion)
+  OK     GET /auth/me reconoce el token  (19 ms)
+  OK     GET /auth/users lista la gente del local  (14 ms)
+  OK     la lista trae al menos al admin  (2 usuarios)
+  OK     ningun usuario de la lista expone su clave
+  OK     con token si deja consultar el inventario  (18 ms)
+
+==============================================================================
+TOTAL: 13 de 13 pasaron, 0 fallaron, 0 saltadas
+==============================================================================
