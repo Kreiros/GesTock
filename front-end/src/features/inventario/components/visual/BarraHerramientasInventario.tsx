@@ -5,10 +5,11 @@ import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
 import Chip from '@mui/material/Chip'
 import Button from '@mui/material/Button'
-import Tooltip from '@mui/material/Tooltip'
 import SearchIcon from '@mui/icons-material/Search'
 import DownloadIcon from '@mui/icons-material/Download'
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteSweepOutlined from '@mui/icons-material/DeleteSweepOutlined'
 import { BotonSincronizar } from '@/shared/components/layout/BotonSincronizar'
 import type { ProductoInventario } from '@/features/inventario/types'
 import { contarCategorias } from '@/features/inventario/utils/categoriasInventario'
@@ -20,9 +21,11 @@ type Props = {
   onBuscar: (texto: string) => void
   onElegirCategoria: (categoria: string) => void
   onExportar: () => void
+  onAgregar: () => void
+  onVerMermas: () => void
 }
 
-// buscador + filtros por categoria + acciones (exportar, ir a recibir mercaderia)
+// buscador + filtros por categoria + acciones (agregar, exportar, recibir mercaderia)
 export function BarraHerramientasInventario({
   productos,
   busqueda,
@@ -30,6 +33,8 @@ export function BarraHerramientasInventario({
   onBuscar,
   onElegirCategoria,
   onExportar,
+  onAgregar,
+  onVerMermas,
 }: Props) {
   const categorias = contarCategorias(productos)
 
@@ -61,14 +66,13 @@ export function BarraHerramientasInventario({
           Recepcion mercaderia
         </Button>
 
-        {/* no hay endpoint para crear productos: se deja visible pero inhabilitado */}
-        <Tooltip title="El backend no tiene un endpoint para crear productos manualmente">
-          <span>
-            <Button size="small" disabled>
-              Añadir producto
-            </Button>
-          </span>
-        </Tooltip>
+        <Button size="small" startIcon={<DeleteSweepOutlined />} onClick={onVerMermas}>
+          Mermas
+        </Button>
+
+        <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={onAgregar}>
+          Añadir producto
+        </Button>
 
         <BotonSincronizar />
       </Box>

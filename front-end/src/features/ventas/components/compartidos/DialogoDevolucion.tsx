@@ -1,5 +1,5 @@
 // src/features/ventas/components/compartidos/DialogoDevolucion.tsx
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -19,9 +19,7 @@ import AddOutlined from '@mui/icons-material/AddOutlined'
 import RemoveOutlined from '@mui/icons-material/RemoveOutlined'
 import { formatoClp } from '@/shared/utils/formatoClp'
 import { formatFecha } from '@/shared/utils/formatFecha'
-import { useInventario } from '@/features/inventario/hooks/useInventario'
 import { useDevolucion } from '@/features/ventas/hooks/useVentas'
-import { idsPorSku } from '@/features/ventas/utils/idsProducto'
 import type { FilaVenta } from '@/features/ventas/utils/filaVenta'
 
 type Props = {
@@ -61,10 +59,7 @@ function Cantidad({
 
 // devolucion total o parcial de una venta
 export function DialogoDevolucion({ venta, onCerrar }: Props) {
-  const inventario = useInventario()
   const devolucion = useDevolucion()
-
-  const mapaIds = useMemo(() => idsPorSku(inventario.data ?? []), [inventario.data])
 
   // parte con la devolucion total, que es el caso comun
   const [cantidades, setCantidades] = useState<Record<string, number>>(() =>
@@ -76,8 +71,8 @@ export function DialogoDevolucion({ venta, onCerrar }: Props) {
   const total = aDevolver.reduce((suma, item) => suma + item.precio_unitario * cantidades[item.id], 0)
   const esTotal = venta.items.length > 0 && venta.items.every((item) => cantidades[item.id] === item.cantidad)
 
-  // si un sku ya no esta en el catalogo no se puede armar la devolucion parcial
-  const sinIdentificar = venta.items.filter((item) => !mapaIds[item.sku])
+  // sin producto_id no se puede armar la devolucion parcial
+  const sinIdentificar = venta.items.filter((item) => !item.producto_id)
 
   const confirmar = () => {
     devolucion.mutate({
@@ -86,7 +81,7 @@ export function DialogoDevolucion({ venta, onCerrar }: Props) {
       // sin items el backend devuelve la venta completa
       items: esTotal
         ? undefined
-        : aDevolver.map((item) => ({ producto_id: mapaIds[item.sku], cantidad: cantidades[item.id] })),
+        : aDevolver.map((item) => ({ producto_id: item.producto_id, cantidad: cantidades[item.id] })),
     })
   }
 
@@ -166,8 +161,8 @@ export function DialogoDevolucion({ venta, onCerrar }: Props) {
 
             {!esTotal && sinIdentificar.length > 0 && (
               <Alert severity="error" sx={{ mt: 1 }}>
-                No se pudo identificar en el catalogo: {sinIdentificar.map((item) => item.sku).join(', ')}. La
-                devolucion parcial necesita el producto en el inventario; la total se puede hacer igual.
+                Estos productos vienen sin identificador: {sinIdentificar.map((item) => item.sku).join(', ')}. La
+                devolucion parcial los necesita; la total se puede hacer igual.
               </Alert>
             )}
 

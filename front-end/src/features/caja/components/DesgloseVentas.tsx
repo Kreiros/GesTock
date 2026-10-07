@@ -47,11 +47,12 @@ export function DesgloseVentas({ sesion }: Props) {
       <Fila
         texto="Efectivo"
         monto={sesion.ventas_efectivo}
-        ayuda="Las ventas con RutPay tambien quedan contadas aqui: el backend aun no las separa (pendiente para Marcelo)"
+        ayuda="Lo unico que deberia estar fisicamente en la gaveta"
       />
       <Fila texto="Transbank" monto={sesion.ventas_transbank} />
       <Fila texto="Mercado Pago" monto={sesion.ventas_mercadopago} />
       <Fila texto="SumUp" monto={sesion.ventas_sumup} />
+      <Fila texto="RutPay" monto={sesion.ventas_rutpay} />
 
       <Box sx={{ borderTop: 1, borderTopColor: 'divider', pt: 1, mt: 0.5 }}>
         <Fila texto="Ventas netas (aprox.)" monto={tax.neto} />

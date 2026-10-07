@@ -8,8 +8,10 @@ const formatoId = /^[a-zA-Z0-9_-]{1,64}$/
 const envSchema = z.object({
   VITE_TENANT_ID: z.string().regex(formatoId, 'VITE_TENANT_ID invalido'),
   VITE_USUARIO_ID: z.string().regex(formatoId, 'VITE_USUARIO_ID invalido'),
+  VITE_DEVICE_ID: z.string().regex(formatoId, 'VITE_DEVICE_ID invalido'),
   VITE_CAJERO_NOMBRE: z.string().min(1),
   VITE_CAJERO_ROL: z.string().min(1),
+  VITE_AUTH_ACTIVA: z.enum(['true', 'false']).default('false'),
 })
 
 // validar al partir
@@ -24,6 +26,8 @@ if (!resultado.success) {
 export const env = {
   tenantId: resultado.data.VITE_TENANT_ID,
   usuarioId: resultado.data.VITE_USUARIO_ID,
+  deviceId: resultado.data.VITE_DEVICE_ID,
   cajeroNombre: resultado.data.VITE_CAJERO_NOMBRE,
   cajeroRol: resultado.data.VITE_CAJERO_ROL,
+  authActiva: resultado.data.VITE_AUTH_ACTIVA === 'true',
 }

@@ -36,16 +36,23 @@ function armarColumnas(
       width: 150,
       renderCell: (parametros) => (
         <Tooltip title={`id interno ${parametros.row.id}`}>
-          <Typography
-            variant="body2"
-            sx={{
-              fontFamily: 'monospace',
-              fontWeight: 600,
-              color: parametros.row.esDevolucion ? 'warning.main' : 'primary.main',
-            }}
-          >
-            {parametros.row.folio}
-          </Typography>
+          <Box sx={{ py: 1 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: 'monospace',
+                fontWeight: 600,
+                color: parametros.row.esDevolucion ? 'warning.main' : 'primary.main',
+              }}
+            >
+              {parametros.row.folio}
+            </Typography>
+            {parametros.row.folioAnulado && (
+              <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                anula {parametros.row.folioAnulado}
+              </Typography>
+            )}
+          </Box>
         </Tooltip>
       ),
     },

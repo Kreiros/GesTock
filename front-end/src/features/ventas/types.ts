@@ -6,8 +6,10 @@ export type ItemTransaccion = {
   cantidad: number
   precio_unitario: number
   subtotal: number
+  producto_id: string
   producto_nombre: string
   sku: string
+  codigo_barra: string | null
 }
 
 // una venta o una devolucion: el backend las guarda en la misma tabla
@@ -23,6 +25,11 @@ export type Transaccion = {
   cajero_nombre: string
   medio_pago_nombre: string
   medio_pago_tipo: string
+  es_devolucion: number
+  referencia_venta_id: string | null
+  rut_cliente: string | null
+  tipo_documento_tributario: string | null
+  monto_ila: number
   items: ItemTransaccion[]
 }
 

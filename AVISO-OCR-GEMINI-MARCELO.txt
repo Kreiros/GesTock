@@ -1,0 +1,114 @@
+﻿================================================================================
+GesTock - OCR de facturas con Google AI Studio: funcionando
+De:    David (frontend)
+Fecha: 03-10-2026
+================================================================================
+
+Marcelo, conseguimos la clave de Google AI Studio y probamos el OCR con una
+factura real en PDF (Froneri, folio 11354). Funciona, pero habia que corregir
+una cosa en el proveedor de Gemini. Te dejo lo que cambie y por que.
+
+
+--------------------------------------------------------------------------------
+EL PROBLEMA: el modelo ya no existe
+--------------------------------------------------------------------------------
+
+Con la clave puesta, la primera llamada devolvia:
+
+    [GeminiOcrProvider] Gemini OCR extraction failed, triggering fallback
+    error: Gemini API returned HTTP status 404: Not Found
+
+No era la clave. Lo comprobe listando los modelos con esa misma clave:
+
+    GET https://generativelanguage.googleapis.com/v1beta/models?key=...
+    -> HTTP 200, 44 modelos disponibles
+
+El problema es que gemini-1.5-flash ya no esta en la lista. Google lo retiro.
+Los que hay hoy son gemini-2.5-flash, gemini-3.5-flash, gemini-flash-latest y
+otros 41.
+
+
+--------------------------------------------------------------------------------
+LO QUE CAMBIE (backend/src/ocr/gemini-ocr.provider.ts)
+--------------------------------------------------------------------------------
+
+1. El modelo salio del string de la URL y quedo como constante configurable:
+
+     private static readonly MODELO = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+
+   Use el alias "latest" a proposito: si lo dejamos con una version fija nos va
+   a volver a pasar lo mismo cuando Google retire la siguiente. Y si algun dia
+   quieres fijarlo, se hace con la variable GEMINI_MODEL sin tocar codigo.
+
+2. Borre el comentario de la linea 24, que decia:
+
+     // Simulación de llamada HTTP a Google AI Studio API ...
+
+   justo encima de un fetch que es real. Lo cambie por uno que describe lo que
+   hace. Lo digo porque si alguien de la comision lee esa linea, va a pensar que
+   el OCR esta simulado cuando no lo esta, y es de las cosas mas fuertes que
+   tiene el proyecto.
+
+Eso es todo. No toque nada mas de tu codigo.
+
+
+--------------------------------------------------------------------------------
+RESULTADO
+--------------------------------------------------------------------------------
+
+Con el cambio, POST /api/v1/invoices/scan sobre el PDF real devuelve:
+
+    ocr_provider: GoogleAiGemini
+    folio:        11354
+    proveedor:    Froneri Chile SpA, 78.450.685-1
+    fecha:        08.09.2026
+    neto 23.682 | iva 4.500 | total 28.182
+    8 items, con descripcion, cantidad y precio unitario correctos
+
+Y el precio de venta sugerido sale bien con el margen de 35% y el redondeo
+chileno: 306 -> 410, 374 -> 510, 5.616 -> 7.580.
+
+Lo cruce con lo que saca el ChileanPdfDteExtractor por su cuenta y dan lo mismo,
+asi que la lectura es correcta.
+
+
+--------------------------------------------------------------------------------
+DOS COSAS QUE CONVIENE SABER
+--------------------------------------------------------------------------------
+
+1. Da 503 de vez en cuando.
+
+   La primera llamada despues de arrancar devolvio "503 Service Unavailable" y
+   cayo al extractor de PDF. Al reintentar funciono. Es saturacion del lado de
+   Google, no nuestra.
+
+   El fallback hace su trabajo, pero hoy no hay reintento: a la primera que
+   falla se pasa al otro motor. Para la demo conviene un par de reintentos con
+   espera antes de rendirse, porque si justo en la presentacion toca un 503 va a
+   decir "ChileanPdfDteExtractor" en pantalla en vez de Gemini.
+
+2. El lote y la fecha de vencimiento vuelven vacios.
+
+   El prompt los pide, pero una factura chilena normal no los trae impresos. Lo
+   confirme: los 8 items salieron con lote y fecha_vencimiento en null, tanto
+   llamando a Gemini directo como pasando por el backend.
+
+   O sea el semaforo FEFO no se va a llenar solo desde las facturas. Hoy se
+   llena a mano al crear o editar un producto, que ya quedo andando desde el
+   frontend. Lo digo porque en el mock de OCR si vienen esos datos, y eso da una
+   impresion mas optimista de la que aguanta una factura de verdad.
+
+
+--------------------------------------------------------------------------------
+CONFIGURACION
+--------------------------------------------------------------------------------
+
+La clave va en el .env de la raiz:
+
+    GEMINI_API_KEY=<la clave de aistudio.google.com>
+    GEMINI_MODEL=              # opcional, si se deja vacio usa gemini-flash-latest
+
+Deje las dos documentadas en .env.example. El .env no se sube, ya esta en el
+.gitignore.
+
+================================================================================

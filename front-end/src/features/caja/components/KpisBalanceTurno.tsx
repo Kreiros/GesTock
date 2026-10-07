@@ -69,7 +69,7 @@ export function KpisBalanceTurno({ sesion }: Props) {
           etiqueta="Ventas efectivo"
           monto={sesion.ventas_efectivo}
           color="success.main"
-          ayuda="Las ventas con RutPay tambien caen aqui: el backend todavia no las separa"
+          ayuda="Solo efectivo. Las ventas electronicas van aparte"
         />
         <Kpi etiqueta="Aportes sencillo (+)" monto={sesion.total_ingresos_caja} color="info.main" />
         <Kpi etiqueta="Egresos / gastos (-)" monto={sesion.total_egresos_caja} color="error.main" />

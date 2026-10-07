@@ -1,4 +1,5 @@
-// src/features/inventario/components/TablaInventario.tsx
+// src/features/inventario/components/visual/TablaInventario.tsx
+import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
@@ -6,15 +7,24 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { formatoClp } from '@/shared/utils/formatoClp'
 import { BarraStock } from '@/features/inventario/components/visual/BarraStock'
 import { calcularMargen } from '@/features/inventario/utils/calculosInventario'
+import { AccionesProducto } from '@/features/inventario/components/compartidos/AccionesProducto'
 import type { ProductoInventario } from '@/features/inventario/types'
 
-type Props = {
+type Acciones = {
+  onEditar: (producto: ProductoInventario) => void
+  onAjustar: (producto: ProductoInventario) => void
+  onMerma: (producto: ProductoInventario) => void
+  onHistorial: (producto: ProductoInventario) => void
+}
+
+type Props = Acciones & {
   productos: ProductoInventario[]
   cargando: boolean
 }
 
 // columnas de la tabla: todas vienen de GET /pos/inventory, nada inventado
-const columnas: GridColDef<ProductoInventario>[] = [
+function armarColumnas(acciones: Acciones): GridColDef<ProductoInventario>[] {
+  return [
   {
     field: 'sku',
     headerName: 'SKU / Codigo',
@@ -87,13 +97,35 @@ const columnas: GridColDef<ProductoInventario>[] = [
         <Typography variant="body2" color={margen >= 30 ? 'success.main' : 'text.secondary'} sx={{ fontWeight: 600 }}>
           {margen.toFixed(1)}%
         </Typography>
-      )
+        )
+      },
     },
-  },
-]
+    {
+      field: 'acciones',
+      headerName: '',
+      width: 60,
+      sortable: false,
+      filterable: false,
+      align: 'center',
+      renderCell: (parametros) => (
+        <AccionesProducto
+          onEditar={() => acciones.onEditar(parametros.row)}
+          onAjustar={() => acciones.onAjustar(parametros.row)}
+          onMerma={() => acciones.onMerma(parametros.row)}
+          onHistorial={() => acciones.onHistorial(parametros.row)}
+        />
+      ),
+    },
+  ]
+}
 
 // tabla del catalogo, con paginacion (mui x-data-grid)
-export function TablaInventario({ productos, cargando }: Props) {
+export function TablaInventario({ productos, cargando, onEditar, onAjustar, onMerma, onHistorial }: Props) {
+  const columnas = useMemo(
+    () => armarColumnas({ onEditar, onAjustar, onMerma, onHistorial }),
+    [onEditar, onAjustar, onMerma, onHistorial],
+  )
+
   return (
     <Box sx={{ height: 560 }}>
       <DataGrid
