@@ -56,31 +56,72 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 function seedSqliteDemoData(): void {
-  const existingTenant = defaultSqliteClient.queryOne<{ id: string }>(
-    'SELECT id FROM tenants WHERE id = ?',
+  // 1. Asegurar Tenant Demo primero para satisfacer FK
+  defaultSqliteClient.execute(
+    `INSERT OR IGNORE INTO tenants (id, nombre, estado) 
+     VALUES (?, 'Almacén Don Tito (Microempresa Demo)', 'ACTIVO')`,
     [DEMO_TENANT_ID]
   );
 
-  if (existingTenant) {
-    return; // Ya fue sembrado
+  // 2. Asegurar que los usuarios esenciales (Admin y Cajero) existan siempre con hashes válidos
+  let adminUserId = DEMO_USER_ID;
+  try {
+    const existingAdmin = defaultSqliteClient.queryOne<{ id: string }>(
+      'SELECT id FROM usuarios WHERE tenant_id = ? AND LOWER(email) = LOWER(?)',
+      [DEMO_TENANT_ID, 'admin@gestock.cl']
+    );
+
+    if (existingAdmin) {
+      adminUserId = existingAdmin.id;
+      defaultSqliteClient.execute(
+        `UPDATE usuarios 
+         SET password_hash = '$2b$10$u5dEMh8bjEYmKPL2zvI/8O/QyIkh0j15a10eeSW0B8J40pbXz5Doy', rol = 'admin' 
+         WHERE id = ?`,
+        [existingAdmin.id]
+      );
+    } else {
+      defaultSqliteClient.execute(
+        `INSERT INTO usuarios (id, tenant_id, nombre, email, password_hash, rol) 
+         VALUES (?, ?, 'Admin Demo', 'admin@gestock.cl', '$2b$10$u5dEMh8bjEYmKPL2zvI/8O/QyIkh0j15a10eeSW0B8J40pbXz5Doy', 'admin')`,
+        [DEMO_USER_ID, DEMO_TENANT_ID]
+      );
+    }
+
+    const existingCajero = defaultSqliteClient.queryOne<{ id: string }>(
+      'SELECT id FROM usuarios WHERE tenant_id = ? AND LOWER(email) = LOWER(?)',
+      [DEMO_TENANT_ID, 'cajero@gestock.cl']
+    );
+
+    if (existingCajero) {
+      defaultSqliteClient.execute(
+        `UPDATE usuarios 
+         SET password_hash = '$2b$10$rQWrPUW3kSQhWliPf4923OB5cPbgIcJe4ml5Yibz2wZItTqJFvvU.', rol = 'cajero' 
+         WHERE id = ?`,
+        [existingCajero.id]
+      );
+    } else {
+      defaultSqliteClient.execute(
+        `INSERT INTO usuarios (id, tenant_id, nombre, email, password_hash, rol) 
+         VALUES ('00000000-0000-0000-0000-000000000003', ?, 'Cajero Demo', 'cajero@gestock.cl', '$2b$10$rQWrPUW3kSQhWliPf4923OB5cPbgIcJe4ml5Yibz2wZItTqJFvvU.', 'cajero')`,
+        [DEMO_TENANT_ID]
+      );
+    }
+  } catch (err) {
+    logger.warn('InitDB', 'Error garantizando usuarios iniciales en SQLite', { error: String(err) });
+  }
+
+  // 3. Verificar si el resto del catálogo demo ya fue sembrado
+  const existingMetodo = defaultSqliteClient.queryOne<{ id: string }>(
+    'SELECT id FROM metodos_pago LIMIT 1'
+  );
+
+  if (existingMetodo) {
+    return; // Ya fue sembrado el catálogo restante
   }
 
   logger.info('InitDB', 'Seeding demo initial dataset in SQLite...');
 
   defaultSqliteClient.withTransaction(() => {
-    // 1. Plan y Tenant
-    defaultSqliteClient.execute(
-      `INSERT INTO tenants (id, nombre, estado) 
-       VALUES (?, 'Almacén Don Tito (Microempresa Demo)', 'ACTIVO')`,
-      [DEMO_TENANT_ID]
-    );
-
-    // 2. Usuario Cajero / Admin
-    defaultSqliteClient.execute(
-      `INSERT INTO usuarios (id, tenant_id, nombre, email, password_hash, rol) 
-       VALUES (?, ?, 'Admin Demo', 'admin@gestock.cl', '$2b$10$demoHashPasswordForAdminDemoUser2026', 'admin')`,
-      [DEMO_USER_ID, DEMO_TENANT_ID]
-    );
 
     // 3. Métodos de Pago
     const metodos = [
@@ -100,7 +141,7 @@ function seedSqliteDemoData(): void {
 
     // 4. Proveedores
     const proveedores = [
-      { id: '22222222-0000-0000-0000-000000000001', rut: '76.123.456-7', nombre: 'Embonor Coca-Cola Chile' },
+      { id: '22222222-0000-0000-0000-000000000001', rut: '76.123.456-0', nombre: 'Embonor Coca-Cola Chile' },
       { id: '22222222-0000-0000-0000-000000000002', rut: '76.999.888-K', nombre: 'Distribuidora Mayorista Central SpA' },
       { id: '22222222-0000-0000-0000-000000000003', rut: '81.444.222-1', nombre: 'Cooperativa Colun Lácteos' }
     ];
@@ -213,7 +254,7 @@ function seedSqliteDemoData(): void {
       defaultSqliteClient.execute(
         `INSERT INTO transacciones_venta (id, tenant_id, usuario_id, folio_local_sqlite, total, unidades, estado, is_dirty, sync_status, fecha)
          VALUES (?, ?, ?, ?, ?, 10, 'COMPLETADA', 0, 'SYNCED', datetime('now', '-2 days'))`,
-        [`v1-${p.id}`, DEMO_TENANT_ID, DEMO_USER_ID, `FOLIO-HIST-${p.sku}`, p.precio * 10]
+        [`v1-${p.id}`, DEMO_TENANT_ID, adminUserId, `FOLIO-HIST-${p.sku}`, p.precio * 10]
       );
       defaultSqliteClient.execute(
         `INSERT INTO detalle_venta (id, venta_id, producto_id, cantidad, precio_unitario, subtotal)
@@ -237,7 +278,7 @@ function seedSqliteDemoData(): void {
     // 9. Configuración Tributaria SII (Res. Ex. N° 176, Ley N° 20.727)
     const siiConfigs = [
       { k: 'sii_modelo_emision', v: 'MODELO_B', d: 'Modelo Emisión SII: MODELO_B (Voucher reemplaza boleta - Res. 176) / MODELO_A (Siempre emite boleta)' },
-      { k: 'sii_rut_emisor', v: '76.123.456-7', d: 'RUT Emisor de la empresa' },
+      { k: 'sii_rut_emisor', v: '76.123.456-0', d: 'RUT Emisor de la empresa' },
       { k: 'sii_razon_social', v: 'ALMACEN DON TITO SPA', d: 'Razón Social comercial' },
       { k: 'sii_giro_comercial', v: 'VENTA AL POR MENOR EN ALMACENES Y MINIMARKET', d: 'Giro comercial según SII' },
       { k: 'sii_acteco', v: '471100', d: 'Código actividad económica principal SII' },
@@ -266,6 +307,23 @@ async function seedPostgresDemoData(): Promise<void> {
     [DEMO_TENANT_ID]
   );
 
+  try {
+    await defaultPgClient.query(
+      `INSERT INTO usuarios (id, tenant_id, nombre, email, password_hash, rol) 
+       VALUES ($1, $2, 'Admin Demo', 'admin@gestock.cl', '$2b$10$u5dEMh8bjEYmKPL2zvI/8O/QyIkh0j15a10eeSW0B8J40pbXz5Doy', 'admin')
+       ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, rol = EXCLUDED.rol`,
+      [DEMO_USER_ID, DEMO_TENANT_ID]
+    );
+    await defaultPgClient.query(
+      `INSERT INTO usuarios (id, tenant_id, nombre, email, password_hash, rol) 
+       VALUES ('00000000-0000-0000-0000-000000000002', $1, 'Cajero Demo', 'cajero@gestock.cl', '$2b$10$rQWrPUW3kSQhWliPf4923OB5cPbgIcJe4ml5Yibz2wZItTqJFvvU.', 'cajero')
+       ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, rol = EXCLUDED.rol`,
+      [DEMO_TENANT_ID]
+    );
+  } catch (err) {
+    logger.warn('InitDB', 'Error garantizando usuarios iniciales en PostgreSQL', { error: String(err) });
+  }
+
   if (res.rows.length > 0) {
     return; // Ya existe en Postgres
   }
@@ -280,11 +338,18 @@ async function seedPostgresDemoData(): Promise<void> {
       [DEMO_TENANT_ID]
     );
 
-    // 2. Usuario
+    // 2. Usuarios del sistema (Admin Demo y Cajero Demo con hashes Bcrypt reales de 60 caracteres)
     await client.query(
       `INSERT INTO usuarios (id, tenant_id, nombre, email, password_hash, rol) 
-       VALUES ($1, $2, 'Admin Demo', 'admin@gestock.cl', '$2b$10$demoHashPasswordForAdminDemoUser2026', 'admin') ON CONFLICT DO NOTHING`,
+       VALUES ($1, $2, 'Admin Demo', 'admin@gestock.cl', '$2b$10$u5dEMh8bjEYmKPL2zvI/8O/QyIkh0j15a10eeSW0B8J40pbXz5Doy', 'admin')
+       ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, rol = EXCLUDED.rol`,
       [DEMO_USER_ID, DEMO_TENANT_ID]
+    );
+    await client.query(
+      `INSERT INTO usuarios (id, tenant_id, nombre, email, password_hash, rol) 
+       VALUES ('00000000-0000-0000-0000-000000000002', $1, 'Cajero Demo', 'cajero@gestock.cl', '$2b$10$rQWrPUW3kSQhWliPf4923OB5cPbgIcJe4ml5Yibz2wZItTqJFvvU.', 'cajero')
+       ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, rol = EXCLUDED.rol`,
+      [DEMO_TENANT_ID]
     );
 
     // 2.1 Métodos de Pago
@@ -302,7 +367,7 @@ async function seedPostgresDemoData(): Promise<void> {
     await client.query(
       `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, whatsapp_contacto) 
        VALUES 
-       ('22222222-0000-0000-0000-000000000001', $1, '76.123.456-7', 'Embonor Coca-Cola Chile', 'contacto@proveedor.cl', '+56911223344'),
+       ('22222222-0000-0000-0000-000000000001', $1, '76.123.456-0', 'Embonor Coca-Cola Chile', 'contacto@proveedor.cl', '+56911223344'),
        ('22222222-0000-0000-0000-000000000002', $1, '76.999.888-K', 'Distribuidora Mayorista Central SpA', 'contacto@proveedor.cl', '+56911223344'),
        ('22222222-0000-0000-0000-000000000003', $1, '81.444.222-1', 'Cooperativa Colun Lácteos', 'contacto@proveedor.cl', '+56911223344')
        ON CONFLICT DO NOTHING`,
