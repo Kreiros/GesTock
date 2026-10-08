@@ -64,3 +64,7 @@ tests_e2e_frontend/reportes/
 # se edita y que Obsidian refleja). El README de la raiz y los de cada carpeta no son
 # documentos, son la portada del proyecto: esos si se versionan.
 docs/*.md
+
+# El historial de misiones es registro interno de trabajo, no entregable:
+# se mantiene en disco y en Obsidian, nunca en el repositorio ni en las evidencias.
+docs/HISTORIAL_MISIONES.docx
