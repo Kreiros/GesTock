@@ -87,9 +87,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     return { status: res.status, data };
   }
 
-  // ==========================================================================
-  // 1. Core Endpoints (2)
-  // ==========================================================================
   describe('1. Core & Health Endpoints', () => {
     test('1. GET /health responde con estado del servicio', async () => {
       const res = await requestApi('GET', '/health');
@@ -106,9 +103,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 2. Módulo de Cierre de Caja (6)
-  // ==========================================================================
   describe('2. Módulo de Cierre de Caja (caja.routes.ts)', () => {
     test('3. POST /api/v1/caja/abrir abre sesión de caja', async () => {
       const res = await requestApi('POST', '/api/v1/caja/abrir', {
@@ -165,9 +159,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 3. Configuración del Negocio (4)
-  // ==========================================================================
   describe('3. Módulo de Configuración (config.routes.ts)', () => {
     test('9. GET /api/v1/config/margin recupera margen de ganancia', async () => {
       const res = await requestApi('GET', `/api/v1/config/margin?tenant_id=${DEMO_TENANT}`);
@@ -202,9 +193,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 4. Dashboard Global (1)
-  // ==========================================================================
   describe('4. Dashboard Global de Analítica (dashboard.routes.ts)', () => {
     test('13. GET /api/v1/dashboard/overview retorna métricas comerciales', async () => {
       const res = await requestApi('GET', `/api/v1/dashboard/overview?tenantId=${DEMO_TENANT}&periodo=mensual`);
@@ -215,9 +203,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 5. Módulo Tributario DTE & SII (16)
-  // ==========================================================================
   describe('5. Módulo Tributario DTE & SII (dte.routes.ts)', () => {
     test('14. GET /api/v1/dte/config retorna configuración fiscal', async () => {
       const res = await requestApi('GET', `/api/v1/dte/config?tenantId=${DEMO_TENANT}`);
@@ -352,9 +337,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 6. Módulo de Facturas e Ingesta OCR (4)
-  // ==========================================================================
   describe('6. Módulo de Facturas e Ingesta OCR (invoice.routes.ts)', () => {
     test('30. POST /api/v1/invoices/scan procesa escaneo con fallback tolerante', async () => {
       const res = await requestApi('POST', '/api/v1/invoices/scan', {
@@ -402,9 +384,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 7. Inteligencia de Tendencias de Mercado (3)
-  // ==========================================================================
   describe('7. Módulo de Tendencias de Mercado (market.routes.ts)', () => {
     test('34. POST /api/v1/trends/sync sincroniza tendencias externas', async () => {
       const res = await requestApi('POST', '/api/v1/trends/sync', {
@@ -431,9 +410,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 8. Pasarelas de Pago (3)
-  // ==========================================================================
   describe('8. Pasarelas de Pago & Contingencia (payment.routes.ts)', () => {
     test('37. POST /api/v1/payments/initiate inicia transacción de pago', async () => {
       const res = await requestApi('POST', '/api/v1/payments/initiate', {
@@ -466,9 +442,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 9. Punto de Venta POS (8)
-  // ==========================================================================
   describe('9. Operación del Punto de Venta (pos.routes.ts)', () => {
     test('40. GET /api/v1/pos/products obtiene catálogo activo con IVA e ILA', async () => {
       const res = await requestApi('GET', `/api/v1/pos/products?tenant_id=${DEMO_TENANT}`);
@@ -538,9 +511,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 10. Reabastecimiento Predictivo (5)
-  // ==========================================================================
   describe('10. Reabastecimiento Predictivo (replenishment.routes.ts)', () => {
     test('48. GET /api/v1/replenishment/velocity calcula rotación diaria de productos', async () => {
       const res = await requestApi('GET', `/api/v1/replenishment/velocity?tenant_id=${DEMO_TENANT}`);
@@ -581,9 +551,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 11. Directorio de Proveedores (3)
-  // ==========================================================================
   describe('11. Directorio de Proveedores (supplier.routes.ts)', () => {
     test('53. GET /api/v1/suppliers/ lista proveedores registrados', async () => {
       const res = await requestApi('GET', `/api/v1/suppliers/?tenant_id=${DEMO_TENANT}`);
@@ -614,9 +581,6 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (5
     });
   });
 
-  // ==========================================================================
-  // 12. Motor de Sincronización Push / Pull (2)
-  // ==========================================================================
   describe('12. Motor de Sincronización Push / Pull (sync.routes.ts)', () => {
     test('56. POST /api/v1/sync/push procesa lotes de sincronización con idempotencia', async () => {
       const res = await requestApi('POST', '/api/v1/sync/push', {
