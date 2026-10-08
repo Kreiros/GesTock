@@ -65,10 +65,10 @@ Los requisitos funcionales han sido identificados, clasificados por módulo oper
 | ID | Requisito Funcional | Descripción y Reglas de Negocio | Prioridad |
 |---|---|---|---|
 | **RF-01** | Inicio de Sesión Seguro (Login JWT) *[Objetivo Fase 2]* | Autenticación mediante `tenant_id`, `email` y `password`. El sistema genera y retorna un token JWT firmado (`HS256`, expiración 24h) y los datos del usuario. Manejo unificado de error 401 (*"El correo o la clave no son correctos"*) para evitar ataques de enumeración. El campo `password_hash` jamás se expone. | **Crítica** |
-| **RF-02** | Registro de Usuarios con Asignación de Rol *[Objetivo Fase 2]* | Registro de nuevos usuarios en el tenant especificando nombre, email, contraseña (mínimo 8 caracteres, encriptada con Bcrypt factor de costo 10) y rol (`admin` o `cajero`). Detección de duplicados con restricción `UNIQUE(tenant_id, email)` (HTTP 409). Retorna HTTP 201 con sesión activa. | **Crítica** |
-| **RF-03** | Verificación de Sesión Activa (`/auth/me`) *[Objetivo Fase 2]* | Endpoint que recibe la cabecera `Authorization: Bearer <token>`, valida la firma criptográfica y expiración del JWT, y retorna los datos vigentes del usuario para reanudar la sesión en recarga. | Alta |
+| **RF-02** | Registro Administrativo de Usuarios (Personal del Local) *[Objetivo Fase 2]* | Creación de cuentas restringida a administradores autenticados desde el panel de Configuración ("Personas del local"). Permite ingresar nombre, email, contraseña (encriptada con Bcrypt costo 10) y rol (`admin` o `cajero`). Detección de duplicados `UNIQUE(tenant_id, email)` (HTTP 409). Retorna HTTP 201 con el usuario creado sanitizado (sin token ni apertura de sesión automática para preservar la sesión del admin). | **Crítica** |
+| **RF-03** | Verificación de Sesión Activa (`/auth/me`) y Lista de Personal (`/auth/users`) *[Objetivo Fase 2]* | Endpoint `GET /api/v1/auth/me` para verificar validez del token JWT y recuperar datos del usuario en recargas. Endpoint `GET /api/v1/auth/users` (restringido a rol `admin`) para auditar la nómina de usuarios del local sin exponer hashes de contraseñas. | Alta |
 | **RF-04** | Matriz de Roles y Vistas (RBAC) | Restringir el acceso según el rol del usuario: <br>• **Rol `cajero` (6 vistas):** Caja POS, Notificaciones, Inventario (consulta y mermas), Cierre de Caja Z, Historial de Ventas y Configuración Básica (tema visual/apariencia).<br>• **Rol `admin` (11 vistas):** Acceso total (las 6 del cajero + Panel Dashboard, Facturas OCR, Proveedores, Reposición ROP, Respaldo SII y Configuración Global del Negocio). | **Crítica** |
-| **RF-05** | Middleware de Protección Perimetral *[Objetivo Fase 2]* | Validar token JWT en todas las rutas bajo `/api/v1/*` (excepto `/auth/login` y `/auth/register`). Rutas administrativas (`/dashboard`, `/invoices/*`, `/suppliers/*`, `/replenishment/*`, `/dte/*`, `/config/*`) protegidas por verificación estricta de rol `admin`. | **Crítica** |
+| **RF-05** | Middleware de Protección Perimetral *[Objetivo Fase 2]* | Validar token JWT en todas las rutas bajo `/api/v1/*` (excepto `/auth/login`, `/health` y `/api`). En producción (`NODE_ENV=production`), la autenticación se exige de forma obligatoria por defecto para cerrar el perímetro de red; en desarrollo se activa con `ENFORCE_AUTH=true` (con interruptor de emergencia `AUTH_DISABLED=true` para pruebas locales). Rutas administrativas (`/dashboard`, `/invoices/*`, `/suppliers/*`, `/replenishment/*`, `/dte/*`, `/config/*`, `/auth/register`, `/auth/users`) protegidas por verificación estricta de rol `admin` (HTTP 403 a rol cajero). | **Crítica** |
 
 ### 2.2 Módulo 2: Punto de Venta (POS) & Checkout de Mostrador
 | ID | Requisito Funcional | Descripción y Reglas de Negocio | Prioridad |
@@ -213,8 +213,8 @@ mindmap
 * **RNF-DISP-04 (Resiliencia de OCR):** Implementación de hasta 3 reintentos con backoff exponencial para errores transitorios (503/429) en la API de Google Gemini antes de derivar al extractor PDF local.
 
 ### 3.3 Seguridad y Confidencialidad (7 RNF)
-* **RNF-SEG-01 (Autenticación JWT & RBAC):** Autenticación mediante tokens JWT firmados (`HS256`) con expiración en 24 horas implementada mediante `jsonwebtoken`. Control de Acceso Basado en Roles (**RBAC**) que discrimina entre `cajero` (6 vistas) y `admin` (11 vistas).
-* **RNF-SEG-02 (Almacenamiento Criptográfico de Contraseñas):** Las contraseñas se gestionan mediante algoritmo **Bcrypt** (`bcryptjs`) con un factor de costo (*work factor*) mínimo de 10 salt rounds (hashes de 60 caracteres reales en siembra), erradicando contraseñas en texto plano o cadenas simuladas.
+* **RNF-SEG-01 (Autenticación JWT & RBAC):** Autenticación mediante tokens JWT firmados (`HS256`) con expiración en 24 horas implementada mediante `jsonwebtoken`. Control de Acceso Basado en Roles (**RBAC**) que discrimina entre `cajero` (6 vistas) y `admin` (11 vistas). El sistema opera bajo una política segura por defecto (*secure-by-default*): en entornos de producción (`NODE_ENV=production`), la verificación de JWT está activada de forma obligatoria salvo que se indique explícitamente `AUTH_DISABLED=true` para contingencias operativas. En desarrollo y staging, la aplicación de autenticación estricta se activa mediante `ENFORCE_AUTH=true`.
+* **RNF-SEG-02 (Almacenamiento Criptográfico de Contraseñas y Parche Idempotente):** Las contraseñas se gestionan mediante algoritmo **Bcrypt** (`bcryptjs`) con un factor de costo (*work factor*) mínimo de 10 salt rounds (hashes de 60 caracteres reales en siembra), erradicando contraseñas en texto plano o cadenas simuladas. Mediante el procedimiento idempotente de inicialización `patchExistingDatabaseFixes()`, cualquier base de datos preexistente migra automáticamente hashes heredados o planos hacia hashes Bcrypt válidos y normaliza el RUT emisor tributario a `76.123.456-0` (conforme a Módulo 11) sin pérdida de datos ni recreación de esquemas.
 * **RNF-SEG-03 (Aislamiento Multi-Tenant Estricto):** Todos los registros en base de datos deben estar estrictamente asociados a un `tenant_id` validado por middleware, evitando cualquier fuga de datos entre distintos comercios.
 * **RNF-SEG-04 (Rate Limiting Granular con `X-Device-ID` e IPv6):** Limitación de tasa perimetral que discrimina por terminal individual mediante la cabecera `X-Device-ID` y dirección IP normalizada con `ipKeyGenerator`, evitando bloqueos cruzados entre cajas bajo una misma red local (NAT) y neutralizando avisos IPv6.
 * **RNF-SEG-05 (Cumplimiento PCI-DSS SAQ-A):** Prohibición absoluta de almacenar números completos de tarjeta de crédito (PAN), códigos de seguridad CVV/CVC o claves PIN en base de datos.
@@ -578,7 +578,7 @@ graph TD
         INDEX["index.ts (Express App Bootstrap)"]
 
         subgraph Routes["routes/ (Controladores REST)"]
-            R_AUTH["auth.routes.ts (3 endpoints)"]
+            R_AUTH["auth.routes.ts (4 endpoints)"]
             R_POS["pos.routes.ts (15 endpoints)"]
             R_DTE["dte.routes.ts (16 endpoints)"]
             R_CAJA["caja.routes.ts (6 endpoints)"]
@@ -720,13 +720,14 @@ Se definen contratos de interfaz estrictos (`PaymentGateway`, `OCRProvider`), pe
 
 ---
 
-## 6. Catálogo de Endpoints y Matriz de Trazabilidad (65 Endpoints)
+## 6. Catálogo de Endpoints y Matriz de Trazabilidad (66 Endpoints)
 
 | Módulo | Método | Endpoint URI | Descripción Funcional y Reglas | RF Vinculado | Rol Mínimo |
 |---|---|---|---|---|---|
 | **Auth** | `POST` | `/api/v1/auth/login` | Autenticación de usuario, retorna JWT firmado y perfil [Objetivo Fase 2] | RF-01 | Público |
-| **Auth** | `POST` | `/api/v1/auth/register` | Registro de usuario con rol y clave Bcrypt salt 10 [Objetivo Fase 2] | RF-02 | Público |
+| **Auth** | `POST` | `/api/v1/auth/register` | Registro de usuario con rol y clave Bcrypt salt 10 [Objetivo Fase 2] | RF-02 | Admin |
 | **Auth** | `GET` | `/api/v1/auth/me` | Verificación de token Bearer y sesión activa [Objetivo Fase 2] | RF-03 | Cajero |
+| **Auth** | `GET` | `/api/v1/auth/users` | Listado administrativo de cuentas registradas y roles [Objetivo Fase 2] | RF-02 | Admin |
 | **Caja** | `POST` | `/api/v1/caja/abrir` | Apertura de turno con monto inicial en efectivo | RF-16 | Cajero |
 | **Caja** | `GET` | `/api/v1/caja/resumen` | Resumen de ventas y saldo teórico del turno | RF-17, RF-19 | Cajero |
 | **Caja** | `POST` | `/api/v1/caja/cerrar` | Cierre formal de turno, arqueo ciego y balance Z | RF-18, RF-19 | Cajero |

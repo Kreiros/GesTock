@@ -193,16 +193,25 @@ export class PostgresClient {
         motivo = error.message;
         if ('errors' in error && Array.isArray((error as any).errors)) {
           const innerErrors = (error as any).errors
-            .map((e: any) => (e instanceof Error ? e.message : String(e)))
+            .map((e: any) => {
+              if (e instanceof Error) return e.message || (e as any).code || String(e);
+              return String(e);
+            })
             .filter(Boolean)
             .join('; ');
           if (innerErrors) motivo = innerErrors;
         }
+        if ((!motivo || motivo === 'AggregateError') && (error as any).cause) {
+          motivo = String((error as any).cause);
+        }
       } else {
         motivo = String(error);
       }
+      if (!motivo || motivo === 'AggregateError') {
+        motivo = 'ECONNREFUSED / Puerto 5432 no responde o timeout de red';
+      }
       logger.warn('PostgresClient', 'Sonda de conectividad con PostgreSQL Cloud fallida', {
-        motivo: motivo || 'Conexión rechazada o timeout de red'
+        motivo
       });
       return false;
     }
