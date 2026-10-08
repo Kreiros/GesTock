@@ -23,7 +23,7 @@ Está dirigida al comercio minorista independiente chileno (minimarkets, botille
   - **Control de Esquema:** 29 tablas relacionales gestionadas mediante 10 migraciones DDL secuenciales y tabla persistente `_migrations`.
 - **Inteligencia Artificial & Servicios Externos:** Google Gemini AI API (`gemini-3.5-flash` con fallback determinista en `pdf-parse`), pasarelas de pago sandbox (Transbank Webpay, Mercado Pago, SumUp, RutPay).
 - **Infraestructura & Contenedores:** Docker, Docker Compose multi-stage build.
-- **Testing & Calidad:** Jest (15 suites de integración + 7 suites unitarias = **207 pruebas automatizadas** con 100% de aprobación).
+- **Testing & Calidad:** Jest (15 suites de integración + 7 suites unitarias = **219 pruebas automatizadas** con 100% de aprobación).
 
 ---
 
@@ -81,12 +81,12 @@ npm run dev
 
 ---
 
-### Batería de Pruebas Automatizadas (207 Pruebas, 100% OK)
+### Batería de Pruebas Automatizadas (219 Pruebas, 100% OK)
 ```bash
 # Ejecutar suite de pruebas de integración (15 suites, 68 tests)
 npm test
 
-# Ejecutar suite de pruebas unitarias aisladas (7 suites, 126 tests)
+# Ejecutar suite de pruebas unitarias aisladas (7 suites, 138 tests)
 npm run test:unit
 
 # Generar reporte de cobertura de código
@@ -136,7 +136,7 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
    - Desarrollo del cliente Frontend POS en React 19 SPA con soporte de roles RBAC (Cajero vs Admin).
    - Integración del motor de Inteligencia Artificial Multimodal (Google Gemini OCR `gemini-3.5-flash`) con reintentos controlados y extractor PDF nativo de respaldo.
    - Implementación de las normativas legales chilenas: Ley de Redondeo (Ley N° 20.956), Ley de Bolsas Reutilizables (Ley N° 21.100) y facturación DTE autorizada por el SII con timbre TED.
-   - Aseguramiento de calidad mediante **207 pruebas automatizadas** (Jest) que validan el 100% de los 69 endpoints RESTful.
+   - Aseguramiento de calidad mediante **219 pruebas automatizadas** (Jest) que validan el 100% de los 69 endpoints RESTful.
 
 3. **Transición (Fase 3 - 30%):**
    - Pruebas de estrés y conmutación offline bajo condiciones de corte de red en terreno.

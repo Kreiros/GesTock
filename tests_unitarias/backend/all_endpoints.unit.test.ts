@@ -17,7 +17,7 @@ const rsaKey = crypto.generateKeyPairSync('rsa', {
   privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
 });
 
-describe('Batería de Verificación del Catálogo de Endpoints (57 de 69)', () => {
+describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (69/69)', () => {
   let server: http.Server;
   let baseUrl: string;
   let dteId = 'demo-dte-01';
@@ -593,6 +593,176 @@ describe('Batería de Verificación del Catálogo de Endpoints (57 de 69)', () =
     test('57. GET /api/v1/sync/pull descarga delta del catálogo desde la nube', async () => {
       const res = await requestApi('GET', `/api/v1/sync/pull?tenant_id=${DEMO_TENANT}`);
       expect([200, 503]).toContain(res.status);
+    });
+  });
+  describe('13. Gestión de Productos, Stock y Mermas (pos.routes.ts)', () => {
+    const sufijo = Date.now();
+    const sku = `SKU-VERIF-${sufijo}`;
+    let productoId = '';
+
+    test('58. POST /api/v1/pos/products da de alta un producto en el catálogo', async () => {
+      const res = await requestApi('POST', '/api/v1/pos/products', {
+        tenant_id: DEMO_TENANT,
+        nombre: 'Producto de Verificación',
+        sku,
+        codigo_barra: `78${String(sufijo).slice(-11)}`,
+        precio_compra: 800,
+        precio_venta: 1500,
+        stock_actual: 20,
+        stock_minimo: 5,
+        categoria: 'Bebidas'
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.data.success).toBe(true);
+      expect(res.data.data.sku).toBe(sku);
+      productoId = res.data.data.id;
+      expect(productoId).toBeTruthy();
+    });
+
+    test('59. PUT /api/v1/pos/products/:id actualiza nombre, precio y categoría', async () => {
+      const res = await requestApi('PUT', `/api/v1/pos/products/${productoId}`, {
+        nombre: 'Producto de Verificación Editado',
+        precio_venta: 1800,
+        categoria: 'Abarrotes'
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.success).toBe(true);
+      expect(res.data.data.nombre).toBe('Producto de Verificación Editado');
+    });
+
+    test('60. PATCH /api/v1/pos/products/:id/stock ajusta el conteo físico', async () => {
+      const res = await requestApi('PATCH', `/api/v1/pos/products/${productoId}/stock`, {
+        tenant_id: DEMO_TENANT,
+        nuevo_stock: 15,
+        motivo: 'Ajuste por conteo físico de verificación'
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.success).toBe(true);
+    });
+
+    test('61. POST /api/v1/pos/mermas registra una baja por vencimiento', async () => {
+      const res = await requestApi('POST', '/api/v1/pos/mermas', {
+        tenant_id: DEMO_TENANT,
+        producto_id: productoId,
+        cantidad: 3,
+        motivo: 'vencimiento',
+        observaciones: 'Unidades retiradas de góndola en la verificación'
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.data.success).toBe(true);
+    });
+
+    test('62. GET /api/v1/pos/mermas lista las bajas registradas del comercio', async () => {
+      const res = await requestApi('GET', `/api/v1/pos/mermas?tenant_id=${DEMO_TENANT}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.data.data)).toBe(true);
+      expect(res.data.data.some((m: any) => m.producto_id === productoId)).toBe(true);
+    });
+
+    test('63. GET /api/v1/pos/stock-history consulta el libro de movimientos', async () => {
+      const res = await requestApi('GET', `/api/v1/pos/stock-history?tenant_id=${DEMO_TENANT}&producto_id=${productoId}`);
+
+      expect(res.status).toBe(200);
+      expect(res.data.count).toBeGreaterThan(0);
+      expect(res.data.data.every((h: any) => h.producto_id === productoId)).toBe(true);
+    });
+
+    test('64. GET /api/v1/pos/products/:id/history traza el alta, el ajuste y la merma', async () => {
+      const res = await requestApi('GET', `/api/v1/pos/products/${productoId}/history?tenant_id=${DEMO_TENANT}`);
+
+      expect(res.status).toBe(200);
+      // El producto acumula tres movimientos: alta inicial, ajuste de conteo y merma
+      expect(res.data.data.length).toBeGreaterThanOrEqual(3);
+      expect(res.data.data.every((h: any) => h.producto_id === productoId)).toBe(true);
+    });
+  });
+
+  describe('14. Autenticación y Gestión de Personal (auth.routes.ts)', () => {
+    const correoCajero = `verificacion_${Date.now()}@gestock.cl`;
+    const claveInicial = 'ClaveVerificacion2026';
+    const claveRotada = 'ClaveRotada2026';
+    let adminToken = '';
+
+    test('65. POST /api/v1/auth/login emite un JWT firmado y perfil sin hash', async () => {
+      const res = await requestApi('POST', '/api/v1/auth/login', {
+        tenant_id: DEMO_TENANT,
+        email: 'admin@gestock.cl',
+        password: 'admin123'
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.data.token.split('.')).toHaveLength(3);
+      expect(res.data.data.usuario.rol).toBe('admin');
+      expect(res.data.data.usuario.password_hash).toBeUndefined();
+      adminToken = res.data.data.token;
+    });
+
+    test('66. GET /api/v1/auth/me reconoce la sesión activa del token', async () => {
+      const res = await requestApi('GET', '/api/v1/auth/me', undefined, {
+        Authorization: `Bearer ${adminToken}`
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.data.usuario.email).toBe('admin@gestock.cl');
+    });
+
+    test('67. GET /api/v1/auth/users lista el personal sin exponer contraseñas', async () => {
+      const res = await requestApi('GET', '/api/v1/auth/users', undefined, {
+        Authorization: `Bearer ${adminToken}`
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.data.data.length).toBeGreaterThan(0);
+      expect(res.data.data.every((u: any) => u.password_hash === undefined)).toBe(true);
+    });
+
+    test('68. POST /api/v1/auth/register crea un cajero en el comercio del administrador', async () => {
+      const res = await requestApi('POST', '/api/v1/auth/register', {
+        tenant_id: DEMO_TENANT,
+        nombre: 'Cajero de Verificación',
+        email: correoCajero,
+        password: claveInicial,
+        rol: 'cajero'
+      }, { Authorization: `Bearer ${adminToken}` });
+
+      expect(res.status).toBe(201);
+      expect(res.data.data.usuario.rol).toBe('cajero');
+      expect(res.data.data.usuario.tenant_id).toBe(DEMO_TENANT);
+      expect(res.data.token).toBeUndefined();
+    });
+
+    test('69. PUT /api/v1/auth/password rota la clave y revoca la anterior', async () => {
+      const sesion = await requestApi('POST', '/api/v1/auth/login', {
+        tenant_id: DEMO_TENANT,
+        email: correoCajero,
+        password: claveInicial
+      });
+      expect(sesion.status).toBe(200);
+
+      const cambio = await requestApi('PUT', '/api/v1/auth/password', {
+        password_actual: claveInicial,
+        password_nueva: claveRotada
+      }, { Authorization: `Bearer ${sesion.data.data.token}` });
+      expect(cambio.status).toBe(200);
+
+      const conNueva = await requestApi('POST', '/api/v1/auth/login', {
+        tenant_id: DEMO_TENANT,
+        email: correoCajero,
+        password: claveRotada
+      });
+      expect(conNueva.status).toBe(200);
+
+      const conAnterior = await requestApi('POST', '/api/v1/auth/login', {
+        tenant_id: DEMO_TENANT,
+        email: correoCajero,
+        password: claveInicial
+      });
+      expect(conAnterior.status).toBe(401);
     });
   });
 });

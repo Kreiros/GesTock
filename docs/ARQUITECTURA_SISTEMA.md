@@ -194,7 +194,7 @@ mindmap
       The Twelve-Factor App (.env)
     Mantenibilidad (4)
       TypeScript Strict Mode
-      Jest 207 Tests (100% Pass)
+      Jest 219 Tests (100% Pass)
       Migraciones DDL 001-010
       Arquitectura Desacoplada
 ```
@@ -240,7 +240,7 @@ mindmap
 
 ### 3.7 Mantenibilidad y Calidad de Código (4 RNF)
 * **RNF-MANT-01 (Tipado Estricto con TypeScript):** El 100% del código de backend debe estar escrito en TypeScript compilado bajo `strict: true`, reduciendo drásticamente errores en tiempo de ejecución.
-* **RNF-MANT-02 (Cobertura de Pruebas Automatizadas):** El sistema debe mantener una cobertura de pruebas superior al **85%** en lógica crítica de negocio, validada mediante una batería automatizada con Jest (207 pruebas activas con 100% de éxito).
+* **RNF-MANT-02 (Cobertura de Pruebas Automatizadas):** El sistema debe mantener una cobertura de pruebas superior al **85%** en lógica crítica de negocio, validada mediante una batería automatizada con Jest (219 pruebas activas con 100% de éxito).
 * **RNF-MANT-03 (Migraciones DDL Versionadas 001-010):** Los cambios en los esquemas de base de datos deben aplicarse exclusivamente mediante scripts de migración secuenciales numerados (`001_initial_schema.sql` a `010_expand_historial_stock_check.sql`), asegurando reproducibilidad exacta de entornos.
 * **RNF-MANT-04 (Arquitectura Modular y Desacoplada):** Organización por capas independientes (Rutas, Servicios, Acceso a Datos, Utilidades) con inversión de dependencias para permitir el reemplazo de proveedores externos (ej. cambiar pasarela de pagos o proveedor OCR) sin alterar la lógica de negocio.
 

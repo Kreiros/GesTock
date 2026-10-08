@@ -17,10 +17,10 @@
 | **Suites de Integración Backend** | **15 suites** ejecutadas (`backend/tests/integration/*.test.ts`) |
 | **Pruebas de Integración Aprobadas** | **81 de 81 pruebas** aprobadas (**100% PASS Rate**) · 0 Fallas |
 | **Suites Unitarias Backend** | **6 suites** ejecutadas (`tests_unitarias/backend/*.unit.test.ts`) |
-| **Pruebas Unitarias Aprobadas** | **115 de 115 pruebas** aprobadas (**100% PASS Rate**) · 0 Fallas |
-| **Total Pruebas Exclusivas Backend** | **196 pruebas automatizadas** (**100% PASS Rate Global**) |
+| **Pruebas Unitarias Aprobadas** | **127 de 127 pruebas** aprobadas (**100% PASS Rate**) · 0 Fallas |
+| **Total Pruebas Exclusivas Backend** | **208 pruebas automatizadas** (**100% PASS Rate Global**) |
 | **Suites Unitarias Frontend Segregadas** | **1 suite** (`tests_unitarias/frontend/frontend_contract_rules.unit.test.ts`, 11 pruebas, 100% PASS) |
-| **Total General Jest** | **207 pruebas aprobadas** (126 unitarias + 81 integración, 100% PASS) |
+| **Total General Jest** | **219 pruebas aprobadas** (138 unitarias + 81 integración, 100% PASS) |
 | **Dictamen de Auditoría** | **APROBADO SIN OBSERVACIONES** |
 
 ---
@@ -71,14 +71,14 @@ Las pruebas unitarias del backend están aisladas de toda dependencia externa. O
 
 | N° | Suite de Pruebas | Archivo | Casos | Estado | Dominio y Contratos Validados |
 |:---:|---|---|:---:|:---:|---|
-| 01 | **Catálogo Completo de Endpoints REST** | `all_endpoints.unit.test.ts` | 57 / 57 | **100% OK** | Verificación integral de los 57 de los 69 endpoints del catálogo REST del backend (Core, POS, Caja, DTE, Invoices, Suppliers, Replenishment, Payments, Trends, Config, Sync, Dashboard). Valida códigos HTTP 200, 201, 400 y 404, payloads estructurados y control de errores. |
+| 01 | **Catálogo Completo de Endpoints REST** | `all_endpoints.unit.test.ts` | 69 / 69 | **100% OK** | Verificación integral de los 69 endpoints del catálogo REST del backend (Core, POS, Caja, DTE, Invoices, Suppliers, Replenishment, Payments, Trends, Config, Sync, Dashboard). Valida códigos HTTP 200, 201, 400 y 404, payloads estructurados y control de errores. |
 | 02 | **Seguridad, Criptografía, JWT & RBAC** | `security_and_auth.unit.test.ts` | 35 / 35 | **100% OK** | Criptografía Bcrypt (hashes de 60 caracteres reales, costo 10); emisión, firma y validación de tokens JWT; control de acceso RBAC (bloqueo 403 a cajeros en rutas admin, paso a administradores); sanitización de Tenant ID contra SQL Injection; capturador global de errores sanitizado; aislamiento multi-tenant (403 si el tenant declarado difiere del token); rutas DTE del comprobante permitidas al cajero; rechazo de `JWT_SECRET` ausente, de ejemplo o corto en producción; `usuario_id` del body reemplazado por el del token. |
 | 03 | **Normativa Tributaria de Precios & Redondeo** | `pricing_and_rounding.unit.test.ts` | 7 / 7 | **100% OK** | Regla legal de redondeo en efectivo (Ley N° 20.956): 1-4 abajo, 5-9 arriba, 0 neutro; cálculo de precio comercial con margen porcentual; desglose preciso de IVA 19% (fórmulas Neto = Total / 1.19, IVA = Total - Neto). |
 | 04 | **Algoritmos Predictivos de Reabastecimiento** | `replenishment_math.unit.test.ts` | 6 / 6 | **100% OK** | Velocidad de venta diaria ($V_d = \text{unidades} / \text{días}$); fórmula formal de Punto de Reorden ($ROP = V_d \times L_t + SS$); activación de compra según umbral; ajuste automático hacia múltiplos de empaque de proveedor (bultos mínimos). |
 | 05 | **Circuit Breaker & Resiliencia Offline** | `circuit_breaker.unit.test.ts` | 5 / 5 | **100% OK** | Estados CLOSED, OPEN y HALF_OPEN; disparo inmediato ante error de conexión; rechazo en caliente (<2ms) sin consumir timeout de red; restauración automática (`resetCircuit`); bypass hacia SQLite local. |
 | 06 | **Facturación DTE, Timbre TED & Res. 176** | `dte_crypto_rules.unit.test.ts` | 5 / 5 | **100% OK** | Códigos tributarios oficiales SII (33 Factura, 39 Boleta, 41 Boleta Exenta, 52 Guía, 61 Nota de Crédito); Resolución Exenta N° 176 (Modelo A: todo emite boleta; Modelo B: tarjetas no emiten boleta 39 para evitar doble débito fiscal); estructura XML del Timbre Electrónico (<TED>). |
 
-**Subtotal Pruebas Unitarias de Backend:** **6 suites, 115 pruebas aprobadas (100% PASS).**
+**Subtotal Pruebas Unitarias de Backend:** **6 suites, 127 pruebas aprobadas (100% PASS).**
 
 ---
 
@@ -88,8 +88,8 @@ Para evitar el acoplamiento entre pruebas del backend y pruebas originadas en re
 
 ```
 tests_unitarias/
-├── backend/                                   # Suites Exclusivas de Backend (115 tests)
-│   ├── all_endpoints.unit.test.ts             # 57 tests
+├── backend/                                   # Suites Exclusivas de Backend (127 tests)
+│   ├── all_endpoints.unit.test.ts             # 69 tests
 │   ├── circuit_breaker.unit.test.ts           # 5 tests
 │   ├── dte_crypto_rules.unit.test.ts          # 5 tests
 │   ├── pricing_and_rounding.unit.test.ts      # 7 tests
@@ -104,8 +104,8 @@ tests_unitarias/
 ```
 
 ### Comandos de Ejecución Específicos añadidos a `package.json`:
-* `npm run test:unit`: Ejecuta todas las pruebas unitarias (126 tests).
-* `npm run test:unit:backend`: Ejecuta exclusivamente las 6 suites de backend (115 tests).
+* `npm run test:unit`: Ejecuta todas las pruebas unitarias (138 tests).
+* `npm run test:unit:backend`: Ejecuta exclusivamente las 6 suites de backend (127 tests).
 * `npm run test:unit:frontend`: Ejecuta exclusivamente la suite de reglas de frontend (11 tests).
 
 ---
@@ -176,6 +176,6 @@ La batería de pruebas automatizadas del Backend de GesTock satisface con creces
 * Demuestra una arquitectura dual sólida y resiliente frente a desconexiones de red.
 * Cumple estrictamente con la normativa legal y tributaria chilena (SII y Ley de Redondeo).
 * Protege el perímetro y los datos de los usuarios mediante criptografía robusta (Bcrypt y JWT).
-* Mantiene una cobertura de pruebas impecable con 196 comprobaciones de backend pasando al 100%.
+* Mantiene una cobertura de pruebas impecable con 208 comprobaciones de backend pasando al 100%.
 
 **Dictamen Técnico:** **APROBADO Y CERTIFICADO PARA PRODUCCIÓN LOCAL Y DEFENSA DE FASE 2.**
