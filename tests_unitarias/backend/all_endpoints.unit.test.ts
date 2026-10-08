@@ -17,7 +17,7 @@ const rsaKey = crypto.generateKeyPairSync('rsa', {
   privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
 });
 
-describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (57/57)', () => {
+describe('Batería de Verificación del Catálogo de Endpoints (57 de 69)', () => {
   let server: http.Server;
   let baseUrl: string;
   let dteId = 'demo-dte-01';

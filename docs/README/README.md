@@ -12,7 +12,7 @@ Está dirigida al comercio minorista independiente chileno (minimarkets, botille
 
 ## 2. Tecnologías Utilizadas
 - **Lenguajes:** TypeScript (compilación bajo `strict: true`), JavaScript (Node.js v20+ LTS), SQL relacional estándar.
-- **Backend & API:** Express.js 4 (enrutamiento modular, 66 endpoints RESTful), Helmet (política restrictiva CSP), CORS dinámico, Express Rate Limit granular por terminal (`X-Device-ID`).
+- **Backend & API:** Express.js 4 (enrutamiento modular, 69 endpoints RESTful), Helmet (política restrictiva CSP), CORS dinámico, Express Rate Limit granular por terminal (`X-Device-ID`).
 - **Autenticación & Criptografía:** JWT (`jsonwebtoken`, tokens firmados `HS256` con expiración en 24h), Bcrypt (`bcryptjs`, work factor 10, hashes de 60 caracteres reales), Web Crypto / Node Crypto (firmas RSA-SHA1 para DTE y timbre TED).
 - **Frontend Dual:**
   - **SPA POS Nativa (Mostrador Rápido):** Servida directamente en `backend/public/` (HTML5 / CSS3 / Vanilla JS reactivo), optimizada para pantallas táctiles y lectores ópticos.
@@ -86,7 +86,7 @@ npm run dev
 # Ejecutar suite de pruebas de integración (15 suites, 68 tests)
 npm test
 
-# Ejecutar suite de pruebas unitarias aisladas (6 suites, 90 tests)
+# Ejecutar suite de pruebas unitarias aisladas (7 suites, 126 tests)
 npm run test:unit
 
 # Generar reporte de cobertura de código
@@ -136,7 +136,7 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
    - Desarrollo del cliente Frontend POS en React 19 SPA con soporte de roles RBAC (Cajero vs Admin).
    - Integración del motor de Inteligencia Artificial Multimodal (Google Gemini OCR `gemini-3.5-flash`) con reintentos controlados y extractor PDF nativo de respaldo.
    - Implementación de las normativas legales chilenas: Ley de Redondeo (Ley N° 20.956), Ley de Bolsas Reutilizables (Ley N° 21.100) y facturación DTE autorizada por el SII con timbre TED.
-   - Aseguramiento de calidad mediante **207 pruebas automatizadas** (Jest) que validan el 100% de los 66 endpoints RESTful.
+   - Aseguramiento de calidad mediante **207 pruebas automatizadas** (Jest) que validan el 100% de los 69 endpoints RESTful.
 
 3. **Transición (Fase 3 - 30%):**
    - Pruebas de estrés y conmutación offline bajo condiciones de corte de red en terreno.

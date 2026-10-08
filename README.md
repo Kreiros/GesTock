@@ -29,7 +29,7 @@ Cumple estrictamente con las normativas del **Servicio de Impuestos Internos (SI
 ## 2. Tecnologías Utilizadas
 
 - **Lenguajes:** TypeScript (strict mode), JavaScript (Node.js v20+ LTS), SQL.
-- **Backend Framework:** Express.js 4 (enrutamiento modular, 66 endpoints RESTful).
+- **Backend Framework:** Express.js 4 (enrutamiento modular, 69 endpoints RESTful).
 - **Frontend:** React 19, TypeScript, Vite, Material UI (MUI v6), React Router 8, Zustand, TanStack Query.
 - **Bases de Datos:** PostgreSQL 16+ (Cloud SaaS) y SQLite 3 (Edge Local POS, `better-sqlite3`).
 - **Seguridad & Red:** Helmet CSP, CORS dinámico, Rate Limit granular por `X-Device-ID` e IPv6, JWT (`jsonwebtoken`), Bcrypt (`bcryptjs`).
@@ -129,7 +129,7 @@ npm run test:coverage
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, de naturaleza iterativa y evolutiva, estructurada en tres fases:
 1. **Incepción y Elaboración (Fase 1 - 20%):** Definición del alcance, justificación técnica del negocio (*Business Case*), análisis de los 55 RF y 25 RNF (ISO/IEC 25010), artefactos UML y modelado relacional inicial (15 tablas maestras).
-2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-010 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.5-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **172 pruebas automatizadas** (Jest).
+2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-010 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.5-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **196 pruebas automatizadas** (Jest).
 3. **Transición (Fase 3 - 30%):** Pruebas de estrés y conmutación offline en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa de título.
 
 ---
@@ -137,12 +137,12 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
 ## 6. Documentación Oficial
 
 Consulte los manuales formales detallados en la carpeta [`docs/`](./docs):
-1. **docs/ARQUITECTURA_SISTEMA.md** / **docs/arquitectura_sistema.docx**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 66 endpoints.
+1. **docs/ARQUITECTURA_SISTEMA.md** / **docs/arquitectura_sistema.docx**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 69 endpoints.
 2. **docs/BASE_DE_DATOS.md** / **docs/base_de_datos.docx**: Modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y banderas de sincronización.
 3. **docs/GUIA_DESPLIEGUE.md** / **docs/guia_de_despliegue.docx**: Instalacion, variables de entorno, Docker Compose y PM2.
 4. **docs/MANUAL_FUNCIONALIDADES.md** / **docs/manual_de_funcionalidades.docx**: Operación del POS, normativas chilenas, DTE, arqueo Z y reabastecimiento ROP.
 5. **docs/ESTADO_ACTUAL_PROYECTO.md** / **docs/estado_actual_proyecto.docx**: Informe de avance, Carta Gantt y métricas de estabilidad.
-6. **docs/evidencia_pruebas_unitarias.docx**: Certificado formal de auditoría y matriz de las 172 pruebas automatizadas.
+6. **docs/evidencia_pruebas_unitarias.docx**: Certificado formal de auditoría y matriz de las 196 pruebas automatizadas.
 
 ---
 
