@@ -38,4 +38,6 @@
 8. **Pruebas y Verificación**: `tsc` limpio; 81 pruebas de integración y 126 unitarias aprobadas; batería E2E 81/81 contra servidor real.
 9. **Git Commit**: Commit `8653b2f` registrado y publicado en la rama `main` de `Kreiros/GesTock`.
 10. **Evidencias de Título**: sincronizadas las carpetas `Backend/` y `Frontend/` de `Evidencias de sistema` con el estado del repositorio (1 archivo nuevo, 24 actualizados, 0 eliminados).
+11. **Limpieza de rastro de IA en pruebas unitarias (regla 6)**: eliminados 36 líneas de banners ASCII que duplicaban los `describe()` en `all_endpoints.unit.test.ts` y la cabecera sintética de `frontend_contract_rules.unit.test.ts`. Se conservaron únicamente los comentarios que explican decisiones de negocio. 126 pruebas unitarias siguen aprobadas y `tsc` sin errores.
+12. **Evidencias de documentación**: retirado el historial de misiones por ser registro interno, documentos renombrados a mayúscula inicial por palabra sin guiones bajos, y creada la carpeta `Pruebas Unitarias` con los scripts de backend y frontend separados.
 
