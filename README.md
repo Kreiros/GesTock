@@ -136,13 +136,13 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
 
 ## 6. Documentación Oficial
 
-Consulte los manuales formales detallados en la carpeta [`docs/`](./docs):
-1. **docs/ARQUITECTURA_SISTEMA.md** / **docs/arquitectura_sistema.docx**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 69 endpoints.
-2. **docs/BASE_DE_DATOS.md** / **docs/base_de_datos.docx**: Modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y banderas de sincronización.
-3. **docs/GUIA_DESPLIEGUE.md** / **docs/guia_de_despliegue.docx**: Instalacion, variables de entorno, Docker Compose y PM2.
-4. **docs/MANUAL_FUNCIONALIDADES.md** / **docs/manual_de_funcionalidades.docx**: Operación del POS, normativas chilenas, DTE, arqueo Z y reabastecimiento ROP.
-5. **docs/ESTADO_ACTUAL_PROYECTO.md** / **docs/estado_actual_proyecto.docx**: Informe de avance, Carta Gantt y métricas de estabilidad.
-6. **docs/evidencia_pruebas_unitarias.docx**: Certificado formal de auditoría y matriz de las 208 pruebas automatizadas.
+Los manuales formales se publican en formato Word en la carpeta [`docs/`](./docs):
+1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 69 endpoints.
+2. **[docs/base_de_datos.docx](./docs/base_de_datos.docx)**: Modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y banderas de sincronización.
+3. **[docs/guia_de_despliegue.docx](./docs/guia_de_despliegue.docx)**: Instalacion, variables de entorno, Docker Compose y PM2.
+4. **[docs/manual_de_funcionalidades.docx](./docs/manual_de_funcionalidades.docx)**: Operación del POS, normativas chilenas, DTE, arqueo Z y reabastecimiento ROP.
+5. **[docs/estado_actual_proyecto.docx](./docs/estado_actual_proyecto.docx)**: Informe de avance, Carta Gantt y métricas de estabilidad.
+6. **[docs/evidencia_pruebas_unitarias.docx](./docs/evidencia_pruebas_unitarias.docx)**: Certificado formal de auditoría y matriz de las 208 pruebas automatizadas.
 
 ---
 
