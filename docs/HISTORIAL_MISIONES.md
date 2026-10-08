@@ -36,4 +36,6 @@
 6. **Dependencias**: `npm audit fix` (0 vulnerabilidades en producción) y Jest actualizado a v30.
 7. **Repositorio limpio**: se dejan de versionar `AGENTS.md`, notas `*-MARCELO.*`, el `.docx` de la raíz y los reportes E2E generados.
 8. **Pruebas y Verificación**: `tsc` limpio; 81 pruebas de integración y 126 unitarias aprobadas; batería E2E 81/81 contra servidor real.
+9. **Git Commit**: Commit `8653b2f` registrado y publicado en la rama `main` de `Kreiros/GesTock`.
+10. **Evidencias de Título**: sincronizadas las carpetas `Backend/` y `Frontend/` de `Evidencias de sistema` con el estado del repositorio (1 archivo nuevo, 24 actualizados, 0 eliminados).
 
