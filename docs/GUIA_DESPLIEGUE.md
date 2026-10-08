@@ -55,12 +55,15 @@ SQLITE_IN_MEMORY=false
 JWT_SECRET=super_secret_jwt_key_gestock_2026_change_in_production
 JWT_EXPIRATION=86400          # 24 horas en segundos
 API_KEY=secret-gestock-api-key-2026
+ENFORCE_AUTH=true             # Exigir Bearer Token en cada petición protegida (activo por defecto en prod)
+AUTH_DISABLED=false           # Interruptor de emergencia solo para pruebas (debe ser false en producción)
 
 # ==============================================================================
 # Inteligencia Artificial (Extracción Multimodal OCR de Facturas)
 # ==============================================================================
 GEMINI_API_KEY=               # Clave de Google AI Studio (aistudio.google.com)
-GEMINI_MODEL=gemini-3.5-flash # Opcional: modelo por defecto
+GEMINI_MODEL=gemini-3.5-flash # Opcional: modelo por defecto (gemini-3.5-flash)
+ENABLE_MOCK_OCR=false         # Si es false, no alucina compras ante fallos; arroja HTTP 422 honesto
 
 # ==============================================================================
 # Seguridad Perimetral y CORS

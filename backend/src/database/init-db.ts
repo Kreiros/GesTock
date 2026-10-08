@@ -26,6 +26,9 @@ export async function initializeDatabase(): Promise<void> {
 
     // Rellenar códigos de barra EAN-13 estándar para productos que no tengan
     backfillSqliteBarcodes();
+
+    // Parches idempotentes para bases existentes (RUT 76.123.456-0, hashes Bcrypt 60 chars y campos offline)
+    patchExistingDatabaseFixes();
   } catch (err) {
     logger.error('InitDB', 'Failed during SQLite initialization', err);
   }
@@ -47,6 +50,9 @@ export async function initializeDatabase(): Promise<void> {
 
       // Rellenar códigos de barra EAN-13 estándar para productos en PostgreSQL
       await backfillPostgresBarcodes();
+
+      // Parches idempotentes para bases PostgreSQL existentes
+      await patchPostgresExistingDatabaseFixes();
     } else {
       logger.warn('InitDB', 'PostgreSQL cloud is unreachable. Operating in standalone Offline-First POS mode.');
     }
@@ -461,3 +467,76 @@ async function backfillPostgresBarcodes(): Promise<void> {
     logger.warn('InitDB', 'Error backfilling barcodes in PostgreSQL', { error: String(err) });
   }
 }
+
+/**
+ * Parches de migración en caliente para corregir bases existentes sin requerir borrado:
+ * 1. Corrige sii_rut_emisor a 76.123.456-0 si quedó con el dígito verificador anterior (-7).
+ * 2. Normaliza el RUT del proveedor semilla emisor a 76.123.456-0.
+ * 3. Actualiza hashes Bcrypt a 60 caracteres reales para admin@gestock.cl y cajero@gestock.cl si estaban en texto plano.
+ * 4. Añade columnas de sincronización offline-first a factura_ingresos en SQLite si faltan.
+ */
+function patchExistingDatabaseFixes(): void {
+  try {
+    // 1. Corregir RUT del emisor en configuracion_sistema a 76.123.456-0
+    defaultSqliteClient.execute(
+      "UPDATE configuracion_sistema SET valor = '76.123.456-0', actualizado_at = datetime('now') WHERE clave = 'sii_rut_emisor' AND (valor = '76.123.456-7' OR valor LIKE '%-7')"
+    );
+
+    // 2. Corregir proveedor semilla si conservaba el RUT anterior
+    defaultSqliteClient.execute(
+      "UPDATE proveedores SET rut_proveedor = '76.123.456-0' WHERE rut_proveedor = '76.123.456-7'"
+    );
+
+    // 3. Garantizar hashes Bcrypt reales de 60 caracteres en usuarios existentes
+    const adminHash = '$2b$10$u5dEMh8bjEYmKPL2zvI/8O/QyIkh0j15a10eeSW0B8J40pbXz5Doy';
+    const cajeroHash = '$2b$10$fV3M334XyqIu8K1oW.xOLeM6M08iH8hNq8gLp3DkXn5rG9jQ5w12e';
+    defaultSqliteClient.execute(
+      "UPDATE usuarios SET password_hash = ? WHERE email = 'admin@gestock.cl' AND (length(password_hash) != 60 OR password_hash = 'admin123')",
+      [adminHash]
+    );
+    defaultSqliteClient.execute(
+      "UPDATE usuarios SET password_hash = ? WHERE email = 'cajero@gestock.cl' AND (length(password_hash) != 60 OR password_hash = 'cajero123')",
+      [cajeroHash]
+    );
+
+    // 4. Agregar columnas offline-first a factura_ingresos si no existen en SQLite
+    try {
+      defaultSqliteClient.execute("ALTER TABLE factura_ingresos ADD COLUMN is_dirty INTEGER NOT NULL DEFAULT 0");
+    } catch {}
+    try {
+      defaultSqliteClient.execute("ALTER TABLE factura_ingresos ADD COLUMN sync_attempts INTEGER NOT NULL DEFAULT 0");
+    } catch {}
+    try {
+      defaultSqliteClient.execute("ALTER TABLE factura_ingresos ADD COLUMN sync_status TEXT DEFAULT 'SYNCED'");
+    } catch {}
+
+    logger.info('InitDB', 'Idempotent patches for existing databases verified successfully in SQLite.');
+  } catch (err) {
+    logger.warn('InitDB', 'Error applying startup patches to existing SQLite database', { error: String(err) });
+  }
+}
+
+async function patchPostgresExistingDatabaseFixes(): Promise<void> {
+  try {
+    await defaultPgClient.query(
+      "UPDATE configuracion_sistema SET valor = '76.123.456-0', actualizado_at = NOW() WHERE clave = 'sii_rut_emisor' AND (valor = '76.123.456-7' OR valor LIKE '%-7')"
+    );
+    await defaultPgClient.query(
+      "UPDATE proveedores SET rut_proveedor = '76.123.456-0' WHERE rut_proveedor = '76.123.456-7'"
+    );
+    const adminHash = '$2b$10$u5dEMh8bjEYmKPL2zvI/8O/QyIkh0j15a10eeSW0B8J40pbXz5Doy';
+    const cajeroHash = '$2b$10$fV3M334XyqIu8K1oW.xOLeM6M08iH8hNq8gLp3DkXn5rG9jQ5w12e';
+    await defaultPgClient.query(
+      "UPDATE usuarios SET password_hash = $1 WHERE email = 'admin@gestock.cl' AND (length(password_hash) != 60 OR password_hash = 'admin123')",
+      [adminHash]
+    );
+    await defaultPgClient.query(
+      "UPDATE usuarios SET password_hash = $1 WHERE email = 'cajero@gestock.cl' AND (length(password_hash) != 60 OR password_hash = 'cajero123')",
+      [cajeroHash]
+    );
+    logger.info('InitDB', 'Idempotent patches for existing databases verified successfully in PostgreSQL.');
+  } catch (err) {
+    logger.warn('InitDB', 'Error applying startup patches to existing PostgreSQL database', { error: String(err) });
+  }
+}
+

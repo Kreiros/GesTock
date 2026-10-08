@@ -150,7 +150,12 @@ export const rbacAuthMiddleware = (req: Request, res: Response, next: NextFuncti
 
   const authHeader = req.headers.authorization;
   const hasBearer = authHeader && authHeader.startsWith('Bearer ');
-  const enforceAuth = process.env.ENFORCE_AUTH === 'true';
+  
+  // En producción (NODE_ENV=production), la autenticación está activa POR DEFECTO a menos que
+  // se declare explícitamente AUTH_DISABLED=true. En desarrollo, se activa con ENFORCE_AUTH=true.
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isAuthDisabled = process.env.AUTH_DISABLED === 'true';
+  const enforceAuth = process.env.ENFORCE_AUTH === 'true' || (isProduction && !isAuthDisabled);
 
   let decodedUser: any = null;
 
