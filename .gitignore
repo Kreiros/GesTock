@@ -59,3 +59,8 @@ GEMINI.md
 
 # Reportes generados por la bateria E2E
 tests_e2e_frontend/reportes/
+
+# En el repositorio los documentos viajan solo en .docx (el .md es la fuente local que
+# se edita y que Obsidian refleja). El README de la raiz y los de cada carpeta no son
+# documentos, son la portada del proyecto: esos si se versionan.
+docs/*.md
