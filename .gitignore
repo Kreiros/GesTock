@@ -47,3 +47,15 @@ back-end/
 
 # Cargas temporales de contexto y chat de la oficina
 .context_uploads/
+
+# Reglas de agentes IA y notas de trabajo entre el equipo (no forman parte del producto)
+AGENTS.md
+GEMINI.md
+.agent/
+.gemini/
+*-MARCELO.*
+*-DAVID.*
+/*.docx
+
+# Reportes generados por la bateria E2E
+tests_e2e_frontend/reportes/

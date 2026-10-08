@@ -52,8 +52,11 @@ SQLITE_IN_MEMORY=false
 # ==============================================================================
 # Seguridad, Criptografía y Control de Acceso
 # ==============================================================================
-JWT_SECRET=super_secret_jwt_key_gestock_2026_change_in_production
+JWT_SECRET=super_secret_jwt_key_gestock_2026_change_in_production   # Solo desarrollo: en producción es obligatorio un valor propio de 32+ caracteres o el servidor no arranca
 JWT_EXPIRATION=86400          # 24 horas en segundos
+INITIAL_ADMIN_EMAIL=          # Producción: administrador inicial si el comercio no tiene uno
+INITIAL_ADMIN_PASSWORD=       # Producción: mínimo 8 caracteres; cámbiela luego con PUT /api/v1/auth/password
+SEED_DEMO_USERS=false         # true solo para crear las cuentas demo en un entorno de producción de pruebas
 API_KEY=secret-gestock-api-key-2026
 ENFORCE_AUTH=true             # Exigir Bearer Token en cada petición protegida (activo por defecto en prod)
 AUTH_DISABLED=false           # Interruptor de emergencia solo para pruebas (debe ser false en producción)
@@ -189,7 +192,7 @@ npm run test:coverage
 
 ## 7. Contexto de Prueba y Credenciales Sembradas
 
-El sistema inicializa automáticamente un entorno de prueba (*seed*) para validar inmediatamente los flujos de punto de venta, arqueo de caja y login:
+El sistema inicializa automáticamente un entorno de prueba (*seed*) para validar inmediatamente los flujos de punto de venta, arqueo de caja y login. Las cuentas demo se crean solo fuera de producción (o con `SEED_DEMO_USERS=true`) y solo si no existen; el arranque nunca restablece contraseñas. En producción (incluido `docker-compose.yml`) se debe definir `JWT_SECRET` y, en la primera instalación, `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`:
 
 - **Tenant ID Sembrado:** `00000000-0000-0000-0000-000000000001` (*Almacén Don Tito SpA*)
 - **Usuario Administrador:** `admin@gestock.cl`

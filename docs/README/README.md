@@ -12,7 +12,7 @@ Está dirigida al comercio minorista independiente chileno (minimarkets, botille
 
 ## 2. Tecnologías Utilizadas
 - **Lenguajes:** TypeScript (compilación bajo `strict: true`), JavaScript (Node.js v20+ LTS), SQL relacional estándar.
-- **Backend & API:** Express.js 4 (enrutamiento modular, 65 endpoints RESTful), Helmet (política restrictiva CSP), CORS dinámico, Express Rate Limit granular por terminal (`X-Device-ID`).
+- **Backend & API:** Express.js 4 (enrutamiento modular, 66 endpoints RESTful), Helmet (política restrictiva CSP), CORS dinámico, Express Rate Limit granular por terminal (`X-Device-ID`).
 - **Autenticación & Criptografía:** JWT (`jsonwebtoken`, tokens firmados `HS256` con expiración en 24h), Bcrypt (`bcryptjs`, work factor 10, hashes de 60 caracteres reales), Web Crypto / Node Crypto (firmas RSA-SHA1 para DTE y timbre TED).
 - **Frontend Dual:**
   - **SPA POS Nativa (Mostrador Rápido):** Servida directamente en `backend/public/` (HTML5 / CSS3 / Vanilla JS reactivo), optimizada para pantallas táctiles y lectores ópticos.
@@ -23,7 +23,7 @@ Está dirigida al comercio minorista independiente chileno (minimarkets, botille
   - **Control de Esquema:** 29 tablas relacionales gestionadas mediante 10 migraciones DDL secuenciales y tabla persistente `_migrations`.
 - **Inteligencia Artificial & Servicios Externos:** Google Gemini AI API (`gemini-3.5-flash` con fallback determinista en `pdf-parse`), pasarelas de pago sandbox (Transbank Webpay, Mercado Pago, SumUp, RutPay).
 - **Infraestructura & Contenedores:** Docker, Docker Compose multi-stage build.
-- **Testing & Calidad:** Jest (15 suites de integración + 6 suites unitarias = **158 pruebas automatizadas** con 100% de aprobación).
+- **Testing & Calidad:** Jest (15 suites de integración + 7 suites unitarias = **207 pruebas automatizadas** con 100% de aprobación).
 
 ---
 
@@ -81,7 +81,7 @@ npm run dev
 
 ---
 
-### Batería de Pruebas Automatizadas (158 Pruebas, 100% OK)
+### Batería de Pruebas Automatizadas (207 Pruebas, 100% OK)
 ```bash
 # Ejecutar suite de pruebas de integración (15 suites, 68 tests)
 npm test
@@ -106,6 +106,7 @@ npm run test:coverage
 | **Tenant ID de Prueba** | `00000000-0000-0000-0000-000000000001` | *Almacén Don Tito (Microempresa Demo sembrada en BD)* |
 | **Usuario Administrador** | `admin@gestock.cl` | Rol `admin` (11 vistas habilitadas) |
 | **Contraseña Administrador** | `admin123` | Cifrada con Bcrypt work factor 10 (hash de 60 caracteres) |
+| **Cuentas demo en producción** | No se crean | Definir `JWT_SECRET` (32+ caracteres) e `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`; cambio de clave con `PUT /api/v1/auth/password` |
 | **Usuario Cajero de Prueba** | `cajero@gestock.cl` | Rol `cajero` (6 vistas operativas de mostrador) |
 | **API Key para Clientes Ext.**| `secret-gestock-api-key-2026` | Cabecera `X-API-Key` para integraciones B2B |
 
@@ -135,7 +136,7 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
    - Desarrollo del cliente Frontend POS en React 19 SPA con soporte de roles RBAC (Cajero vs Admin).
    - Integración del motor de Inteligencia Artificial Multimodal (Google Gemini OCR `gemini-3.5-flash`) con reintentos controlados y extractor PDF nativo de respaldo.
    - Implementación de las normativas legales chilenas: Ley de Redondeo (Ley N° 20.956), Ley de Bolsas Reutilizables (Ley N° 21.100) y facturación DTE autorizada por el SII con timbre TED.
-   - Aseguramiento de calidad mediante **158 pruebas automatizadas** (Jest) que validan el 100% de los 65 endpoints RESTful.
+   - Aseguramiento de calidad mediante **207 pruebas automatizadas** (Jest) que validan el 100% de los 66 endpoints RESTful.
 
 3. **Transición (Fase 3 - 30%):**
    - Pruebas de estrés y conmutación offline bajo condiciones de corte de red en terreno.

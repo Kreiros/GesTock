@@ -35,6 +35,10 @@ services:
       PGDATABASE: ${PGDATABASE:-gestock_cloud_db}
       SQLITE_DB_PATH: /app/data/gestock_local.sqlite
       NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET (minimo 32 caracteres) en el archivo .env}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-false}
     ports:
       - "3000:3000"
     volumes:

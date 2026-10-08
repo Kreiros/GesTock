@@ -17,8 +17,8 @@ La batería fue ejecutada, evaluada y enriquecida con éxito:
 2. **Resolución de Inconsistencias:** Se subsanaron las dos fallas detectadas en la corrida inicial (validación de RUT mediante Módulo 11 en SII y prevención de facturas ficticias en el OCR).
 3. **Incorporación a Pruebas Unitarias:** Las reglas puras de negocio y algoritmos de validación fueron encapsulados en la suite `tests_unitarias/frontend_contract_rules.unit.test.ts` (11 pruebas unitarias adicionales).
 4. **Estado de Suites:**
-   * **Pruebas de Integración Jest (`npm test`):** 15 suites, 76 pruebas pasando (100%).
-   * **Pruebas Unitarias Jest (`npm run test:unit`):** 7 suites, 107 pruebas pasando (100%).
+   * **Pruebas de Integración Jest (`npm test`):** 15 suites, 81 pruebas pasando (100%).
+   * **Pruebas Unitarias Jest (`npm run test:unit`):** 7 suites, 126 pruebas pasando (100%).
    * **Batería E2E Frontend (`npm run test:e2e:frontend`):** 9 módulos, 99 comprobaciones pasando (100%).
 
 ---
@@ -89,13 +89,13 @@ Para asegurar que las reglas críticas evaluadas por el frontend se mantengan pr
 ### Ejecución de Pruebas Unitarias (Jest)
 ```bash
 npm run test:unit
-# Resultado esperado: 7 suites passed, 107 tests passed (100%)
+# Resultado esperado: 7 suites passed, 126 tests passed (100%)
 ```
 
 ### Ejecución de Pruebas de Integración (Jest)
 ```bash
 npm test
-# Resultado esperado: 15 suites passed, 76 tests passed (100%)
+# Resultado esperado: 15 suites passed, 81 tests passed (100%)
 ```
 
 ### Ejecución de la Batería Frontend E2E (Node ESM)

@@ -15,12 +15,12 @@
 | **Sistema Evaluado** | GesTock Backend Core (Node.js v22, TypeScript v5.8, Express v4.21) |
 | **Arquitectura de Persistencia** | Dual-Database Híbrida: PostgreSQL Cloud (SaaS Multi-tenant) & SQLite Local Mirror (POS Offline-First) |
 | **Suites de Integración Backend** | **15 suites** ejecutadas (`backend/tests/integration/*.test.ts`) |
-| **Pruebas de Integración Aprobadas** | **76 de 76 pruebas** aprobadas (**100% PASS Rate**) · 0 Fallas |
+| **Pruebas de Integración Aprobadas** | **81 de 81 pruebas** aprobadas (**100% PASS Rate**) · 0 Fallas |
 | **Suites Unitarias Backend** | **6 suites** ejecutadas (`tests_unitarias/backend/*.unit.test.ts`) |
-| **Pruebas Unitarias Aprobadas** | **96 de 96 pruebas** aprobadas (**100% PASS Rate**) · 0 Fallas |
-| **Total Pruebas Exclusivas Backend** | **172 pruebas automatizadas** (**100% PASS Rate Global**) |
+| **Pruebas Unitarias Aprobadas** | **115 de 115 pruebas** aprobadas (**100% PASS Rate**) · 0 Fallas |
+| **Total Pruebas Exclusivas Backend** | **196 pruebas automatizadas** (**100% PASS Rate Global**) |
 | **Suites Unitarias Frontend Segregadas** | **1 suite** (`tests_unitarias/frontend/frontend_contract_rules.unit.test.ts`, 11 pruebas, 100% PASS) |
-| **Total General Jest** | **183 pruebas aprobadas** (107 unitarias + 76 integración, 100% PASS) |
+| **Total General Jest** | **207 pruebas aprobadas** (126 unitarias + 81 integración, 100% PASS) |
 | **Dictamen de Auditoría** | **APROBADO SIN OBSERVACIONES** |
 
 ---
@@ -45,7 +45,7 @@ Las pruebas de integración evalúan el funcionamiento coordinado de controlador
 
 | N° | Suite de Pruebas | Archivo | Casos | Estado | Dominio y Comportamiento Verificado |
 |:---:|---|---|:---:|:---:|---|
-| 01 | **Seguridad & Autenticación REST** | `auth_endpoints.test.ts` | 8 / 8 | **100% OK** | Login con credenciales válidas emite JWT; bloqueo perimetral 401 sin token; bloqueo 401 ante JWT adulterado; registro restringido exclusivamente a administradores; sanitización de usuarios (nunca expone `password_hash`); endpoints protegidos `/me` y `/users`; mensaje de error idéntico anti-enumeración. |
+| 01 | **Seguridad & Autenticación REST** | `auth_endpoints.test.ts` | 21 / 21 | **100% OK** | Login con credenciales válidas emite JWT; bloqueo perimetral 401 sin token; bloqueo 401 ante JWT adulterado; registro restringido exclusivamente a administradores; sanitización de usuarios (nunca expone `password_hash`); endpoints protegidos `/me` y `/users`; mensaje de error idéntico anti-enumeración. registro bloqueado (403) hacia otro comercio; cambio de contraseña `PUT /auth/password` (401 sin token o con clave actual errónea, 400 si es corta, 200 y login con la nueva). |
 | 02 | **Cumplimiento Retail Chileno** | `chilean_retail_compliance.test.ts` | 4 / 4 | **100% OK** | Aplicación estricta de Ley N° 20.956 (redondeo hacia arriba/abajo en pagos en efectivo); cálculo exacto de vuelto; separación del IVA Débito Fiscal (19%); coherencia con terminales POS. |
 | 03 | **Persistencia Dual & ACID** | `dual_persistence_acid.test.ts` | 5 / 5 | **100% OK** | Transaccionalidad atómica multiconsulta (`withTransaction`); aislamiento multi-tenant estricto; rollback garantizado ante excepciones; espejo continuo entre SQLite y PostgreSQL en memoria (`pg-mem`). |
 | 04 | **Flujo E2E de Punto de Venta (POS)** | `frontend_pos_e2e.test.ts` | 4 / 4 | **100% OK** | Ciclo completo de venta desde escaneo de productos, cálculo de descuentos, emisión de comprobante fiscal, deducción atómica de existencias y registro en auditoría. |
@@ -61,7 +61,7 @@ Las pruebas de integración evalúan el funcionamiento coordinado de controlador
 | 14 | **Resolución de Conflictos Sync** | `sync_conflict_resolution.test.ts` | 5 / 5 | **100% OK** | Resolución determinista de ediciones concurrentes nube-local; aplicación de regla *Last-Write-Wins* (LWW) cronológica; registro de auditoría en tabla de resolución de conflictos. |
 | 15 | **Empuje de Sincronización (Push Engine)** | `sync_engine_push.test.ts` | 5 / 5 | **100% OK** | Procesamiento por lotes de la cola `sync_queue`; envío transaccional de ventas y movimientos de stock; actualización de estado local (`is_dirty = 0`) tras confirmación en la nube. |
 
-**Subtotal Pruebas de Integración:** **15 suites, 76 pruebas aprobadas (100% PASS).**
+**Subtotal Pruebas de Integración:** **15 suites, 81 pruebas aprobadas (100% PASS).**
 
 ---
 
@@ -72,13 +72,13 @@ Las pruebas unitarias del backend están aisladas de toda dependencia externa. O
 | N° | Suite de Pruebas | Archivo | Casos | Estado | Dominio y Contratos Validados |
 |:---:|---|---|:---:|:---:|---|
 | 01 | **Catálogo Completo de Endpoints REST** | `all_endpoints.unit.test.ts` | 57 / 57 | **100% OK** | Verificación integral de los 57 endpoints REST del backend (Core, POS, Caja, DTE, Invoices, Suppliers, Replenishment, Payments, Trends, Config, Sync, Dashboard). Valida códigos HTTP 200, 201, 400 y 404, payloads estructurados y control de errores. |
-| 02 | **Seguridad, Criptografía, JWT & RBAC** | `security_and_auth.unit.test.ts` | 16 / 16 | **100% OK** | Criptografía Bcrypt (hashes de 60 caracteres reales, costo 10); emisión, firma y validación de tokens JWT; control de acceso RBAC (bloqueo 403 a cajeros en rutas admin, paso a administradores); sanitización de Tenant ID contra SQL Injection; capturador global de errores sanitizado. |
+| 02 | **Seguridad, Criptografía, JWT & RBAC** | `security_and_auth.unit.test.ts` | 35 / 35 | **100% OK** | Criptografía Bcrypt (hashes de 60 caracteres reales, costo 10); emisión, firma y validación de tokens JWT; control de acceso RBAC (bloqueo 403 a cajeros en rutas admin, paso a administradores); sanitización de Tenant ID contra SQL Injection; capturador global de errores sanitizado; aislamiento multi-tenant (403 si el tenant declarado difiere del token); rutas DTE del comprobante permitidas al cajero; rechazo de `JWT_SECRET` ausente, de ejemplo o corto en producción; `usuario_id` del body reemplazado por el del token. |
 | 03 | **Normativa Tributaria de Precios & Redondeo** | `pricing_and_rounding.unit.test.ts` | 7 / 7 | **100% OK** | Regla legal de redondeo en efectivo (Ley N° 20.956): 1-4 abajo, 5-9 arriba, 0 neutro; cálculo de precio comercial con margen porcentual; desglose preciso de IVA 19% (fórmulas Neto = Total / 1.19, IVA = Total - Neto). |
 | 04 | **Algoritmos Predictivos de Reabastecimiento** | `replenishment_math.unit.test.ts` | 6 / 6 | **100% OK** | Velocidad de venta diaria ($V_d = \text{unidades} / \text{días}$); fórmula formal de Punto de Reorden ($ROP = V_d \times L_t + SS$); activación de compra según umbral; ajuste automático hacia múltiplos de empaque de proveedor (bultos mínimos). |
 | 05 | **Circuit Breaker & Resiliencia Offline** | `circuit_breaker.unit.test.ts` | 5 / 5 | **100% OK** | Estados CLOSED, OPEN y HALF_OPEN; disparo inmediato ante error de conexión; rechazo en caliente (<2ms) sin consumir timeout de red; restauración automática (`resetCircuit`); bypass hacia SQLite local. |
 | 06 | **Facturación DTE, Timbre TED & Res. 176** | `dte_crypto_rules.unit.test.ts` | 5 / 5 | **100% OK** | Códigos tributarios oficiales SII (33 Factura, 39 Boleta, 41 Boleta Exenta, 52 Guía, 61 Nota de Crédito); Resolución Exenta N° 176 (Modelo A: todo emite boleta; Modelo B: tarjetas no emiten boleta 39 para evitar doble débito fiscal); estructura XML del Timbre Electrónico (<TED>). |
 
-**Subtotal Pruebas Unitarias de Backend:** **6 suites, 96 pruebas aprobadas (100% PASS).**
+**Subtotal Pruebas Unitarias de Backend:** **6 suites, 115 pruebas aprobadas (100% PASS).**
 
 ---
 
@@ -88,13 +88,13 @@ Para evitar el acoplamiento entre pruebas del backend y pruebas originadas en re
 
 ```
 tests_unitarias/
-├── backend/                                   # Suites Exclusivas de Backend (96 tests)
+├── backend/                                   # Suites Exclusivas de Backend (115 tests)
 │   ├── all_endpoints.unit.test.ts             # 57 tests
 │   ├── circuit_breaker.unit.test.ts           # 5 tests
 │   ├── dte_crypto_rules.unit.test.ts          # 5 tests
 │   ├── pricing_and_rounding.unit.test.ts      # 7 tests
 │   ├── replenishment_math.unit.test.ts        # 6 tests
-│   └── security_and_auth.unit.test.ts         # 16 tests
+│   └── security_and_auth.unit.test.ts         # 35 tests
 │
 ├── frontend/                                  # Suites de Reglas de Contrato Frontend (11 tests)
 │   └── frontend_contract_rules.unit.test.ts   # 11 tests
@@ -104,8 +104,8 @@ tests_unitarias/
 ```
 
 ### Comandos de Ejecución Específicos añadidos a `package.json`:
-* `npm run test:unit`: Ejecuta todas las pruebas unitarias (107 tests).
-* `npm run test:unit:backend`: Ejecuta exclusivamente las 6 suites de backend (96 tests).
+* `npm run test:unit`: Ejecuta todas las pruebas unitarias (126 tests).
+* `npm run test:unit:backend`: Ejecuta exclusivamente las 6 suites de backend (115 tests).
 * `npm run test:unit:frontend`: Ejecuta exclusivamente la suite de reglas de frontend (11 tests).
 
 ---
@@ -176,6 +176,6 @@ La batería de pruebas automatizadas del Backend de GesTock satisface con creces
 * Demuestra una arquitectura dual sólida y resiliente frente a desconexiones de red.
 * Cumple estrictamente con la normativa legal y tributaria chilena (SII y Ley de Redondeo).
 * Protege el perímetro y los datos de los usuarios mediante criptografía robusta (Bcrypt y JWT).
-* Mantiene una cobertura de pruebas impecable con 172 comprobaciones de backend pasando al 100%.
+* Mantiene una cobertura de pruebas impecable con 196 comprobaciones de backend pasando al 100%.
 
 **Dictamen Técnico:** **APROBADO Y CERTIFICADO PARA PRODUCCIÓN LOCAL Y DEFENSA DE FASE 2.**

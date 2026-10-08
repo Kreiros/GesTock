@@ -5,7 +5,6 @@ const API_V1 = '/api/v1'
 
 // rutas del backend que usa el frontend
 export const endpoints = {
-  // pendiente: el backend todavia no expone estas rutas, ver AUTENTICACION-MARCELO.txt
   auth: {
     login: `${API_V1}/auth/login`,
     registro: `${API_V1}/auth/register`,
