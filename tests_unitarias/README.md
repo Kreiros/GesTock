@@ -11,7 +11,7 @@ Está diseñada para ser transportable, auditable y ejecutable en CI/CD de forma
 ```
 tests_unitarias/
 ├── backend/                               # Pruebas Unitarias del Backend (Lógica de Servidor & Core)
-│   ├── all_endpoints.unit.test.ts         # Cobertura de catálogo REST (57 pruebas)
+│   ├── all_endpoints.unit.test.ts         # Cobertura de catálogo REST (69 pruebas)
 │   ├── circuit_breaker.unit.test.ts       # Resiliencia Offline-First & Circuit Breaker (5 pruebas)
 │   ├── dte_crypto_rules.unit.test.ts      # Facturación DTE, Timbre TED y Res. Ex. N° 176 (5 pruebas)
 │   ├── pricing_and_rounding.unit.test.ts  # Ley de Redondeo N° 20.956, Margen e IVA (7 pruebas)
@@ -27,7 +27,7 @@ tests_unitarias/
 
 ## 📊 Matriz Detallada de Pruebas Unitarias
 
-### 1. Módulo Backend (`tests_unitarias/backend/` — 115 Pruebas)
+### 1. Módulo Backend (`tests_unitarias/backend/` — 127 Pruebas)
 
 | Archivo | Dominio Evaluado | Descripción Técnica | Tests | Estado |
 |---|---|---|:---:|:---:|
@@ -44,7 +44,7 @@ tests_unitarias/
 |---|---|---|:---:|:---:|
 | `frontend_contract_rules.unit.test.ts` | Reglas de Negocio & Contratos UI | Algoritmo Módulo 11 oficial del SII (76.123.456-0, DV numérico y K), fórmula matemática de arqueo de caja con RutPay aislado, trazabilidad continua de existencias (0->10->7->5), idempotencia en edición parcial (COALESCE), estructura de notas de crédito y anti-enumeración de usuarios en login (HTTP 401 unificado). | 11 | **100% PASS** |
 
-**Total Consolidado:** **126 pruebas unitarias automatizadas (100% aprobadas).**
+**Total Consolidado:** **138 pruebas unitarias automatizadas (100% aprobadas).**
 
 ---
 
@@ -53,10 +53,10 @@ tests_unitarias/
 Desde la raíz del proyecto GesTock:
 
 ```bash
-# 1. Ejecutar TODAS las pruebas unitarias (Backend + Frontend, 126 tests)
+# 1. Ejecutar TODAS las pruebas unitarias (Backend + Frontend, 138 tests)
 npm run test:unit
 
-# 2. Ejecutar EXCLUSIVAMENTE las pruebas unitarias del Backend (115 tests)
+# 2. Ejecutar EXCLUSIVAMENTE las pruebas unitarias del Backend (127 tests)
 npm run test:unit:backend
 
 # 3. Ejecutar EXCLUSIVAMENTE las pruebas unitarias del Frontend (11 tests)

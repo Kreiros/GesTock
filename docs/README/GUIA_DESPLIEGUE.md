@@ -186,12 +186,12 @@ curl http://localhost:3000/health
 curl http://localhost:3000/api
 ```
 
-### Ejecución de Baterías de Pruebas (207 Tests, 100% Passing):
+### Ejecución de Baterías de Pruebas (219 Tests, 100% Passing):
 ```bash
 # Batería de Pruebas de Integración (15 suites, 68 tests)
 npm test
 
-# Batería de Pruebas Unitarias Aisladas (7 suites, 126 tests)
+# Batería de Pruebas Unitarias Aisladas (7 suites, 138 tests)
 npm run test:unit
 
 # Reporte de cobertura de código
