@@ -109,6 +109,7 @@ sequenceDiagram
   * `POST /api/v1/auth/register` (Restringido a rol `Admin`).
   * `GET /api/v1/auth/me` (Requiere rol `Cajero` o `Admin`).
   * `GET /api/v1/auth/users` (Restringido a rol `Admin`, audita personal).
+  * `PUT /api/v1/auth/password` (Cualquier usuario autenticado, cambia su propia contraseña).
 * **Middleware Aplicable:** `rbacAuthMiddleware` en `backend/src/middleware/security.middleware.ts`.
   * *Regla Invariante:* En producción (`NODE_ENV=production`), la validación JWT es obligatoria por defecto salvo `AUTH_DISABLED=true`. En desarrollo se exige con `ENFORCE_AUTH=true`.
 * **Servicio de Dominio:** `backend/src/auth/auth.service.ts`.

@@ -29,13 +29,13 @@ Cumple estrictamente con las normativas del **Servicio de Impuestos Internos (SI
 ## 2. Tecnologías Utilizadas
 
 - **Lenguajes:** TypeScript (strict mode), JavaScript (Node.js v20+ LTS), SQL.
-- **Backend Framework:** Express.js 4 (enrutamiento modular, 65 endpoints RESTful).
+- **Backend Framework:** Express.js 4 (enrutamiento modular, 66 endpoints RESTful).
 - **Frontend:** React 19, TypeScript, Vite, Material UI (MUI v6), React Router 8, Zustand, TanStack Query.
 - **Bases de Datos:** PostgreSQL 16+ (Cloud SaaS) y SQLite 3 (Edge Local POS, `better-sqlite3`).
 - **Seguridad & Red:** Helmet CSP, CORS dinámico, Rate Limit granular por `X-Device-ID` e IPv6, JWT (`jsonwebtoken`), Bcrypt (`bcryptjs`).
 - **Inteligencia Artificial:** Google Gemini AI API (`gemini-3.5-flash` con fallback en `pdf-parse`).
 - **Infraestructura:** Docker, Docker Compose multi-stage.
-- **Testing:** Jest (158 pruebas automatizadas, 100% aprobadas).
+- **Testing:** Jest (207 pruebas automatizadas, 100% aprobadas).
 
 ---
 
@@ -85,12 +85,12 @@ npm run dev
 
 ---
 
-### Baterías de Pruebas Automatizadas (158 Pruebas, 100% OK)
+### Baterías de Pruebas Automatizadas (207 Pruebas, 100% OK)
 ```bash
-# Pruebas de integración (15 suites, 76 tests)
+# Pruebas de integración (15 suites, 81 tests)
 npm test
 
-# Pruebas unitarias aisladas (6 suites, 96 tests)
+# Pruebas unitarias aisladas (7 suites, 126 tests)
 npm run test:unit
 
 # Reporte de cobertura de código
@@ -112,6 +112,7 @@ npm run test:coverage
 | **Contraseña Administrador** | `admin123` | Cifrada con Bcrypt work factor 10 (hash de 60 caracteres) |
 | **Usuario Cajero de Prueba** | `cajero@gestock.cl` | Rol `cajero` (6 vistas operativas de mostrador) |
 | **Contraseña Cajero** | `cajero123` | Cifrada con Bcrypt work factor 10 (hash de 60 caracteres) |
+| **Cuentas demo en producción** | No se crean | Definir `JWT_SECRET` (32+ caracteres) e `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`; cambio de clave con `PUT /api/v1/auth/password` |
 | **API Key para Clientes Ext.**| `secret-gestock-api-key-2026` | Cabecera `X-API-Key` para integraciones B2B |
 
 ---
@@ -136,7 +137,7 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
 ## 6. Documentación Oficial
 
 Consulte los manuales formales detallados en la carpeta [`docs/`](./docs):
-1. **docs/ARQUITECTURA_SISTEMA.md** / **docs/arquitectura_sistema.docx**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 65 endpoints.
+1. **docs/ARQUITECTURA_SISTEMA.md** / **docs/arquitectura_sistema.docx**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 66 endpoints.
 2. **docs/BASE_DE_DATOS.md** / **docs/base_de_datos.docx**: Modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y banderas de sincronización.
 3. **docs/GUIA_DESPLIEGUE.md** / **docs/guia_de_despliegue.docx**: Instalacion, variables de entorno, Docker Compose y PM2.
 4. **docs/MANUAL_FUNCIONALIDADES.md** / **docs/manual_de_funcionalidades.docx**: Operación del POS, normativas chilenas, DTE, arqueo Z y reabastecimiento ROP.
