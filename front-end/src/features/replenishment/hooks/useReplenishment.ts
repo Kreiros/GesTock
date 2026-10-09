@@ -7,7 +7,7 @@ import {
 } from '@/features/replenishment/api/replenishment.api'
 import { CONFIG_ROP_POR_DEFECTO } from '@/features/replenishment/types'
 import { VIGENCIA_LARGA_MS } from '@/lib/query/queryClient'
-import { useEsAdmin } from '@/features/auth/stores/sesionStore'
+import { usePuedeAdministrar } from '@/features/auth/stores/sesionStore'
 import type { ConfigRop } from '@/features/replenishment/types'
 
 // sugerencia de pedido segun el punto de reorden (rop). solo la consulta, no genera ordenes de compra.
@@ -17,7 +17,7 @@ export function useSugerenciaPedido(config: ConfigRop = CONFIG_ROP_POR_DEFECTO) 
     queryKey: ['replenishment', 'sugerencia', config],
     queryFn: () => obtenerSugerenciaPedido(config),
     staleTime: VIGENCIA_LARGA_MS,
-    enabled: useEsAdmin(),
+    enabled: usePuedeAdministrar(),
   })
 }
 

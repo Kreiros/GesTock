@@ -8,14 +8,14 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import { formatoClp } from '@/shared/utils/formatoClp'
 import { useSugerenciaPedido } from '@/features/replenishment/hooks/useReplenishment'
 import { useConfigRopStore } from '@/shared/stores/configRopStore'
-import { useEsAdmin } from '@/features/auth/stores/sesionStore'
+import { usePuedeAdministrar } from '@/features/auth/stores/sesionStore'
 import { DialogoSugerenciaPedido } from '@/features/inventario/components/visual/DialogoSugerenciaPedido'
 
 // tarjeta inferior: cuantos productos necesitan reposicion, segun el algoritmo rop real
 export function PanelSugerenciaPedido() {
   const { data, isPending } = useSugerenciaPedido(useConfigRopStore((estado) => estado.config))
   const [abierto, setAbierto] = useState(false)
-  const esAdmin = useEsAdmin()
+  const esAdmin = usePuedeAdministrar()
 
   // pedir a proveedores es tarea del admin
   if (!esAdmin) return null
