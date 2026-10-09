@@ -1,7 +1,7 @@
 // src/features/invoices/api/invoices.api.ts
 import { httpClient } from '@/lib/api/httpClient'
 import { endpoints } from '@/lib/api/endpoints'
-import { env } from '@/config/env'
+import { tenantActual } from '@/features/auth/utils/identidad'
 import type {
   DatosExtraidosFactura,
   PrevisualizacionFactura,
@@ -17,7 +17,7 @@ export async function escanearFactura(archivoBase64: string, nombreArchivo: stri
   const { data } = await httpClient.post<{ success: boolean; preview: PrevisualizacionFactura }>(
     endpoints.invoices.scan,
     {
-      tenant_id: env.tenantId,
+      tenant_id: tenantActual(),
       invoice_data: archivoBase64,
       file_name: nombreArchivo,
       mime_type: tipoArchivo,
@@ -31,7 +31,7 @@ export async function escanearFactura(archivoBase64: string, nombreArchivo: stri
 export async function confirmarFactura(datos: DatosExtraidosFactura) {
   const { data } = await httpClient.post<{ success: boolean; data: ResultadoIngesta }>(
     endpoints.invoices.confirm,
-    { tenant_id: env.tenantId, invoice_data: datos },
+    { tenant_id: tenantActual(), invoice_data: datos },
   )
   return data.data
 }

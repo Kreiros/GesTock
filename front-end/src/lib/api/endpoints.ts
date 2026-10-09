@@ -10,6 +10,7 @@ export const endpoints = {
     registro: `${API_V1}/auth/register`,
     perfil: `${API_V1}/auth/me`,
     usuarios: `${API_V1}/auth/users`,
+    clave: `${API_V1}/auth/password`,
   },
   sistema: {
     info: '/api',
@@ -73,6 +74,5 @@ export const endpoints = {
     cerrar: `${API_V1}/caja/cerrar`,
     historial: `${API_V1}/caja/historial`,
     movimiento: `${API_V1}/caja/movimiento`,
-    movimientos: `${API_V1}/caja/movimientos`,
   },
 } as const
