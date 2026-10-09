@@ -5,24 +5,23 @@ No usa datos simulados: si el servidor no está arriba, las pruebas no corren.
 
 ## Cómo correrlas
 
-Primero el backend, en otra terminal:
+Primero el backend, en otra terminal y desde la raíz del proyecto:
 
 ```bash
-cd "C:/Users/david/OneDrive/Escritorio/gestock"
 npm run dev
 ```
 
-Y después, desde esta carpeta:
+Y después, también desde la raíz:
 
 ```bash
-node ejecutar.mjs
+npm run test:e2e:frontend
 ```
 
 Para correr solo un grupo, se le pasa parte del nombre del archivo:
 
 ```bash
-node ejecutar.mjs productos
-node ejecutar.mjs 08
+npm run test:e2e:frontend productos
+npm run test:e2e:frontend 10
 ```
 
 No hay que instalar nada. Usa el `fetch` que ya trae Node.
@@ -40,6 +39,7 @@ No hay que instalar nada. Usa el `fetch` que ya trae Node.
 | `07-facturas-ocr.mjs` | Lectura de facturas con OCR |
 | `08-sii.mjs` | Folios CAF, F29, RCOF y guías |
 | `09-autenticacion.mjs` | Login, usuarios y permisos |
+| `10-permisos-cajero.mjs` | Lo que el cajero puede y no puede hacer |
 
 ## Lo que no se prueba, y por qué
 
@@ -48,12 +48,9 @@ Algunas cosas quedan marcadas como **SALTA** a propósito:
 - **Confirmar la ingesta de una factura.** Crearía productos de verdad en el
   inventario. Se prueba a mano desde la pantalla.
 - **El set de certificación del SII.** Emite documentos reales y consume folios.
-- **Las pruebas de autenticación.** El backend todavía no expone `/api/v1/auth`.
-  Cuando Marcelo lo entregue, se corren con:
-
-  ```bash
-  GESTOCK_ADMIN_EMAIL=admin@gestock.cl GESTOCK_ADMIN_PASSWORD=... node ejecutar.mjs 09
-  ```
+- **La comprobación de que sin token no se entra.** En desarrollo el backend deja
+  pasar a propósito, así que esa sola queda saltada. Con `ENFORCE_AUTH=true` o con
+  `NODE_ENV=production` sí se exige y la prueba corre.
 
 Una prueba saltada no cuenta como falla, pero queda registrada en el reporte.
 
@@ -63,7 +60,7 @@ Las pruebas de producto crean un artículo con SKU `PRUEBA-########`. Al termina
 lo desactivan, que es lo máximo que permite la API porque no existe un endpoint
 para borrar productos.
 
-Para sacarlos de la base del todo:
+Para sacarlos de la base del todo, desde esta carpeta:
 
 ```bash
 node limpiar.mjs
@@ -83,6 +80,11 @@ comprobación y el total. Sirve como evidencia para la Fase 2.
 | `GESTOCK_URL` | Dirección del backend | `http://localhost:3000` |
 | `GESTOCK_TENANT` | Local sobre el que se prueba | el tenant demo |
 | `GESTOCK_DEVICE` | Identificador de la caja | `PRUEBAS-AUTOMATICAS` |
-| `GESTOCK_ADMIN_EMAIL` | Correo para las pruebas de login | — |
-| `GESTOCK_ADMIN_PASSWORD` | Clave para las pruebas de login | — |
+| `GESTOCK_ADMIN_EMAIL` | Correo del admin | `admin@gestock.cl` |
+| `GESTOCK_ADMIN_PASSWORD` | Clave del admin | `admin123` |
+| `GESTOCK_CAJERO_EMAIL` | Correo del cajero | `cajero@gestock.cl` |
+| `GESTOCK_CAJERO_PASSWORD` | Clave del cajero | `cajero123` |
 | `GESTOCK_SQLITE` | Ruta de la base, solo para `limpiar.mjs` | la del proyecto |
+
+En producción no existen las cuentas de ejemplo, así que ahí hay que pasar las
+credenciales de verdad por variable de entorno.
