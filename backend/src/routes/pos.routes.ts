@@ -10,6 +10,7 @@ import { defaultDteEmitter } from '../dte/dte-emitter.service';
 import { TipoDTE } from '../dte/types';
 import { defaultReplenishmentService } from '../replenishment/replenishment.service';
 import { defaultTenantConfigService } from '../config/tenant-config.service';
+import { defaultInvoiceQueue } from '../invoices/invoice-queue.service';
 
 import { generateChileanBarcode } from '../utils/barcode.utils';
 
@@ -893,20 +894,41 @@ router.post('/sync', async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    // 3. Obtener conteo actualizado de pendientes
+    // 3. Reintentar las facturas que quedaron sin digitalizar por falta de conexión (RF-43)
+    let colaFacturas = { procesadas: 0, fallidas: 0, pendientes: 0 };
+    try {
+      const resultadoCola = await defaultInvoiceQueue.procesarPendientes(tenantId);
+      colaFacturas = {
+        procesadas: resultadoCola.procesadas,
+        fallidas: resultadoCola.fallidas,
+        pendientes: resultadoCola.pendientes
+      };
+    } catch (colaErr) {
+      logger.warn('PosRoutes', 'La cola de facturas pendientes no pudo procesarse en esta sincronización', {
+        error: colaErr instanceof Error ? colaErr.message : String(colaErr)
+      });
+    }
+
+    // 4. Obtener conteo actualizado de pendientes
     const dirtyCountResult = sqlite.queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM transacciones_venta WHERE is_dirty = 1'
     );
 
+    const partes = [
+      result.synced_ids.length > 0
+        ? `${result.synced_ids.length} ventas respaldadas en la nube`
+        : 'ventas ya sincronizadas',
+      colaFacturas.procesadas > 0 ? `${colaFacturas.procesadas} facturas digitalizadas desde la cola` : null
+    ].filter(Boolean);
+
     res.status(200).json({
       success: true,
-      message: result.synced_ids.length > 0
-        ? `Sincronización completada: ${result.synced_ids.length} ventas respaldadas en la nube.`
-        : 'Todos los datos ya se encuentran sincronizados con la nube.',
+      message: `Sincronización completada: ${partes.join(' y ')}.`,
       synced_sales_count: result.synced_ids.length,
       failed_sales_count: result.failed_ids.length,
       catalog_updated_count: catalogUpdatedCount,
       pending_dirty_count: dirtyCountResult?.count || 0,
+      invoice_queue: colaFacturas,
       cloud_online: true,
       result
     });

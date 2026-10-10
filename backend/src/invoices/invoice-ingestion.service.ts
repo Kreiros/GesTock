@@ -509,7 +509,7 @@ export class InvoiceIngestionService {
         `SELECT fi.*, p.nombre_proveedores as proveedor_nombre 
          FROM factura_ingresos fi
          LEFT JOIN proveedores p ON fi.proveedor_id = p.id
-         WHERE fi.tenant_id = $1
+         WHERE fi.tenant_id = $1 AND fi.estado NOT IN ('PENDIENTE_OCR', 'FALLIDA_OCR')
          ORDER BY fi.created_at DESC`,
         [tenantId]
       );
@@ -526,7 +526,7 @@ export class InvoiceIngestionService {
           `SELECT fi.*, p.nombre_proveedores as proveedor_nombre 
            FROM factura_ingresos fi
            LEFT JOIN proveedores p ON fi.proveedor_id = p.id
-           WHERE fi.tenant_id = ?
+           WHERE fi.tenant_id = ? AND fi.estado NOT IN ('PENDIENTE_OCR', 'FALLIDA_OCR')
            ORDER BY fi.fecha_ingreso DESC`,
           [tenantId]
         );

@@ -1,9 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { defaultInvoiceIngestionService } from '../invoices/invoice-ingestion.service';
+import { defaultInvoiceQueue } from '../invoices/invoice-queue.service';
 import { InvoiceInput, ExtractedInvoiceData } from '../ocr/types';
 import { logger } from '../utils/logger';
 
 const router = Router();
+
+const esFalloDeDigitalizacion = (mensaje: string): boolean => mensaje.includes('No fue posible digitalizar');
 
 /**
  * POST /api/v1/invoices/scan
@@ -36,13 +39,93 @@ router.post('/scan', async (req: Request, res: Response): Promise<void> => {
       preview
     });
   } catch (error) {
-    logger.error('InvoiceRoutes', 'Failed to scan invoice', error);
     const errorMsg = error instanceof Error ? error.message : String(error);
-    const statusCode = errorMsg.includes('No fue posible digitalizar') ? 422 : 500;
-    res.status(statusCode).json({
+
+    // Si el documento no se pudo digitalizar, se guarda y queda en cola para reintentarlo al
+    // recuperar la conexion. Antes se descartaba, de modo que no habia nada que reprocesar.
+    if (esFalloDeDigitalizacion(errorMsg)) {
+      try {
+        const encolada = defaultInvoiceQueue.encolar(tenant_id, invoiceData, file_name, mime_type, errorMsg);
+        logger.warn('InvoiceRoutes', 'Factura sin digitalizar encolada para reintento', { id: encolada.id });
+        res.status(202).json({
+          success: true,
+          encolada: true,
+          data: { ...encolada, estado: 'PENDIENTE_OCR', intentos_maximos: defaultInvoiceQueue.intentosMaximos },
+          message: 'No fue posible digitalizar el documento ahora. Quedo guardado y se reintentara al ' +
+            'recuperar la conexion; tambien puede ingresarlo manualmente.'
+        });
+        return;
+      } catch (errorCola) {
+        logger.error('InvoiceRoutes', 'No se pudo encolar la factura sin digitalizar', errorCola);
+        res.status(422).json({
+          success: false,
+          message: errorMsg,
+          error: errorCola instanceof Error ? errorCola.message : String(errorCola)
+        });
+        return;
+      }
+    }
+
+    logger.error('InvoiceRoutes', 'Failed to scan invoice', error);
+    res.status(500).json({
       success: false,
-      message: errorMsg.includes('No fue posible digitalizar') ? errorMsg : 'Error al escanear la factura',
+      message: 'Error al escanear la factura',
       error: errorMsg
+    });
+  }
+});
+
+/**
+ * GET /api/v1/invoices/pending
+ * Facturas guardadas que aun no se han podido digitalizar (RF-43)
+ */
+router.get('/pending', (req: Request, res: Response): void => {
+  const tenantId = (req.query.tenant_id as string) || (req.headers['x-tenant-id'] as string);
+
+  if (!tenantId) {
+    res.status(400).json({ success: false, message: 'tenant_id query parameter is required' });
+    return;
+  }
+
+  try {
+    const cola = defaultInvoiceQueue.listar(tenantId);
+    res.status(200).json({
+      success: true,
+      count: cola.length,
+      intentos_maximos: defaultInvoiceQueue.intentosMaximos,
+      data: cola
+    });
+  } catch (error) {
+    logger.error('InvoiceRoutes', 'Failed to list pending invoices', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al consultar la cola de facturas pendientes',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * POST /api/v1/invoices/process-pending
+ * Reintenta la digitalizacion de la cola. Tambien se ejecuta desde POST /pos/sync
+ */
+router.post('/process-pending', async (req: Request, res: Response): Promise<void> => {
+  const tenantId = req.body?.tenant_id || (req.headers['x-tenant-id'] as string) || (req.query.tenant_id as string);
+
+  if (!tenantId) {
+    res.status(400).json({ success: false, message: 'tenant_id is required' });
+    return;
+  }
+
+  try {
+    const resultado = await defaultInvoiceQueue.procesarPendientes(tenantId);
+    res.status(200).json({ success: true, data: resultado });
+  } catch (error) {
+    logger.error('InvoiceRoutes', 'Failed to process pending invoice queue', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al procesar la cola de facturas pendientes',
+      error: error instanceof Error ? error.message : String(error)
     });
   }
 });

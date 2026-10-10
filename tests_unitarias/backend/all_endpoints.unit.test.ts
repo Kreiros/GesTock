@@ -17,7 +17,7 @@ const rsaKey = crypto.generateKeyPairSync('rsa', {
   privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
 });
 
-describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (69/69)', () => {
+describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (71/71)', () => {
   let server: http.Server;
   let baseUrl: string;
   let dteId = 'demo-dte-01';
@@ -376,6 +376,23 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (6
       });
       expect(res.status).toBe(200);
       expect(res.data.success).toBe(true);
+    });
+
+    test('70. GET /api/v1/invoices/pending consulta la cola de facturas sin digitalizar', async () => {
+      const res = await requestApi('GET', `/api/v1/invoices/pending?tenant_id=${DEMO_TENANT}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.data.data)).toBe(true);
+      expect(res.data.intentos_maximos).toBeGreaterThan(0);
+    });
+
+    test('71. POST /api/v1/invoices/process-pending reintenta la digitalización de la cola', async () => {
+      const res = await requestApi('POST', '/api/v1/invoices/process-pending', { tenant_id: DEMO_TENANT });
+
+      expect(res.status).toBe(200);
+      expect(res.data.data).toHaveProperty('procesadas');
+      expect(res.data.data).toHaveProperty('fallidas');
+      expect(res.data.data).toHaveProperty('pendientes');
     });
 
     test('33. GET /api/v1/invoices/ lista historial de facturas ingresadas', async () => {
