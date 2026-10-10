@@ -122,7 +122,11 @@ router.post('/process-pending', async (req: Request, res: Response): Promise<voi
   try {
     const resultado = await defaultInvoiceQueue.procesarPendientes(tenantId);
     const documentosHuerfanos = defaultInvoiceQueue.limpiarHuerfanos(tenantId);
-    res.status(200).json({ success: true, data: { ...resultado, documentos_huerfanos_eliminados: documentosHuerfanos } });
+    const respaldo = await defaultInvoiceIngestionService.respaldarFacturasEnNube(tenantId);
+    res.status(200).json({
+      success: true,
+      data: { ...resultado, documentos_huerfanos_eliminados: documentosHuerfanos, respaldo_nube: respaldo }
+    });
   } catch (error) {
     logger.error('InvoiceRoutes', 'Failed to process pending invoice queue', error);
     res.status(500).json({
@@ -248,8 +252,8 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
  * GET /api/v1/invoices/:id/document
  * Documento original de la factura, respaldo de la compra para el SII y la contabilidad
  */
-router.get('/:id/document', (req: Request, res: Response): void => {
-  const { id } = req.params;
+router.get('/:id/document', async (req: Request, res: Response): Promise<void> => {
+  const id = String(req.params.id);
   const tenantId = (req.query.tenant_id as string) || (req.headers['x-tenant-id'] as string);
 
   if (!tenantId) {
@@ -268,16 +272,29 @@ router.get('/:id/document', (req: Request, res: Response): void => {
       return;
     }
 
-    if (!factura.archivo_ruta || !defaultInvoiceFileStore.existe(factura.archivo_ruta)) {
+    // Disco local primero; si el archivo ya no esta, se recupera del respaldo en la nube. Sin esta
+    // segunda via el respaldo no serviria de nada: un respaldo que no se puede restaurar no es respaldo.
+    let contenido: Buffer | null = null;
+    let origen = 'local';
+
+    if (factura.archivo_ruta && defaultInvoiceFileStore.existe(factura.archivo_ruta)) {
+      contenido = defaultInvoiceFileStore.leerBuffer(factura.archivo_ruta);
+    } else {
+      contenido = await defaultInvoiceIngestionService.recuperarDocumentoDeNube(tenantId, id);
+      origen = 'nube';
+    }
+
+    if (!contenido) {
       res.status(404).json({
         success: false,
-        message: 'Esta factura no tiene documento original almacenado. Las ingresadas antes de la ' +
-          'incorporacion del respaldo documental, o escaneadas sin reenviar su referencia, no lo conservan.'
+        message: 'Esta factura no tiene documento original almacenado ni en el equipo local ni en la ' +
+          'nube. Las ingresadas antes de la incorporacion del respaldo documental, o escaneadas sin ' +
+          'reenviar su referencia, no lo conservan.'
       });
       return;
     }
 
-    const contenido = Buffer.from(defaultInvoiceFileStore.leerBase64(factura.archivo_ruta), 'base64');
+    res.setHeader('X-Documento-Origen', origen);
     res.setHeader('Content-Type', factura.archivo_mime || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename="${factura.archivo_nombre || 'factura'}"`);
     res.status(200).send(contenido);

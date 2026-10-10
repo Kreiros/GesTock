@@ -14,6 +14,7 @@ tests_unitarias/
 │   ├── all_endpoints.unit.test.ts         # Cobertura de catálogo REST (72 pruebas)
 │   ├── circuit_breaker.unit.test.ts       # Resiliencia Offline-First & Circuit Breaker (5 pruebas)
 │   ├── dte_crypto_rules.unit.test.ts      # Facturación DTE, Timbre TED y Res. Ex. N° 176 (5 pruebas)
+│   ├── invoice_cloud_backup.unit.test.ts  # Respaldo de facturas en la nube y restauración (9 pruebas)
 │   ├── invoice_queue.unit.test.ts         # Cola offline, respaldo documental y limpieza (10 pruebas)
 │   ├── ocr_fallback_policy.unit.test.ts   # Política del simulador de OCR y bloqueo en producción (6 pruebas)
 │   ├── sqlite_migrator.unit.test.ts       # Idempotencia del migrador ante ADD COLUMN repetido (6 pruebas)
@@ -30,7 +31,7 @@ tests_unitarias/
 
 ## 📊 Matriz Detallada de Pruebas Unitarias
 
-### 1. Módulo Backend (`tests_unitarias/backend/` — 152 Pruebas)
+### 1. Módulo Backend (`tests_unitarias/backend/` — 161 Pruebas)
 
 | Archivo | Dominio Evaluado | Descripción Técnica | Tests | Estado |
 |---|---|---|:---:|:---:|
@@ -39,6 +40,7 @@ tests_unitarias/
 | `pricing_and_rounding.unit.test.ts` | Normativa Tributaria & Precios | Valida Ley de Redondeo Chilena N° 20.956 (redondeo a decena en efectivo), margen de ganancia comercial y desglose exacto de IVA (19%). | 7 | **100% PASS** |
 | `replenishment_math.unit.test.ts` | Algoritmos Predictivos ROP | Valida cálculo de velocidad diaria de venta, punto de reorden (ROP = Demanda Lead Time + Stock Seguridad) y ajuste por bulto mínimo. | 6 | **100% PASS** |
 | `circuit_breaker.unit.test.ts` | Resiliencia Offline-First | Valida estados CLOSED, OPEN y HALF_OPEN, tiempo de respuesta en falla (<2ms) y rechazo inmediato sin retardo de red. | 5 | **100% PASS** |
+| `invoice_cloud_backup.unit.test.ts` | Respaldo de Facturas en la Nube | Valida que la factura, su proveedor y los bytes del documento se suban a la nube, que el proveedor nacido offline se replique antes por la clave foránea, que sin conexión nada se marque como respaldado y que el documento se restaure desde la nube cuando el equipo local lo perdió. | 9 | **100% PASS** |
 | `invoice_queue.unit.test.ts` | Cola Offline y Respaldo Documental | Valida el encolado con persistencia del documento, el reintento exitoso, el conteo de intentos, el paso a `FALLIDA_OCR` al agotarlos, la vinculación del documento a la factura resultante, la limpieza de documentos sin factura asociada y los límites del almacén. | 10 | **100% PASS** |
 | `sqlite_migrator.unit.test.ts` | Idempotencia de Migraciones | Valida que un `ADD COLUMN` sobre una columna existente se omita sin abortar la migración, que no se reintente en bucle y que un error real siga abortando sin registrarla. | 6 | **100% PASS** |
 | `ocr_fallback_policy.unit.test.ts` | Política del Simulador de OCR | Valida que el simulador solo participe con `ENABLE_MOCK_OCR=true` y que `simulate_failure`, que llega en la petición, sea inerte en producción. | 6 | **100% PASS** |
@@ -50,7 +52,7 @@ tests_unitarias/
 |---|---|---|:---:|:---:|
 | `frontend_contract_rules.unit.test.ts` | Reglas de Negocio & Contratos UI | Algoritmo Módulo 11 oficial del SII (76.123.456-0, DV numérico y K), fórmula matemática de arqueo de caja con RutPay aislado, trazabilidad continua de existencias (0->10->7->5), idempotencia en edición parcial (COALESCE), estructura de notas de crédito y anti-enumeración de usuarios en login (HTTP 401 unificado). | 11 | **100% PASS** |
 
-**Total Consolidado:** **163 pruebas unitarias automatizadas (100% aprobadas).**
+**Total Consolidado:** **172 pruebas unitarias automatizadas (100% aprobadas).**
 
 ---
 
@@ -59,10 +61,10 @@ tests_unitarias/
 Desde la raíz del proyecto GesTock:
 
 ```bash
-# 1. Ejecutar TODAS las pruebas unitarias (Backend + Frontend, 163 tests)
+# 1. Ejecutar TODAS las pruebas unitarias (Backend + Frontend, 172 tests)
 npm run test:unit
 
-# 2. Ejecutar EXCLUSIVAMENTE las pruebas unitarias del Backend (152 tests)
+# 2. Ejecutar EXCLUSIVAMENTE las pruebas unitarias del Backend (161 tests)
 npm run test:unit:backend
 
 # 3. Ejecutar EXCLUSIVAMENTE las pruebas unitarias del Frontend (11 tests)
