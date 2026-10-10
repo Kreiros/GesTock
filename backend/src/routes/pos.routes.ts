@@ -11,6 +11,7 @@ import { TipoDTE } from '../dte/types';
 import { defaultReplenishmentService } from '../replenishment/replenishment.service';
 import { defaultTenantConfigService } from '../config/tenant-config.service';
 import { defaultInvoiceQueue } from '../invoices/invoice-queue.service';
+import { defaultInvoiceIngestionService } from '../invoices/invoice-ingestion.service';
 
 import { generateChileanBarcode } from '../utils/barcode.utils';
 
@@ -909,7 +910,17 @@ router.post('/sync', async (req: Request, res: Response): Promise<void> => {
       });
     }
 
-    // 4. Obtener conteo actualizado de pendientes
+    // 4. Subir a la nube los documentos de factura que quedaron solo en disco (RF-46)
+    let respaldoNube = { respaldados: 0, pendientes: 0, omitidos: 0 };
+    try {
+      respaldoNube = await defaultInvoiceIngestionService.respaldarFacturasEnNube(tenantId);
+    } catch (respErr) {
+      logger.warn('PosRoutes', 'El respaldo de documentos en la nube no pudo completarse', {
+        error: respErr instanceof Error ? respErr.message : String(respErr)
+      });
+    }
+
+    // 5. Obtener conteo actualizado de pendientes
     const dirtyCountResult = sqlite.queryOne<{ count: number }>(
       'SELECT COUNT(*) as count FROM transacciones_venta WHERE is_dirty = 1'
     );
@@ -918,7 +929,8 @@ router.post('/sync', async (req: Request, res: Response): Promise<void> => {
       result.synced_ids.length > 0
         ? `${result.synced_ids.length} ventas respaldadas en la nube`
         : 'ventas ya sincronizadas',
-      colaFacturas.procesadas > 0 ? `${colaFacturas.procesadas} facturas digitalizadas desde la cola` : null
+      colaFacturas.procesadas > 0 ? `${colaFacturas.procesadas} facturas digitalizadas desde la cola` : null,
+      respaldoNube.respaldados > 0 ? `${respaldoNube.respaldados} documentos respaldados en la nube` : null
     ].filter(Boolean);
 
     res.status(200).json({
@@ -929,6 +941,7 @@ router.post('/sync', async (req: Request, res: Response): Promise<void> => {
       catalog_updated_count: catalogUpdatedCount,
       pending_dirty_count: dirtyCountResult?.count || 0,
       invoice_queue: colaFacturas,
+      invoice_document_backup: respaldoNube,
       cloud_online: true,
       result
     });

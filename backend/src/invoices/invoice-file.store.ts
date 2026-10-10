@@ -100,6 +100,10 @@ export class InvoiceFileStore {
     return fs.readFileSync(absoluta).toString('base64');
   }
 
+  public leerBuffer(rutaRelativa: string): Buffer {
+    return fs.readFileSync(path.join(this.baseDir, rutaRelativa));
+  }
+
   public existe(rutaRelativa: string): boolean {
     try {
       return fs.existsSync(path.join(this.baseDir, rutaRelativa));
