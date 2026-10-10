@@ -14,7 +14,14 @@ describe('Smart Invoice Ingestion & Resilient OCR Fallback', () => {
   let dispatcher: OcrDispatcherService;
   let ingestionService: InvoiceIngestionService;
 
+  const enableMockOcrPrevio = process.env.ENABLE_MOCK_OCR;
+
   beforeAll(async () => {
+    // Esta suite usa MockOcrProvider como extractor determinista: devuelve el JSON que recibe,
+    // lo que permite fijar la factura de entrada sin depender de Gemini. Hay que habilitarlo
+    // de forma explícita porque, por política, el simulador no participa por defecto.
+    process.env.ENABLE_MOCK_OCR = 'true';
+
     const pgSetup = await createTestPostgresClient();
     pgClient = pgSetup.client;
     dispatcher = new OcrDispatcherService();
@@ -22,6 +29,8 @@ describe('Smart Invoice Ingestion & Resilient OCR Fallback', () => {
   });
 
   afterAll(async () => {
+    if (enableMockOcrPrevio === undefined) delete process.env.ENABLE_MOCK_OCR;
+    else process.env.ENABLE_MOCK_OCR = enableMockOcrPrevio;
     await pgClient.close();
   });
 

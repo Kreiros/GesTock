@@ -205,8 +205,8 @@ export class InvoiceIngestionService {
         );
       } else {
         await client.query(
-          `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, giro, direccion, telefono, dias_visita_proveedores)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, giro, direccion, telefono, dias_visita_proveedores, origen_creacion, factura_origen_folio)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'FACTURA', $10)`,
           [
             supplierId,
             tenantId,
@@ -216,7 +216,8 @@ export class InvoiceIngestionService {
             invoiceData.giro_proveedor || 'Distribuidora Mayorista',
             invoiceData.direccion_proveedor || 'Casa Matriz',
             invoiceData.telefono_proveedor || '+56 2 2345 6789',
-            invoiceData.dias_visita_proveedor || 'Lunes'
+            invoiceData.dias_visita_proveedor || 'Lunes',
+            invoiceData.folio_factura
           ]
         );
       }
@@ -387,8 +388,8 @@ export class InvoiceIngestionService {
           );
         } else {
           defaultSqliteClient.execute(
-            `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, whatsapp_contacto, giro, direccion, telefono, dias_visita_proveedores)
-             VALUES (?, ?, ?, ?, 'contacto@proveedor.cl', '+56911223344', ?, ?, ?, ?)`,
+            `INSERT INTO proveedores (id, tenant_id, rut_proveedor, nombre_proveedores, email, whatsapp_contacto, giro, direccion, telefono, dias_visita_proveedores, origen_creacion, factura_origen_folio)
+             VALUES (?, ?, ?, ?, 'contacto@proveedor.cl', '+56911223344', ?, ?, ?, ?, 'FACTURA', ?)`,
             [
               supplierId,
               tenantId,
@@ -397,7 +398,8 @@ export class InvoiceIngestionService {
               invoiceData.giro_proveedor || 'Distribución Mayorista',
               invoiceData.direccion_proveedor || 'Casa Matriz',
               invoiceData.telefono_proveedor || '+56 2 2345 6789',
-              invoiceData.dias_visita_proveedor || 'Lunes'
+              invoiceData.dias_visita_proveedor || 'Lunes',
+              invoiceData.folio_factura
             ]
           );
         }

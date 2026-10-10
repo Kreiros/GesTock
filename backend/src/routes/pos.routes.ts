@@ -929,11 +929,13 @@ router.get('/inventory', (req: Request, res: Response): void => {
 
   try {
     const products = sqlite.query<any>(
-      `SELECT p.id, p.tenant_id, p.proveedor_id, p.sku, p.codigo_barra, p.nombre, p.stock_actual, p.stock_minimo, 
-              p.precio_compra, p.precio_venta, p.categoria, p.activo, p.updated_at,
+      `SELECT p.id, p.tenant_id, p.proveedor_id, p.sku, p.codigo_barra, p.nombre, p.stock_actual, p.stock_minimo,
+              p.precio_compra, p.precio_venta, p.categoria, p.activo, p.created_at, p.updated_at,
               p.origen_creacion, p.factura_origen_folio,
               p.lote, p.fecha_vencimiento, p.impuesto_adicional_codigo, p.impuesto_adicional_tasa,
-              pr.nombre_proveedores as proveedor_nombre
+              pr.nombre_proveedores as proveedor_nombre,
+              (SELECT MAX(h.fecha_movimiento) FROM historial_stock h
+                WHERE h.producto_id = p.id AND h.tipo_movimiento = 'ingreso_factura') as ultimo_ingreso_factura
        FROM productos p
        LEFT JOIN proveedores pr ON p.proveedor_id = pr.id
        WHERE p.tenant_id = ?
