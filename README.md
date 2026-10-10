@@ -29,13 +29,13 @@ Cumple estrictamente con las normativas del **Servicio de Impuestos Internos (SI
 ## 2. Tecnologías Utilizadas
 
 - **Lenguajes:** TypeScript (strict mode), JavaScript (Node.js v20+ LTS), SQL.
-- **Backend Framework:** Express.js 4 (enrutamiento modular, 71 endpoints RESTful).
+- **Backend Framework:** Express.js 4 (enrutamiento modular, 72 endpoints RESTful).
 - **Frontend:** React 19, TypeScript, Vite, Material UI (MUI v6), React Router 8, Zustand, TanStack Query.
 - **Bases de Datos:** PostgreSQL 16+ (Cloud SaaS) y SQLite 3 (Edge Local POS, `better-sqlite3`).
 - **Seguridad & Red:** Helmet CSP, CORS dinámico, Rate Limit granular por `X-Device-ID` e IPv6, JWT (`jsonwebtoken`), Bcrypt (`bcryptjs`).
 - **Inteligencia Artificial:** Google Gemini AI API (`gemini-3.5-flash` con fallback en `pdf-parse`).
 - **Infraestructura:** Docker, Docker Compose multi-stage.
-- **Testing:** Jest (235 pruebas automatizadas, 100% aprobadas).
+- **Testing:** Jest (244 pruebas automatizadas, 100% aprobadas).
 
 ---
 
@@ -85,12 +85,12 @@ npm run dev
 
 ---
 
-### Baterías de Pruebas Automatizadas (235 Pruebas, 100% OK)
+### Baterías de Pruebas Automatizadas (244 Pruebas, 100% OK)
 ```bash
 # Pruebas de integración (15 suites, 81 tests)
 npm test
 
-# Pruebas unitarias aisladas (9 suites, 154 tests)
+# Pruebas unitarias aisladas (10 suites, 163 tests)
 npm run test:unit
 
 # Reporte de cobertura de código
@@ -129,7 +129,7 @@ npm run test:coverage
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, de naturaleza iterativa y evolutiva, estructurada en tres fases:
 1. **Incepción y Elaboración (Fase 1 - 20%):** Definición del alcance, justificación técnica del negocio (*Business Case*), análisis de los 55 RF y 25 RNF (ISO/IEC 25010), artefactos UML y modelado relacional inicial (15 tablas maestras).
-2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-012 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.5-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **224 pruebas automatizadas** (Jest).
+2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-012 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.5-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **233 pruebas automatizadas** (Jest).
 3. **Transición (Fase 3 - 30%):** Pruebas de estrés y conmutación offline en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa de título.
 
 ---
@@ -137,12 +137,12 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
 ## 6. Documentación Oficial
 
 Los manuales formales se publican en formato Word en la carpeta [`docs/`](./docs):
-1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 71 endpoints.
+1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: Diseño arquitectónico 4+1 de Kruchten, modelos matemáticos, resiliencia y catálogo de 72 endpoints.
 2. **[docs/base_de_datos.docx](./docs/base_de_datos.docx)**: Modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y banderas de sincronización.
 3. **[docs/guia_de_despliegue.docx](./docs/guia_de_despliegue.docx)**: Instalacion, variables de entorno, Docker Compose y PM2.
 4. **[docs/manual_de_funcionalidades.docx](./docs/manual_de_funcionalidades.docx)**: Operación del POS, normativas chilenas, DTE, arqueo Z y reabastecimiento ROP.
 5. **[docs/estado_actual_proyecto.docx](./docs/estado_actual_proyecto.docx)**: Informe de avance, Carta Gantt y métricas de estabilidad.
-6. **[docs/evidencia_pruebas_unitarias.docx](./docs/evidencia_pruebas_unitarias.docx)**: Certificado formal de auditoría y matriz de las 224 pruebas automatizadas.
+6. **[docs/evidencia_pruebas_unitarias.docx](./docs/evidencia_pruebas_unitarias.docx)**: Certificado formal de auditoría y matriz de las 233 pruebas automatizadas.
 
 ---
 
