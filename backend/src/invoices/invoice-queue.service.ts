@@ -135,13 +135,23 @@ export class InvoiceQueueService {
 
       try {
         const base64 = this.store.leerBase64(factura.archivo_ruta);
-        const ingresada = await this.ingestion.ingestInvoice(tenantId, {
-          invoiceData: base64,
-          fileName: factura.archivo_nombre || undefined,
-          mimeType: factura.archivo_mime || undefined
-        });
+        // Se reenvía el documento ya almacenado: queda vinculado a la factura resultante como
+        // respaldo tributario, en lugar de guardarse otra vez o quedar huérfano en disco
+        const ingresada = await this.ingestion.ingestInvoice(
+          tenantId,
+          {
+            invoiceData: base64,
+            fileName: factura.archivo_nombre || undefined,
+            mimeType: factura.archivo_mime || undefined
+          },
+          {
+            ruta: factura.archivo_ruta,
+            nombre: factura.archivo_nombre || 'factura',
+            mime: factura.archivo_mime || 'application/octet-stream'
+          }
+        );
 
-        // El ticket de cola cumplió su función: la factura real ya quedó registrada
+        // El ticket de cola cumplió su función: la factura real ya referencia el documento
         this.sqlite.execute('DELETE FROM factura_ingresos WHERE id = ?', [factura.id]);
         resultado.procesadas += 1;
         resultado.detalle.push({
@@ -173,6 +183,35 @@ export class InvoiceQueueService {
 
     resultado.pendientes = this.contarPendientes(tenantId);
     return resultado;
+  }
+
+  /**
+   * Elimina documentos que ninguna factura referencia, lo que ocurre cuando se escanea y no se
+   * confirma. Se respeta un margen de horas para no borrar un escaneo que el usuario aún está
+   * revisando en pantalla.
+   */
+  public limpiarHuerfanos(tenantId: string, horasMinimas = 24): number {
+    const referenciadas = new Set(
+      this.sqlite
+        .query<{ archivo_ruta: string }>(
+          'SELECT archivo_ruta FROM factura_ingresos WHERE tenant_id = ? AND archivo_ruta IS NOT NULL',
+          [tenantId]
+        )
+        .map((f) => f.archivo_ruta)
+    );
+
+    let eliminados = 0;
+    for (const ruta of this.store.inventariar(tenantId)) {
+      if (referenciadas.has(ruta)) continue;
+      if (this.store.antiguedadHoras(ruta) < horasMinimas) continue;
+      this.store.eliminar(ruta);
+      eliminados += 1;
+    }
+
+    if (eliminados > 0) {
+      logger.info('InvoiceQueueService', `Documentos sin factura asociada eliminados: ${eliminados}`, { tenantId });
+    }
+    return eliminados;
   }
 
   private marcarFallida(id: string, motivo: string, intentos?: number): void {

@@ -17,7 +17,7 @@ const rsaKey = crypto.generateKeyPairSync('rsa', {
   privateKeyEncoding: { type: 'pkcs1', format: 'pem' }
 });
 
-describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (71/71)', () => {
+describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (72/72)', () => {
   let server: http.Server;
   let baseUrl: string;
   let dteId = 'demo-dte-01';
@@ -393,6 +393,14 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (7
       expect(res.data.data).toHaveProperty('procesadas');
       expect(res.data.data).toHaveProperty('fallidas');
       expect(res.data.data).toHaveProperty('pendientes');
+    });
+
+    test('72. GET /api/v1/invoices/:id/document recupera el respaldo documental de la compra', async () => {
+      const res = await requestApi('GET', `/api/v1/invoices/00000000-0000-0000-0000-0000000000ff/document?tenant_id=${DEMO_TENANT}`);
+
+      // Una factura inexistente responde 404 con mensaje accionable, no un error opaco
+      expect(res.status).toBe(404);
+      expect(res.data.success).toBe(false);
     });
 
     test('33. GET /api/v1/invoices/ lista historial de facturas ingresadas', async () => {

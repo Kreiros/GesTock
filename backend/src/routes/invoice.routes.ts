@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { defaultInvoiceIngestionService } from '../invoices/invoice-ingestion.service';
 import { defaultInvoiceQueue } from '../invoices/invoice-queue.service';
+import { defaultInvoiceFileStore } from '../invoices/invoice-file.store';
+import { defaultSqliteClient } from '../database/sqlite/client';
 import { InvoiceInput, ExtractedInvoiceData } from '../ocr/types';
 import { logger } from '../utils/logger';
 
@@ -119,7 +121,8 @@ router.post('/process-pending', async (req: Request, res: Response): Promise<voi
 
   try {
     const resultado = await defaultInvoiceQueue.procesarPendientes(tenantId);
-    res.status(200).json({ success: true, data: resultado });
+    const documentosHuerfanos = defaultInvoiceQueue.limpiarHuerfanos(tenantId);
+    res.status(200).json({ success: true, data: { ...resultado, documentos_huerfanos_eliminados: documentosHuerfanos } });
   } catch (error) {
     logger.error('InvoiceRoutes', 'Failed to process pending invoice queue', error);
     res.status(500).json({
@@ -135,7 +138,7 @@ router.post('/process-pending', async (req: Request, res: Response): Promise<voi
  * Paso 2: Confirmación explícita del usuario para autorizar la ingesta transaccional
  */
 router.post('/confirm', async (req: Request, res: Response): Promise<void> => {
-  const { invoice_data } = req.body;
+  const { invoice_data, documento } = req.body;
   const tenant_id = req.body.tenant_id || (req as any).tenant_id || (req.headers['x-tenant-id'] as string) || (req.query.tenant_id as string);
 
   if (!tenant_id || !invoice_data) {
@@ -147,7 +150,13 @@ router.post('/confirm', async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    const result = await defaultInvoiceIngestionService.confirmIngest(tenant_id, invoice_data as ExtractedInvoiceData);
+    // "documento" es la referencia que devolvio el escaneo: vincula el respaldo tributario a la
+    // factura. Si el cliente no lo reenvia, la ingesta funciona igual pero sin documento asociado.
+    const result = await defaultInvoiceIngestionService.confirmIngest(
+      tenant_id,
+      invoice_data as ExtractedInvoiceData,
+      documento
+    );
     res.status(200).json({
       success: true,
       data: result
@@ -230,6 +239,53 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({
       success: false,
       message: 'Internal server error retrieving invoices',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+/**
+ * GET /api/v1/invoices/:id/document
+ * Documento original de la factura, respaldo de la compra para el SII y la contabilidad
+ */
+router.get('/:id/document', (req: Request, res: Response): void => {
+  const { id } = req.params;
+  const tenantId = (req.query.tenant_id as string) || (req.headers['x-tenant-id'] as string);
+
+  if (!tenantId) {
+    res.status(400).json({ success: false, message: 'tenant_id query parameter is required' });
+    return;
+  }
+
+  try {
+    const factura = defaultSqliteClient.queryOne<{ archivo_ruta: string | null; archivo_nombre: string | null; archivo_mime: string | null }>(
+      'SELECT archivo_ruta, archivo_nombre, archivo_mime FROM factura_ingresos WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+
+    if (!factura) {
+      res.status(404).json({ success: false, message: 'Factura no encontrada en este comercio' });
+      return;
+    }
+
+    if (!factura.archivo_ruta || !defaultInvoiceFileStore.existe(factura.archivo_ruta)) {
+      res.status(404).json({
+        success: false,
+        message: 'Esta factura no tiene documento original almacenado. Las ingresadas antes de la ' +
+          'incorporacion del respaldo documental, o escaneadas sin reenviar su referencia, no lo conservan.'
+      });
+      return;
+    }
+
+    const contenido = Buffer.from(defaultInvoiceFileStore.leerBase64(factura.archivo_ruta), 'base64');
+    res.setHeader('Content-Type', factura.archivo_mime || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${factura.archivo_nombre || 'factura'}"`);
+    res.status(200).send(contenido);
+  } catch (error) {
+    logger.error('InvoiceRoutes', 'Failed to retrieve invoice document', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al recuperar el documento de la factura',
       error: error instanceof Error ? error.message : String(error)
     });
   }

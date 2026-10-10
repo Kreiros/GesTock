@@ -3,6 +3,13 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
 
+/** Referencia minima al documento almacenado, para vincularlo al registro de la factura. */
+export interface DocumentoFactura {
+  ruta: string;
+  nombre: string;
+  mime: string;
+}
+
 export interface StoredInvoiceFile {
   ruta: string; // relativa al directorio base, para que el respaldo sea portable
   nombre: string;
@@ -106,6 +113,25 @@ export class InvoiceFileStore {
       fs.unlinkSync(path.join(this.baseDir, rutaRelativa));
     } catch (err) {
       logger.warn('InvoiceFileStore', 'No se pudo eliminar el documento almacenado', { ruta: rutaRelativa, error: String(err) });
+    }
+  }
+
+  /** Rutas relativas de los documentos de un comercio, para cruzarlas con la base. */
+  public inventariar(tenantId: string): string[] {
+    const dir = path.join(this.baseDir, tenantId);
+    try {
+      return fs.readdirSync(dir).map((nombre) => `${tenantId}/${nombre}`);
+    } catch {
+      return [];
+    }
+  }
+
+  public antiguedadHoras(rutaRelativa: string): number {
+    try {
+      const stat = fs.statSync(path.join(this.baseDir, rutaRelativa));
+      return (Date.now() - stat.mtimeMs) / 3_600_000;
+    } catch {
+      return 0;
     }
   }
 

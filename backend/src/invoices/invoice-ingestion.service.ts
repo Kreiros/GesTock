@@ -4,6 +4,7 @@ import { defaultSqliteClient } from '../database/sqlite/client';
 import { OcrDispatcherService, defaultOcrDispatcher } from '../ocr/ocr-dispatcher.service';
 import { InvoiceInput, ExtractedInvoiceData } from '../ocr/types';
 import { defaultTenantConfigService } from '../config/tenant-config.service';
+import { DocumentoFactura, defaultInvoiceFileStore } from './invoice-file.store';
 import { calcularPrecioVenta, desglosarIvaChileno } from '../utils/pricing';
 import { generateChileanBarcode } from '../utils/barcode.utils';
 import { logger } from '../utils/logger';
@@ -55,6 +56,8 @@ export interface ScannedInvoicePreview {
   margin_used: number;
   items: ScannedItemPreview[];
   raw_data: ExtractedInvoiceData;
+  /** Referencia al documento original ya almacenado; debe reenviarse en confirm para vincularlo. */
+  documento?: DocumentoFactura;
 }
 
 export class InvoiceIngestionService {
@@ -71,6 +74,11 @@ export class InvoiceIngestionService {
    */
   public async scanInvoice(tenantId: string, input: InvoiceInput): Promise<ScannedInvoicePreview> {
     const startTime = Date.now();
+
+    // El documento se guarda antes de leerlo: es el respaldo tributario de la compra y debe
+    // conservarse tanto si el OCR acierta como si falla
+    const documento = this.persistirDocumento(tenantId, input);
+
     const ocrResult = await this.ocrDispatcher.processInvoice(input);
     const invoiceData = ocrResult.data;
     const configuredMargin = await defaultTenantConfigService.getProfitMargin(tenantId);
@@ -143,31 +151,59 @@ export class InvoiceIngestionService {
       raw_data: {
         ...invoiceData,
         dias_visita_proveedor
-      }
+      },
+      documento
     };
+  }
+
+  /**
+   * Guarda el documento recibido y devuelve su referencia. Un fallo de almacenamiento no debe
+   * impedir la lectura de la factura: se registra y el flujo continúa sin respaldo vinculado.
+   */
+  private persistirDocumento(tenantId: string, input: InvoiceInput): DocumentoFactura | undefined {
+    try {
+      const guardado = defaultInvoiceFileStore.guardar(tenantId, input.invoiceData, input.fileName, input.mimeType);
+      return { ruta: guardado.ruta, nombre: guardado.nombre, mime: guardado.mime };
+    } catch (error) {
+      logger.warn('InvoiceIngestionService', 'No se pudo almacenar el documento original de la factura', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return undefined;
+    }
   }
 
   /**
    * Paso 2: Confirmar la ingesta mediante transacción ACID persistiendo en SQLite y PostgreSQL
    * y marcando los productos nuevos con 'FACTURA' para etiquetado visual.
    */
-  public async confirmIngest(tenantId: string, invoiceData: ExtractedInvoiceData): Promise<IngestionResult> {
-    return this.executeIngestTransaction(tenantId, invoiceData, invoiceData.metodo_ingreso || 'CONFIRMED_SCAN', false);
+  public async confirmIngest(
+    tenantId: string,
+    invoiceData: ExtractedInvoiceData,
+    documento?: DocumentoFactura
+  ): Promise<IngestionResult> {
+    return this.executeIngestTransaction(tenantId, invoiceData, invoiceData.metodo_ingreso || 'CONFIRMED_SCAN', false, documento);
   }
 
   /**
    * Ingesta directa para retrocompatibilidad
    */
-  public async ingestInvoice(tenantId: string, input: InvoiceInput): Promise<IngestionResult> {
+  public async ingestInvoice(
+    tenantId: string,
+    input: InvoiceInput,
+    documento?: DocumentoFactura
+  ): Promise<IngestionResult> {
+    // La cola reenvía el documento que ya almacenó; en una ingesta directa se guarda aquí
+    const respaldo = documento || this.persistirDocumento(tenantId, input);
     const ocrResult = await this.ocrDispatcher.processInvoice(input);
-    return this.executeIngestTransaction(tenantId, ocrResult.data, ocrResult.providerName, ocrResult.usedFallback);
+    return this.executeIngestTransaction(tenantId, ocrResult.data, ocrResult.providerName, ocrResult.usedFallback, respaldo);
   }
 
   private async executeIngestTransaction(
     tenantId: string,
     invoiceData: ExtractedInvoiceData,
     ocrProvider: string,
-    usedFallback = false
+    usedFallback = false,
+    documento?: DocumentoFactura
   ): Promise<IngestionResult> {
     const startTime = Date.now();
     const configuredMargin = await defaultTenantConfigService.getProfitMargin(tenantId);
@@ -228,8 +264,9 @@ export class InvoiceIngestionService {
 
       await client.query(
         `INSERT INTO factura_ingresos 
-         (id, tenant_id, proveedor_id, numero_factura, fecha_ingreso, estado, cantidad, metodo_ingreso, rut_proveedor, total, json_ocr_raw)
-         VALUES ($1, $2, $3, $4, $5, 'PROCESSED', $6, $7, $8, $9, $10)`,
+         (id, tenant_id, proveedor_id, numero_factura, fecha_ingreso, estado, cantidad, metodo_ingreso, rut_proveedor, total, json_ocr_raw,
+          archivo_ruta, archivo_nombre, archivo_mime)
+         VALUES ($1, $2, $3, $4, $5, 'PROCESSED', $6, $7, $8, $9, $10, $11, $12, $13)`,
         [
           invoiceId,
           tenantId,
@@ -240,7 +277,10 @@ export class InvoiceIngestionService {
           invoiceData.metodo_ingreso || ocrProvider,
           invoiceData.rut_proveedor,
           invoiceTotal,
-          JSON.stringify(invoiceData)
+          JSON.stringify(invoiceData),
+          documento?.ruta ?? null,
+          documento?.nombre ?? null,
+          documento?.mime ?? null
         ]
       );
 
@@ -406,8 +446,9 @@ export class InvoiceIngestionService {
 
         defaultSqliteClient.execute(
           `INSERT OR IGNORE INTO factura_ingresos 
-           (id, tenant_id, proveedor_id, numero_factura, fecha_ingreso, estado, cantidad, metodo_ingreso, rut_proveedor, total, json_ocr_raw)
-           VALUES (?, ?, ?, ?, ?, 'PROCESSED', ?, ?, ?, ?, ?)`,
+           (id, tenant_id, proveedor_id, numero_factura, fecha_ingreso, estado, cantidad, metodo_ingreso, rut_proveedor, total, json_ocr_raw,
+            archivo_ruta, archivo_nombre, archivo_mime)
+           VALUES (?, ?, ?, ?, ?, 'PROCESSED', ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             invoiceId,
             tenantId,
@@ -418,7 +459,10 @@ export class InvoiceIngestionService {
             invoiceData.metodo_ingreso || ocrProvider || 'CONFIRMED_SCAN',
             invoiceData.rut_proveedor || 'S/RUT',
             invoiceTotal,
-            JSON.stringify(invoiceData)
+            JSON.stringify(invoiceData),
+            documento?.ruta ?? null,
+            documento?.nombre ?? null,
+            documento?.mime ?? null
           ]
         );
 

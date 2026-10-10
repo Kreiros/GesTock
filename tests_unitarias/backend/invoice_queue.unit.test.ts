@@ -19,9 +19,11 @@ const DOCUMENTO = Buffer.from('contenido-de-la-factura').toString('base64');
 /** Ingesta simulada: permite decidir si la digitalizacion de turno funciona o falla. */
 function ingestaQueResponde(respuestas: Array<'ok' | 'falla'>) {
   const usadas: string[] = [];
+  const documentos: Array<{ ruta: string; nombre: string; mime: string } | undefined> = [];
   let i = 0;
   const servicio = {
-    async ingestInvoice(): Promise<IngestionResult> {
+    async ingestInvoice(_t: string, _input: unknown, documento?: { ruta: string; nombre: string; mime: string }): Promise<IngestionResult> {
+      documentos.push(documento);
       const turno = respuestas[Math.min(i, respuestas.length - 1)];
       i += 1;
       usadas.push(turno);
@@ -41,7 +43,7 @@ function ingestaQueResponde(respuestas: Array<'ok' | 'falla'>) {
       };
     }
   };
-  return { servicio: servicio as unknown as InvoiceIngestionService, usadas };
+  return { servicio: servicio as unknown as InvoiceIngestionService, usadas, documentos };
 }
 
 describe('Pruebas Unitarias: Cola de Facturas Pendientes de Digitalizacion', () => {
@@ -147,6 +149,51 @@ describe('Pruebas Unitarias: Cola de Facturas Pendientes de Digitalizacion', () 
 
     expect(resultado.fallidas).toBe(1);
     expect(cola.listar(TENANT)[0].estado).toBe(ESTADO_FALLIDA);
+  });
+
+  test('al procesar la cola el documento se vincula a la factura, no queda huerfano', async () => {
+    const { servicio, documentos } = ingestaQueResponde(['ok']);
+    const cola = new InvoiceQueueService(defaultSqliteClient, store, servicio, 3);
+    cola.encolar(TENANT, DOCUMENTO, 'factura.pdf', 'application/pdf');
+    const guardado = fs.readdirSync(path.join(directorio, TENANT))[0];
+
+    await cola.procesarPendientes(TENANT);
+
+    // el respaldo tributario viaja a la factura resultante en lugar de perderse en disco
+    expect(documentos[0]).toBeDefined();
+    expect(documentos[0]!.ruta).toBe(`${TENANT}/${guardado}`);
+    expect(documentos[0]!.nombre).toBe('factura.pdf');
+    expect(fs.existsSync(path.join(directorio, TENANT, guardado))).toBe(true);
+  });
+
+  test('la limpieza borra documentos sin factura asociada y respeta los recientes', () => {
+    const cola = new InvoiceQueueService(defaultSqliteClient, store, ingestaQueResponde(['ok']).servicio, 3);
+
+    const huerfanoViejo = store.guardar(TENANT, DOCUMENTO, 'abandonada.pdf', 'application/pdf');
+    const huerfanoNuevo = store.guardar(TENANT, DOCUMENTO, 'en_revision.pdf', 'application/pdf');
+    const referenciado = store.guardar(TENANT, DOCUMENTO, 'confirmada.pdf', 'application/pdf');
+    cola.encolar(TENANT, DOCUMENTO, 'en_cola.pdf', 'application/pdf');
+
+    // se referencia uno desde una factura ya procesada
+    defaultSqliteClient.execute(
+      `INSERT INTO factura_ingresos (id, tenant_id, numero_factura, fecha_ingreso, estado, cantidad, total, archivo_ruta)
+       VALUES ('fact-con-respaldo', ?, 'FAC-1', date('now'), 'PROCESSED', 1, 1000, ?)`,
+      [TENANT, referenciado.ruta]
+    );
+
+    // se envejece solo el abandonado para que caiga fuera del margen de horas
+    const antiguo = path.join(directorio, huerfanoViejo.ruta);
+    const hace48h = new Date(Date.now() - 48 * 3600 * 1000);
+    fs.utimesSync(antiguo, hace48h, hace48h);
+
+    const eliminados = cola.limpiarHuerfanos(TENANT, 24);
+
+    expect(eliminados).toBe(1);
+    expect(store.existe(huerfanoViejo.ruta)).toBe(false);
+    expect(store.existe(huerfanoNuevo.ruta)).toBe(true);
+    expect(store.existe(referenciado.ruta)).toBe(true);
+
+    defaultSqliteClient.execute("DELETE FROM factura_ingresos WHERE id = 'fact-con-respaldo'");
   });
 
   test('el almacen rechaza un documento vacio y uno que excede el maximo', () => {
