@@ -47,12 +47,15 @@ export class OcrDispatcherService {
       }
 
       // 3. Fallback controlado
-      // Cuando GEMINI_API_KEY está configurada o en producción (NODE_ENV=production),
-      // el simulador MockOcrProvider NO participa (salvo simulación explícita simulateFailure: true),
-      // evitando inventar datos fiscales o proveedores no existentes en el inventario real.
-      const hasApiKey = Boolean(process.env.GEMINI_API_KEY);
+      // El simulador solo participa si se habilita por configuración (ENABLE_MOCK_OCR=true) o si
+      // una prueba fuerza el fallo fuera de producción. simulateFailure llega desde el cuerpo de la
+      // petición, así que en producción no puede engancharlo un cliente: inventaría datos fiscales
+      // y proveedores inexistentes y la pantalla los mostraría como reales.
       const isProduction = process.env.NODE_ENV === 'production';
-      if ((hasApiKey || isProduction) && !input.simulateFailure) {
+      const mockEnabled = process.env.ENABLE_MOCK_OCR === 'true';
+      const simulacionDePrueba = input.simulateFailure === true && !isProduction;
+
+      if (!mockEnabled && !simulacionDePrueba) {
         throw new Error(
           'No fue posible digitalizar el documento mediante IA ni extracción nativa de PDF. ' +
           'Verifique la legibilidad de la imagen o ingrese la factura manualmente.'

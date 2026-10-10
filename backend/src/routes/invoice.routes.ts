@@ -135,7 +135,10 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
   try {
     const invoices = await defaultInvoiceIngestionService.getInvoices(tenantId);
+    // "data" normaliza el contrato con el resto de la API; "invoices" se conserva para no
+    // romper a los clientes que ya la consumen.
     res.status(200).json({
+      data: invoices,
       success: true,
       invoices
     });

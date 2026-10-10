@@ -342,7 +342,8 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (6
       const res = await requestApi('POST', '/api/v1/invoices/scan', {
         tenant_id: DEMO_TENANT,
         file_name: 'factura_mock.pdf',
-        invoice_data: 'JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDw...'
+        invoice_data: 'JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDw...',
+        simulate_failure: true
       });
       expect(res.status).toBe(200);
       expect(res.data.success).toBe(true);
@@ -370,7 +371,8 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (6
       const res = await requestApi('POST', '/api/v1/invoices/ingest', {
         tenant_id: DEMO_TENANT,
         file_name: 'factura_ingesta.pdf',
-        invoice_data: 'JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDw...'
+        invoice_data: 'JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDw...',
+        simulate_failure: true
       });
       expect(res.status).toBe(200);
       expect(res.data.success).toBe(true);
@@ -380,6 +382,7 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (6
       const res = await requestApi('GET', `/api/v1/invoices/?tenant_id=${DEMO_TENANT}`);
       expect(res.status).toBe(200);
       expect(res.data.success).toBe(true);
+      expect(Array.isArray(res.data.data)).toBe(true);
       expect(Array.isArray(res.data.invoices)).toBe(true);
     });
   });
