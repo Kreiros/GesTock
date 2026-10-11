@@ -697,9 +697,20 @@ export class InvoiceIngestionService {
           );
         }
       });
+      persistidoLocal = true;
     } catch (sqliteErr) {
       persistidoLocal = false;
-      logger.warn('InvoiceIngestion', 'Failed to mirror invoice to SQLite local', { sqliteErr });
+      logger.error('InvoiceIngestion', 'Failed to mirror invoice to SQLite local', sqliteErr);
+    }
+
+    // Devolver éxito sin haber persistido en el nodo local es una mentira con consecuencias: la
+    // cola borraría su ticket y la factura no existiría en ninguna parte. Se falla para que el
+    // documento siga disponible y la operación se reintente o se derive a ingreso manual.
+    if (!persistidoLocal) {
+      throw new Error(
+        'La factura no pudo registrarse en el nodo local, por lo que no se da por ingresada. ' +
+        'Revise los datos extraídos e inténtelo de nuevo o ingrésela manualmente.'
+      );
     }
 
     const duration = Date.now() - startTime;
