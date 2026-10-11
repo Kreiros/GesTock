@@ -21,7 +21,7 @@ Cumple estrictamente con las normativas del **Servicio de Impuestos Internos (SI
 * **Control de Caja y Balance Z**: Apertura de turno con fondo inicial, registro de egresos/ingresos de efectivo, arqueo ciego y reporte Z en formato térmico.
 * **Control de Vencimientos y Mermas**: Registro de lotes y semáforo preventivo de caducidad para rotación FEFO (*First-Expired, First-Out*, D.S. 977/96 MINSAL).
 * **Abastecimiento Predictivo (ROP)**: Cálculo de velocidad diaria de venta, punto de reorden con stock de seguridad y ajuste por empaques mínimos de proveedores B2B.
-* **Ingesta Inteligente de Facturas (OCR con IA)**: Escaneo de facturas PDF mediante **Google Gemini AI** (`gemini-3.5-flash`), actualización automática de costos y fijación de precios con margen de ganancia configurable y extractor local de respaldo.
+* **Ingesta Inteligente de Facturas (OCR con IA)**: Escaneo de facturas PDF mediante **Google Gemini AI** (`gemini-3.6-flash`), actualización automática de costos y fijación de precios con margen de ganancia configurable y extractor local de respaldo.
 * **Seguridad y Control de Acceso (RBAC)**: Autenticación mediante tokens JWT firmados (`HS256`, 24h), almacenamiento de contraseñas con **Bcrypt** (salt 10, hashes de 60 caracteres reales) y matriz de vistas para cajeros (6 vistas) y administradores (11 vistas).
 
 ---
@@ -33,7 +33,7 @@ Cumple estrictamente con las normativas del **Servicio de Impuestos Internos (SI
 - **Frontend:** React 19, TypeScript, Vite, Material UI (MUI v6), React Router 8, Zustand, TanStack Query.
 - **Bases de Datos:** PostgreSQL 16+ (Cloud SaaS) y SQLite 3 (Edge Local POS, `better-sqlite3`).
 - **Seguridad & Red:** Helmet CSP, CORS dinámico, Rate Limit granular por `X-Device-ID` e IPv6, JWT (`jsonwebtoken`), Bcrypt (`bcryptjs`).
-- **Inteligencia Artificial:** Google Gemini AI API (`gemini-3.5-flash` con fallback en `pdf-parse`).
+- **Inteligencia Artificial:** Google Gemini AI API (`gemini-3.6-flash` con fallback en `pdf-parse`).
 - **Infraestructura:** Docker, Docker Compose multi-stage.
 - **Testing:** Jest (219 pruebas automatizadas, 100% aprobadas).
 
@@ -129,7 +129,7 @@ npm run test:coverage
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, de naturaleza iterativa y evolutiva, estructurada en tres fases:
 1. **Incepción y Elaboración (Fase 1 - 20%):** Definición del alcance, justificación técnica del negocio (*Business Case*), análisis de los 55 RF y 25 RNF (ISO/IEC 25010), artefactos UML y modelado relacional inicial (15 tablas maestras).
-2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-010 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.5-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **208 pruebas automatizadas** (Jest).
+2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-010 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.6-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **208 pruebas automatizadas** (Jest).
 3. **Transición (Fase 3 - 30%):** Pruebas de estrés y conmutación offline en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa de título.
 
 ---
