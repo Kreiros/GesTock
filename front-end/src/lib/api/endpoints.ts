@@ -67,6 +67,9 @@ export const endpoints = {
     scan: `${API_V1}/invoices/scan`,
     confirm: `${API_V1}/invoices/confirm`,
     listar: `${API_V1}/invoices/`,
+    pendientes: `${API_V1}/invoices/pending`,
+    procesarPendientes: `${API_V1}/invoices/process-pending`,
+    documento: (id: string) => `${API_V1}/invoices/${id}/document`,
   },
   caja: {
     abrir: `${API_V1}/caja/abrir`,
