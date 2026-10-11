@@ -17,8 +17,10 @@ const simulador: IOcrProvider = {
       rut_proveedor: '76.123.456-0',
       razon_social: 'Proveedor Inventado SpA',
       fecha_emision: '2026-10-08',
-      items: [],
-      total: 0,
+      // Con detalle real: el simulador devuelve una factura completa, y una extraccion sin items
+      // ni folio se considera documento ilegible
+      items: [{ descripcion: 'Bebida Cola 1.5L', cantidad: 6, precio_unitario: 850, subtotal: 5100 }],
+      total: 5100,
       metodo_ingreso: 'SIMULADO'
     };
   }

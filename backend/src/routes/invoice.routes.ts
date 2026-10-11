@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { defaultInvoiceIngestionService } from '../invoices/invoice-ingestion.service';
 import { defaultInvoiceQueue } from '../invoices/invoice-queue.service';
 import { defaultInvoiceFileStore } from '../invoices/invoice-file.store';
+import { esDocumentoIlegible } from '../ocr/extraccion';
 import { defaultSqliteClient } from '../database/sqlite/client';
 import { InvoiceInput, ExtractedInvoiceData } from '../ocr/types';
 import { logger } from '../utils/logger';
@@ -43,7 +44,25 @@ router.post('/scan', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
 
-    // Si el documento no se pudo digitalizar, se guarda y queda en cola para reintentarlo al
+    // El motor leyo el documento y no sirve: reintentarlo daria el mismo resultado, asi que se
+    // conserva marcado como fallido y se le pide al usuario otra fotografia.
+    if (esDocumentoIlegible(error)) {
+      try {
+        const registrada = defaultInvoiceQueue.registrarIlegible(tenant_id, invoiceData, file_name, mime_type, errorMsg);
+        res.status(422).json({
+          success: false,
+          ilegible: true,
+          data: { ...registrada, estado: 'FALLIDA_OCR' },
+          message: errorMsg
+        });
+      } catch (errorRegistro) {
+        logger.error('InvoiceRoutes', 'No se pudo registrar el documento ilegible', errorRegistro);
+        res.status(422).json({ success: false, ilegible: true, message: errorMsg });
+      }
+      return;
+    }
+
+    // Si no se pudo alcanzar ningun motor, se guarda y queda en cola para reintentarlo al
     // recuperar la conexion. Antes se descartaba, de modo que no habia nada que reprocesar.
     if (esFalloDeDigitalizacion(errorMsg)) {
       try {
@@ -205,11 +224,16 @@ router.post('/ingest', async (req: Request, res: Response): Promise<void> => {
       data: result
     });
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (esDocumentoIlegible(error)) {
+      res.status(422).json({ success: false, ilegible: true, message: errorMsg });
+      return;
+    }
     logger.error('InvoiceRoutes', 'Failed to ingest invoice', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error during invoice ingestion',
-      error: error instanceof Error ? error.message : String(error)
+      error: errorMsg
     });
   }
 });

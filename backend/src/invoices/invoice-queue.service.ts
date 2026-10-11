@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { defaultSqliteClient, SqliteClient } from '../database/sqlite/client';
 import { logger } from '../utils/logger';
+import { esDocumentoIlegible } from '../ocr/extraccion';
 import { InvoiceFileStore, defaultInvoiceFileStore } from './invoice-file.store';
 import { InvoiceIngestionService, defaultInvoiceIngestionService } from './invoice-ingestion.service';
 
@@ -87,6 +88,39 @@ export class InvoiceQueueService {
     return { id, archivo_nombre: archivo.nombre, numero_factura: numeroProvisional };
   }
 
+  /**
+   * Registra un documento que el motor leyó y resultó ilegible. No entra como pendiente porque
+   * reintentarlo daría el mismo resultado: queda visible como fallido para que el usuario saque
+   * otra fotografía o la ingrese a mano, y el archivo se conserva mientras decide.
+   */
+  public registrarIlegible(
+    tenantId: string,
+    contenido: string | Buffer,
+    fileName?: string,
+    mimeType?: string,
+    motivo?: string
+  ): { id: string; archivo_nombre: string; numero_factura: string } {
+    const archivo = this.store.guardar(tenantId, contenido, fileName, mimeType);
+    const id = uuidv4();
+    const numeroProvisional = `ILEGIBLE-${id.slice(0, 8).toUpperCase()}`;
+
+    this.sqlite.execute(
+      `INSERT INTO factura_ingresos
+         (id, tenant_id, numero_factura, fecha_ingreso, estado, cantidad, metodo_ingreso, total,
+          archivo_ruta, archivo_nombre, archivo_mime, ultimo_error, is_dirty, sync_attempts, sync_status, procesado_at)
+       VALUES (?, ?, ?, date('now'), ?, 0, 'OCR_ILEGIBLE', 0, ?, ?, ?, ?, 0, ?, ?, datetime('now'))`,
+      [id, tenantId, numeroProvisional, ESTADO_FALLIDA, archivo.ruta, archivo.nombre, archivo.mime,
+       motivo || null, this.maxIntentos, ESTADO_FALLIDA]
+    );
+
+    logger.warn('InvoiceQueueService', `Documento ilegible registrado sin reintentos: ${numeroProvisional}`, {
+      tenantId,
+      archivo: archivo.nombre
+    });
+
+    return { id, archivo_nombre: archivo.nombre, numero_factura: numeroProvisional };
+  }
+
   public listar(tenantId: string, incluirFallidas = true): FacturaEnCola[] {
     const estados = incluirFallidas ? [ESTADO_PENDIENTE, ESTADO_FALLIDA] : [ESTADO_PENDIENTE];
     const marcadores = estados.map(() => '?').join(', ');
@@ -162,6 +196,16 @@ export class InvoiceQueueService {
         logger.info('InvoiceQueueService', `Factura de la cola digitalizada en el intento ${intentos}`, { id: factura.id });
       } catch (error) {
         const mensaje = error instanceof Error ? error.message : String(error);
+
+        // El motor leyó el documento y no sirve: insistir no lo mejora
+        if (esDocumentoIlegible(error)) {
+          this.marcarFallida(factura.id, mensaje, intentos);
+          resultado.fallidas += 1;
+          resultado.detalle.push({ id: factura.id, estado: ESTADO_FALLIDA, error: mensaje });
+          logger.warn('InvoiceQueueService', 'Factura retirada de la cola por documento ilegible', { id: factura.id });
+          continue;
+        }
+
         if (intentos >= this.maxIntentos) {
           this.marcarFallida(factura.id, mensaje, intentos);
           resultado.fallidas += 1;
