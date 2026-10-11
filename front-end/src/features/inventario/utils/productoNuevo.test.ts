@@ -1,6 +1,6 @@
 // src/features/inventario/utils/productoNuevo.test.ts
 import { describe, expect, it } from 'vitest'
-import { esProductoNuevo, ultimoCierreZ } from '@/features/inventario/utils/productoNuevo'
+import { esProductoNuevo, esProductoRepuesto, ultimoCierreZ } from '@/features/inventario/utils/productoNuevo'
 import type { ProductoInventario } from '@/features/inventario/types'
 import type { CierreHistorial } from '@/features/caja/types'
 
@@ -8,6 +8,8 @@ function producto(campos: Partial<ProductoInventario>): ProductoInventario {
   return {
     origen_creacion: 'FACTURA',
     factura_origen_folio: 'FAC-11354',
+    created_at: null,
+    ultimo_ingreso_factura: null,
     ...campos,
   } as ProductoInventario
 }
@@ -57,9 +59,42 @@ describe('esProductoNuevo', () => {
     expect(esProductoNuevo(producto({ created_at: '2026-09-23 09:00:00' }), null)).toBe(true)
   })
 
-  // mientras GET /pos/inventory no devuelva created_at
-  it('marca si no viene la fecha de creacion, para no esconder lo recien llegado', () => {
-    expect(esProductoNuevo(producto({ created_at: null }), ultimoZ)).toBe(true)
-    expect(esProductoNuevo(producto({}), ultimoZ)).toBe(true)
+  it('no marca si no viene la fecha de creacion', () => {
+    expect(esProductoNuevo(producto({ created_at: null }), ultimoZ)).toBe(false)
+  })
+})
+
+describe('esProductoRepuesto', () => {
+  const ultimoZ = new Date('2026-09-24T01:38:05.000Z')
+
+  it('marca el que ya existia y se repuso despues del ultimo cierre', () => {
+    const repuesto = producto({
+      origen_creacion: 'CATALOGO',
+      ultimo_ingreso_factura: '2026-09-25 09:00:00',
+    })
+    expect(esProductoRepuesto(repuesto, ultimoZ)).toBe(true)
+  })
+
+  it('deja de marcar cuando la reposicion ya paso por un cierre', () => {
+    const repuesto = producto({
+      origen_creacion: 'CATALOGO',
+      ultimo_ingreso_factura: '2026-09-23 09:00:00',
+    })
+    expect(esProductoRepuesto(repuesto, ultimoZ)).toBe(false)
+  })
+
+  it('no marca el que nunca se repuso por factura', () => {
+    const nunca = producto({ origen_creacion: 'CATALOGO', ultimo_ingreso_factura: null })
+    expect(esProductoRepuesto(nunca, ultimoZ)).toBe(false)
+  })
+
+  // si es nuevo manda esa etiqueta, no se muestran las dos
+  it('no marca como repuesto al que ya sale como nuevo', () => {
+    const nuevo = producto({
+      created_at: '2026-09-25 09:00:00',
+      ultimo_ingreso_factura: '2026-09-25 09:00:00',
+    })
+    expect(esProductoNuevo(nuevo, ultimoZ)).toBe(true)
+    expect(esProductoRepuesto(nuevo, ultimoZ)).toBe(false)
   })
 })
