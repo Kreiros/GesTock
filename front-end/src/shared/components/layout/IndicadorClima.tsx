@@ -21,10 +21,11 @@ const ICONOS = {
   tormenta: ThunderstormIcon,
 } as const satisfies Record<TipoClima, unknown>
 
+// del tema, que ya trae su tono para claro y para oscuro
 const COLORES = {
-  calor: '#ea580c',
-  frio: '#0284c7',
-  lluvia: '#0284c7',
+  calor: 'warning.main',
+  frio: 'info.main',
+  lluvia: 'info.main',
 } as const
 
 type Props = {
