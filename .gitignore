@@ -68,3 +68,6 @@ docs/*.md
 # El historial de misiones es registro interno de trabajo, no entregable:
 # se mantiene en disco y en Obsidian, nunca en el repositorio ni en las evidencias.
 docs/HISTORIAL_MISIONES.docx
+
+# Respaldos locales previos a migraciones o cambios estructurales
+backups/
