@@ -1,0 +1,111 @@
+03-11-2026
+Verifique tus dos arreglos
+
+
+Marcelo, baje tus tres commits y probe los dos arreglos con el Docker levantado.
+Funcionan.
+
+Un detalle: cuando mandaste el txt todavia no habias subido nada. Los dos
+repositorios seguian en mi commit del 02-11 y el DAS del repo seguia condensado.
+Avisame cuando empujes y verifico el mismo dia.
+
+
+El programador dejo de escribir
+
+Siete minutos con el correo caido, mismo equipo y mismo catalogo:
+
+    camino anterior    de 841 a 869 ordenes en doce minutos
+    camino nuevo       869 antes y 869 despues
+
+Una sola linea de EmailService en esos siete minutos, antes era una por minuto.
+El contador quedo en la base:
+
+    intentos_aviso_rop_email = {"fecha":"2026-11-03","intentos":1,...}
+
+Tuve que apuntar el aviso al martes a las 00:00 para que llegara a intentarlo. Ya
+lo deje en lunes 08:00.
+
+Borre las ordenes que dejo el defecto: 869 en PostgreSQL y 894 en SQLite, todas
+sugerida del 02 y el 03. PostgreSQL quedo en cero. Deje las 294 de septiembre y
+octubre, donde hay 202 enviada que si son avisos despachados.
+
+
+El desglose da 4, no 5
+
+Tu codigo esta bien, el numero del txt no. Medido en mi base:
+
+    {"respaldados":0,"omitidos":3,"pendientes":0,"sin_archivo":3,
+     "en_proceso_ocr":0,"fallidos_ocr":1}
+
+Suman 4, que es lo que daba el contador viejo. Tu escribiste sin_archivo 4 mas
+fallidos_ocr 1.
+
+El error es de mi redaccion: cuando dije "de esas 4, tres se intentan y la cuarta
+esta en FALLIDA_OCR", la cuarta ES la de FALLIDA_OCR. Tu clasificador lo resuelve
+bien solo.
+
+
+Las 87 contra PostgreSQL real
+
+    USE_REAL_PG=true, 16 suites, 87 de 87, 19 segundos
+
+El helper aborta la corrida si la sonda de salud no contesta, asi que no pudo
+caer al motor en memoria sin avisar.
+
+
+La pantalla ya esta adaptada
+
+Tome tus seis campos. La caja dice ahora:
+
+    pendientes       sube al sincronizar de nuevo
+    sin_archivo      perdieron su archivo, hay que subirlos de nuevo
+    fallidos_ocr     no se pudieron leer, hay que ingresarlos de nuevo
+    en_proceso_ocr   no se avisa, se resuelve solo
+
+Los dos del medio dejan el aviso en ambar aunque la sincronizacion sea exito: no
+se arreglan sincronizando, igual que la venta detenida. Subido a los dos
+repositorios con doce pruebas.
+
+
+Dos cosas que pones como pendientes y ya estaban cerradas
+
+Los tres documentos estaban corregidos desde el 02-11 y te lo dije en el txt
+anterior. Faltaba subirlos, y eso ya esta: van en Evidencias de documentacion
+como Product Backlog.docx, Sprint Backlog.docx y Retrospectivas.docx.
+
+El minimarket tambien lo cerramos el 02-11: dos o tres personas ajenas al
+proyecto sobre el sistema completo, con la diferencia de alcance declarada en el
+informe final. Ya quedo en la tabla de riesgos. Falta solo conseguir a las
+personas, y eso lo tomo yo.
+
+
+Los 23 requisitos
+
+Conte etiqueta por etiqueta y tu numero era exacto. Ninguno al reves: no hay nada
+en mi backlog que el DAS no defina.
+
+El 33 contra 37 tampoco era contradiccion: mi backlog tiene 33 filas y cubre 37
+etiquetas, porque hay filas agrupadas tipo RF-52/55. Tu contabas etiquetas.
+
+Antes de bajarlos reviso cada uno contra el codigo, porque mi seccion 7 declara
+que lo que la lista contiene esta construido. RF-51 ya se que no entra: el propio
+DAS lo marca Retirado y el modulo salio del codigo la semana pasada.
+
+
+Los informes
+
+Tu lista de doce era correcta. Archive tres que tenia sueltos, asi que voy en
+once de trece. Faltan dos que nunca me llegaron:
+
+    19-10   node:sqlite en Electron, medido
+    21-10   El boton de sincronizar: tres defectos encadenados
+
+
+Lo que queda
+
+Tuyo: el empaquetado en Electron.
+
+Mio: bajar los 23 al backlog, la retrospectiva de la cuarta iteracion el 12-11 y
+el plan de pruebas en la primera semana de la iteracion 5.
+
+La clave de Gemini te la paso por el otro canal.

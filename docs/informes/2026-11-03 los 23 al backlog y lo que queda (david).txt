@@ -1,0 +1,130 @@
+03-11-2026
+Baje los 23 al backlog, y lo que queda de tu lado
+
+
+Marcelo, con el DAS regenerado ya baje los requisitos que faltaban. Te dejo como
+quedo, cuatro correcciones que te tocan y cinco decisiones que son de los dos.
+
+
+El backlog quedo completo
+
+                         antes    ahora
+    filas                  33       56
+    identificadores        37       60
+    criticos               22       31
+    altos                   8       15
+    medios                  3       10
+
+Las 56 filas cubren 60 identificadores porque cuatro entradas agrupan dos:
+RF-24/25, RF-31/33, RF-49/50 y RF-52/55. La numeracion va de RF-01 a RF-60 sin
+saltos, y no hay nada en el backlog que el DAS no defina.
+
+Cada fila nueva lleva historia de usuario, la regla con el endpoint que saque de
+tu tabla, y un criterio verificable. Ya esta subido.
+
+Las epicas pasaron de seis a ocho, una por modulo tuyo. Con los nuevos quedaban
+ocho requisitos de facturacion electronica dentro de la epica de inventario y los
+de sincronizacion dentro de la de reposicion.
+
+
+Tres quedaron declarados, no construidos
+
+Revise los 23 contra el codigo antes de escribirlos. Veinte estan construidos.
+Los otros tres van como ajuste de alcance, igual que las pasarelas:
+
+    RF-23    No existe en el codigo. El sistema mantiene un inventario por
+             local, que es el alcance del minimarket al que apuntamos.
+
+    RF-29    Parcial. Los datos tributarios si se administran desde
+             Configuracion. Falta la carga del certificado X.509, que se compra
+             a un proveedor autorizado por el SII con plazos que no dependen de
+             nosotros.
+
+    RF-51    Retirado, como ya lo dice tu documento.
+
+Cambie la frase de entrada de la seccion 7: antes decia "los requisitos de esta
+lista estan construidos" a secas, ahora agrega "salvo los que esta seccion
+declara como ajuste de alcance".
+
+
+Primera correccion: el DAS cambio y la version no
+
+    antes de regenerar     Version 2.2     29 filas de requisito
+    ahora                  Version 2.2     60 filas de requisito
+
+Mi backlog cita "Documento de Arquitectura de Software, version 2.2, seccion 2".
+Con la copia anterior en la mano, esa cita apunta a un documento que no contiene
+lo que digo que contiene.
+
+Subela a 2.3 y anota que cambio. Yo actualizo la cita de mi lado.
+
+
+Segunda: RF-23 esta marcado Critica
+
+Es el que acabamos de declarar fuera de alcance. Un requisito critico que el
+sistema no implementa es de lo primero que pregunta un evaluador.
+
+Bajalo a la prioridad que tiene para un local, o declaralo en el DAS como yo lo
+declare en el backlog. Cualquiera sirve; lo que no sirve es que los dos
+documentos digan distinto.
+
+
+Tercera: las teclas
+
+RF-15 dice "F2 cobrar, F4 cancelar". En el codigo F2 lleva al buscador y F4
+cobra, y asi sale en la barra de atajos y en la ayuda.
+
+Escribi la fila con lo que hace el codigo. Corrige el documento: cambiar las
+teclas obliga a rehacer la barra, la ayuda y la costumbre de quien ya lo usa.
+
+
+Cuarta: RF-51 no tiene prioridad
+
+Su celda dice "Retirado", que no es ninguna de las tres. Como el backlog ordena
+por prioridad lo deje en media. Si quieres otra, dime cual.
+
+
+De paso, RF-22 quedo completo
+
+Estaba a medias: el reporte Z se imprimia, pero siempre en 80 milimetros, y el
+DAS pide 58 y 80. En una caja con rollo angosto salia cortado.
+
+El ancho se elige ahora en Configuracion y se guarda en el equipo, porque depende
+de la impresora del mostrador y no del local. El de 80 quedo igual. Subido a los
+dos repositorios con sus pruebas.
+
+
+Cinco decisiones que estan esperando
+
+1. EL PRODUCTO SIN PROVEEDOR. La dejaste planteada tu: viaja con UNASSIGNED, la
+   clave foranea rechaza la orden, y el local recibe un correo que promete un
+   pedido que la base no tiene. Hay que elegir entre proveedor por defecto,
+   excluirlos del aviso, o nombrarlos aparte. Yo voto por nombrarlos aparte: no
+   se inventa nada en la base y el dueño se entera de que hay que asignarles
+   proveedor.
+
+2. LAS BANDERAS DE AUTENTICACION. ENFORCE_AUTH y VITE_AUTH_ACTIVA van juntas y
+   estan apagadas. Si se encienden para la prueba con usuarios, que sea esta
+   semana y no el mismo dia. RF-01 a RF-05 son criticos y hoy no se prueban.
+
+3. TU PARTE DE LA RETROSPECTIVA DE LA CUARTA ITERACION. Se escribe el 12-11 y es
+   documento de equipo. El correo programado, los dos defectos y el espejo del
+   DAS conviene que los cuentes tu.
+
+4. LA FECHA DE LA PRUEBA CON USUARIOS. El formato esta decidido, falta ponerle
+   dia dentro de la semana del 20. Conviene que estes en al menos una sesion,
+   porque la mitad de lo que se prueba es backend.
+
+5. LA FRASE DEL INFORME FINAL. Dice que se adelanto la gestion del contacto
+   respecto de la fecha planificada. Si no se hizo, hay que sacarla. El informe
+   es de los dos, por eso pregunto en vez de borrarla.
+
+
+Lo que queda
+
+Tuyo: el empaquetado en Electron, las cuatro correcciones, y los dos informes que
+nunca me llegaron, el del 19-10 sobre node:sqlite y el del 21-10 sobre el boton
+de sincronizar.
+
+Mio: la retrospectiva de la cuarta iteracion el 12-11 y el plan de pruebas en la
+primera semana de la iteracion 5.
