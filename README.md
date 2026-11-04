@@ -129,7 +129,7 @@ npm run test:coverage
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, de naturaleza iterativa y evolutiva, estructurada en tres fases:
 1. **Incepción y Elaboración (Fase 1 - 20%):** Definición del alcance, justificación técnica del negocio (*Business Case*), análisis de los 55 RF y 25 RNF (ISO/IEC 25010), artefactos UML y modelado relacional inicial (15 tablas maestras).
-2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-018 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.6-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **348 pruebas automatizadas** (Jest).
+2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-017 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.6-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **348 pruebas automatizadas** (Jest).
 3. **Transición (Fase 3 - 30%):** Pruebas de estrés y conmutación offline en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa de título.
 
 ---
