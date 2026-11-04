@@ -71,3 +71,6 @@ docs/HISTORIAL_MISIONES.docx
 
 # Respaldos locales previos a migraciones o cambios estructurales
 backups/
+
+# Configuracion local de herramientas de agente
+.claude/
