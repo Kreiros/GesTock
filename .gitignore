@@ -78,3 +78,6 @@ backups/
 # Salida del empaquetado de escritorio
 release/
 front-end/dist/
+
+# Guia interna de arranque limpio: material de coordinacion del equipo, no del producto
+docs/GUIA-ARRANQUE-LIMPIO-DAVID.md
