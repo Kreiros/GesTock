@@ -1,0 +1,111 @@
+08-10-2026
+Lo que falta en el apartado de facturas
+
+
+Marcelo, compare tu descripcion de como deberia funcionar el apartado con el
+codigo, linea por linea. La mayor parte ya esta hecha. Faltan cuatro cosas, y la
+primera es una palabra.
+
+
+Lo que ya funciona
+
+Verificado: la IA lee la factura y saca productos y proveedor, los compara con
+el inventario, crea los que no existen y los marca como es_nuevo, crea el
+proveedor si no esta, y guarda en cada producto de donde vino con
+origen_creacion = 'FACTURA' y factura_origen_folio.
+
+De mi lado ya se ve: en la pantalla de la factura cada producto sale como
+"Nuevo" o con el cambio de stock, y la etiqueta quedo tambien en el inventario,
+que antes solo aparecia en modo tecnico.
+
+
+1. La palabra que necesito
+
+Definiste que la etiqueta dura hasta que se hace el Z. Eso ya lo programe: saco
+la fecha del ultimo cierre de /caja/historial y comparo.
+
+El problema es que no se cuando nacio cada producto. productos.created_at existe
+en la tabla pero GET /pos/inventory no lo devuelve. Es agregarlo al SELECT, en
+pos.routes.ts linea 933:
+
+    p.precio_compra, p.precio_venta, p.categoria, p.activo, p.created_at, p.updated_at,
+
+Con eso la etiqueta empieza a caducar sola, ya lo deje preparado.
+
+Mientras tanto deje un comportamiento a proposito: si no viene la fecha, la
+etiqueta se muestra igual. Preferi mostrar de mas antes que esconder algo recien
+llegado, pero significa que hoy un producto de septiembre sigue diciendo
+"Nuevo".
+
+Lo probe con 8 pruebas unitarias: producto de antes del cierre, de despues, sin
+cierres todavia y sin fecha. Son las primeras del frontend, se corren con npm
+test dentro de front-end/.
+
+
+2. La etiqueta de "añadido recientemente" no se puede hacer
+
+Tu descripcion dice que a los productos que ya existian hay que ponerles esa
+etiqueta. No tiene de donde salir.
+
+El producto no guarda cuando fue su ultima reposicion por factura. El dato esta
+en historial_stock como un movimiento ingreso_factura, pero GET /pos/inventory
+no lo trae, y no lo puedo pedir producto por producto: serian 16 peticiones para
+pintar una tabla, y en un local de verdad muchas mas.
+
+Te pido agregar a cada fila del inventario la fecha del ultimo movimiento
+ingreso_factura, algo como ultimo_ingreso_factura. Con eso aplico la misma regla
+del Z que ya programe.
+
+Si te parece mucho se puede dejar para despues: hoy el dueño igual ve los
+productos nuevos, que es el caso que mas importa.
+
+
+3. El proveedor creado por la factura no se distingue
+
+La ingesta lo crea y en la pantalla de la factura se marca como nuevo. Pero en
+el directorio de Proveedores no hay forma de saber cual lo creo la IA y cual
+cargamos a mano. La tabla no tiene campo de origen:
+
+    id, tenant_id, rut_proveedor, nombre_proveedores, dias_visita_proveedores,
+    email, whatsapp_contacto, created_at, updated_at, giro, direccion, telefono
+
+Productos tiene origen_creacion y proveedores no. Lo mismo que hiciste alla
+serviria aca, y devolverlo en la lista.
+
+Importa mas de lo que parece: un proveedor que salio de un OCR puede tener el
+nombre o el RUT mal leidos, y conviene que el dueño sepa cuales revisar.
+
+
+4. La cola sin internet
+
+De esto me dijiste "hay que verlo, siempre se manifesto que seria asi". Te dejo
+el tamaño real.
+
+Hoy no existe la cola. Sin internet la factura no queda esperando: cae al
+simulador y la pantalla muestra una factura inventada como si fuera real.
+
+Y hay algo antes: el archivo original no se guarda en ninguna parte. Entra, se
+procesa y se descarta. Asi que aunque hubiera cola, al volver la conexion no
+habria nada que procesar.
+
+Son dos cosas en este orden: guardar el PDF o la foto al subirla, y dejar la
+factura en estado pendiente para procesarla despues.
+
+Las columnas que agregaste a factura_ingresos, is_dirty, sync_attempts y
+sync_status, estan puestas pero nadie las usa: invoice-ingestion no las escribe
+y pos-sync-engine solo recorre transacciones_venta.
+
+
+Un detalle chico
+
+GET /invoices/ responde la lista bajo la clave "invoices" y el resto del backend
+usa "data". Me hizo perder un rato pensando que estaba vacia. El frontend ya lo
+maneja, lo anoto por consistencia junto con el camelCase de /dte.
+
+
+Si tuvieras que hacer una sola
+
+La del punto 1. Es una palabra y desbloquea la regla que definiste tu.
+
+Despues las del OCR que siguen abiertas, lo de ENABLE_MOCK_OCR que el codigo no
+lee y lo de la cola. Y al final las etiquetas de los puntos 2 y 3.

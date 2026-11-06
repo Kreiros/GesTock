@@ -1,0 +1,173 @@
+07-10-2026
+Todo lo que falta del backend
+
+
+Marcelo, junte en un solo documento todo lo pendiente, para no andar con cinco
+archivos sueltos. Reemplaza los informes anteriores y esta ordenado por
+prioridad. Todo verificado hoy contra el repositorio.
+
+
+Bloqueante 1: la autenticacion
+
+Las pantallas de login y de usuarios estan hechas y subidas pero hoy dan 404.
+Tambien bloquea el tunel de Cloudflare, mas abajo.
+
+Hay que instalar jsonwebtoken y bcrypt con sus tipos; no esta ninguna de las
+dos. Ya tienes la tabla usuarios en los dos motores y JWT_SECRET y
+JWT_EXPIRATION en .env.example.
+
+POST /auth/login recibe tenant_id, email y password, y responde 200 con token y
+usuario. 401 si el correo no existe o la clave esta mala, con el mismo mensaje
+en los dos casos: si los distingues, cualquiera averigua que correos estan
+registrados probando uno por uno. Y nunca devolver password_hash.
+
+POST /auth/register cambia respecto a lo que te mande antes. Ya no es publico:
+sacamos el formulario del login, porque en una caja no corresponde que
+cualquiera se haga una cuenta. Ahora las crea el admin desde Configuracion.
+
+Entonces pide token con rol admin y responde 201 solo con el usuario, sin token.
+Antes devolvia token para dejar dentro a quien se registraba; ahora no, porque
+quien crea la cuenta es el admin y tiene que seguir conectado como admin. 401
+sin token, 403 si no es admin, 409 si el correo ya existe, 400 si falta algo.
+
+GET /auth/users es nuevo: la lista de gente del local para Configuracion, con
+token de admin y sin password_hash.
+
+GET /auth/me devuelve el usuario del token, para saber al arrancar si la sesion
+guardada sigue viva. No necesito logout, el JWT no se guarda en el servidor.
+
+El middleware son dos piezas: validar el token en todo /api/v1 menos login, y
+revisar el rol en las de administracion.
+
+    solo admin    /dashboard, /invoices, /suppliers, /replenishment, /dte, /config
+    cajero        /pos, /caja
+
+De mi lado el cajero no ve el menu de admin y si escribe la direccion le sale un
+aviso, pero eso es cosmetico: quien sepa llamar la API entra igual.
+
+Y hay que arreglar el usuario sembrado. init-db.ts lineas 81 y 286:
+'$2b$10$demoHashPasswordForAdminDemoUser2026' no es un hash bcrypt sino texto
+que lo parece, 43 caracteres contra los 60 de uno real, asi que ninguna clave va
+a coincidir nunca. Generarlo con bcrypt.hash() y sembrar tambien un cajero,
+porque hoy solo existe el admin. Pasame los correos y las claves cuando esten.
+
+POR QUE BLOQUEA CLOUDFLARE: hoy el backend no tiene autenticacion de ningun tipo
+y el app.listen() no fija host, asi que ya escucha en todas las interfaces. Con
+todo en localhost da lo mismo, pero apenas abramos el tunel cualquiera con la
+direccion puede leer el inventario o crear productos sin credencial.
+
+
+Bloqueante 2: el OCR inventa facturas
+
+Es la que mas me preocupa, aunque no bloquee ninguna pantalla.
+
+Si Gemini falla y el extractor de PDF no reconoce items, entra el tercer motor,
+el MockOcrFallback, y devuelve una factura completa inventada que la pantalla
+muestra igual que una real.
+
+    subi       COMERCIAL LOS ALERCES LIMITADA, folio 99887, 1 producto
+    devolvio   Distribuidora Mayorista Central SpA, 76.999.888-K,
+               folio FAC-174455, 2 productos
+
+Ninguno de esos datos estaba en el archivo.
+
+La pantalla muestra un chip naranjo que dice "Motor de respaldo (IA no
+disponible)", pero eso suena a que leyo la factura con un lector mas simple, no
+a que los datos son ficticios. Alguien puede confirmar y meter al inventario dos
+productos que nunca compro, con stock y precio inventados.
+
+Propongo que el simulador no participe cuando hay GEMINI_API_KEY configurada: si
+los dos motores reales fallan, que la respuesta sea un error honesto. El
+simulador sirve para desarrollar sin clave, no para operar.
+
+Si prefieres dejarlo, bloqueo el boton de confirmar y pongo un aviso grande.
+Dime cual. Hoy el dispatcher no consulta GEMINI_API_KEY.
+
+
+Importante 3: el reintento del OCR
+
+En ocr-dispatcher.service.ts, si Gemini falla una vez se pasa de inmediato al
+extractor de PDF. No hay reintento.
+
+Gemini devuelve 503 bastante seguido. Medido con la factura real, tres llamadas
+por modelo:
+
+    gemini-flash-latest   0 de 3   (503, una tardo 60,8 s en fallar)
+    gemini-2.5-flash      0 de 3   (404, ya no esta disponible)
+    gemini-3.8-flash      0 de 3   (503)
+    gemini-3.7-flash      1 de 3
+    gemini-3.5-flash      3 de 3   a unos 17 segundos, este quedo configurado
+
+Un 503 se arregla reintentando. Hoy no se reintenta, asi que en pantalla aparece
+"Lector nativo de PDF" cuando Gemini si habria funcionado.
+
+Propongo 2 o 3 intentos como maximo, con espera de 1 y 2 segundos, y solo para
+errores que se recuperan: 503, 429 y fallas de red. Un 404 o un 401 no se
+arregla reintentando. Sin tope no conviene: el cajero esta esperando, cada
+intento son unos 17 segundos, y ya existe un plan B que funciona.
+
+De mi lado subi el timeout. El cliente cortaba a los 15 segundos y un escaneo
+tardo 19,7, o sea habia escaneos muriendo en pantalla. Ahora esa llamada tiene
+60.
+
+
+Importante 4: el RUT del emisor no sirve
+
+76.123.456-7 no pasa el modulo 11, el digito correcto es 0. Lo calcule a mano y
+quedo como prueba automatica, asi que sale marcado en cada corrida.
+
+El SII rechazaria todos los documentos emitidos con ese RUT. Para la demo es
+cambiar un caracter en la semilla.
+
+
+Medio 5: las facturas no entran al offline-first
+
+Solo transacciones_venta y cierres_caja tienen is_dirty y sync_status.
+
+Sin internet, un PDF digital (el que manda el proveedor por correo) se lee local
+con el extractor nativo en 0,11 segundos, mismo resultado que Gemini. Pero una
+foto de la factura de papel el extractor no la puede leer, porque necesita que
+el PDF traiga el texto adentro, asi que cae al simulador y pasa lo del punto 2.
+
+Lo logico seria que en ese caso la factura quede en PENDIENTE_OCR y que la
+sincronizacion la procese con Gemini cuando vuelva la conexion, igual que con
+las ventas. Implica guardar el archivo original, que hoy el backend no guarda.
+Es decision de diseño, no un bug.
+
+Lo menciono porque el proyecto se presenta como offline-first y hoy eso es
+cierto para ventas y caja pero no para la ingesta. Cerrarlo hace que la
+respuesta a "que pasa si se cae internet" pase de "depende" a "nada, todo sigue
+y se pone al dia solo".
+
+
+Menor 6: detalles que salieron escribiendo las pruebas
+
+Arme una bateria que golpea los endpoints de verdad, 9 grupos y 86
+comprobaciones, te la paso aparte.
+
+PATCH /pos/products/:id/stock devuelve stock_nuevo y POST /pos/mermas devuelve
+stock_actual: el mismo dato con dos nombres.
+
+Las rutas /dte responden en camelCase y el resto en snake_case. No es un error,
+pero obliga a tratar esas respuestas distinto y es facil equivocarse.
+
+GET /pos/products/:id/history no viene en orden cronologico estricto cuando
+varios movimientos caen en el mismo segundo. Lo resolvi encadenando por
+cambio_anterior y nuevo_stock, pero un orden estable por fecha y despues id
+queda mas simple.
+
+El log de PostgreSQL trae el motivo vacio siempre. Si algun dia falla por
+credenciales, firewall o la nube caida de verdad, el mensaje va a ser identico.
+
+Y GET /caja/movimientos exige sesion_id; sin el responde 400. No estaba
+documentado y me costo un rato.
+
+
+El orden que elegiria
+
+    1. Autenticacion completa, que desbloquea dos pantallas hechas y es
+       requisito para abrir el tunel
+    2. Que el OCR no invente facturas, el unico que puede meter datos falsos al
+       inventario
+    3. El reintento del OCR y el RUT, que entre los dos son una tarde
+    4. El resto cuando haya tiempo

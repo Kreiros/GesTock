@@ -1,0 +1,126 @@
+08-10-2026
+Cerre los pendientes de frontend
+
+
+Marcelo, revise tu lista entera y no habia ningun punto equivocado: los seis usos
+del usuario fijo estaban donde decias, los del tenant tambien, PUT
+/auth/password existe y el 403 por local distinto esta implementado.
+
+Cerre los diez puntos, ya estan arriba.
+
+
+Antes que nada: uno de tus arreglos rompia el modo de hoy
+
+Le pusiste enabled: useEsAdmin() a useProveedores, useCorreo y
+useSugerenciaPedido. useEsAdmin pregunta por el rol de la sesion, y hoy
+VITE_AUTH_ACTIVA esta en false, asi que no hay sesion.
+
+Sin sesion nadie es admin, asi que esas tres consultas quedaban apagadas para
+todos: Proveedores en blanco, Reposicion en blanco y el aviso del correo sin
+aparecer.
+
+Lo arregle con usePuedeAdministrar(), el mismo criterio que ya usaban
+RutaProtegida y RutaDeAdmin: con la autenticacion apagada pasa, con la
+autenticacion activa manda el rol. El resto de tus cambios quedo tal cual.
+
+
+Prioridad alta
+
+EL USUARIO SALE DE LA SESION. Archivo nuevo, features/auth/utils/identidad.ts,
+con usuarioActualId(), tenantActual() y nombreActual(). Leen la sesion y caen al
+.env mientras la autenticacion siga apagada. De ahi toman caja.api, ventas.api,
+useCobrarVenta y movimientos.ts, que ya muestra el nombre real de quien hizo el
+movimiento en vez de compararlo contra el id fijo.
+
+No borre VITE_USUARIO_ID todavia: es el respaldo mientras la autenticacion este
+apagada. Se saca el dia que la encendamos en firme.
+
+EL TENANT SALE DEL TOKEN. Cambiado en el interceptor de httpClient y en los diez
+archivos de api, asi que la cabecera, la query y el cuerpo mandan el mismo. El
+login conserva env.tenantId a proposito porque todavia no hay sesion de donde
+sacarlo, y el register pasa a tenantActual().
+
+LA PANTALLA PARA CAMBIAR LA CLAVE quedo en Configuracion, para admin y cajero.
+Pide la actual, la nueva y repetirla, con el minimo de 8 que exige el backend. Lo
+del 401 que avisabas estaba bien visto: el interceptor excluye esa ruta del
+cierre automatico, asi que una clave actual equivocada muestra el error y la
+sesion sigue abierta. Probado con la autenticacion encendida. Deje admin123 como
+estaba.
+
+EL 403 muestra el mensaje del backend en vez de un error generico. Entre con el
+cajero a /dashboard y salio tu texto: "Acceso denegado: se requieren permisos de
+administrador".
+
+
+Prioridad media
+
+El bundle lo medi sirviendo el build y mirando que descarga el navegador al
+abrir la caja, no solo el tamaño del archivo:
+
+    antes   1967 KB
+    ahora    899 KB
+
+DataGrid, 392 KB, y el panel con los graficos, 332 KB, ya no entran en la carga
+inicial, y desaparecio el aviso de Vite. La caja y el login cargan de una, el
+resto llega al entrar a cada pantalla. Los lazy quedaron en
+app/router/paginas.tsx porque dentro del router disparaban once avisos de
+oxlint.
+
+Las vulnerabilidades pasaron de 3 a 0 con npm audit fix. Solo cambio el
+package-lock. Verificado despues con tsc, oxlint y vite build.
+
+Agregue casos/10-permisos-cajero.mjs con 11 comprobaciones: cuatro rutas suyas
+en 200, cuatro de admin en 403 y el register en 403. Devuelve la sesion de admin
+al terminar. Aparte, la prueba de "sin token no se entra" ahora se omite en vez
+de fallar cuando la autenticacion no esta exigida, porque antes quedaba siempre
+en rojo en desarrollo.
+
+    109 de 109 en desarrollo
+    110 de 110 con ENFORCE_AUTH=true
+
+El README quedo sin rutas personales: todo se corre desde la raiz con npm run
+test:e2e:frontend, y documenta las credenciales por variable de entorno y que en
+produccion no existen las cuentas de ejemplo.
+
+
+Prioridad baja
+
+/auth/me ya se usa: al recargar se revisa el token guardado, y si no vale el
+interceptor cierra la sesion y manda al login. Antes te enterabas recien al
+primer error, con la pantalla a medio cargar. Probado con un token falso.
+
+caja.movimientos lo saque: los movimientos ya vienen dentro de /caja/resumen, en
+sesion.movimientos. Pedirlos aparte era duplicar.
+
+ConfiguracionPage ya no trata como admin a quien no tiene sesion.
+
+
+Dos cosas tuyas que siguen abiertas
+
+Del documento anterior, este push no las toco.
+
+ENABLE_MOCK_OCR sigue en el .env.example pero el codigo no la lee en ninguna
+parte. Lo que decide si el simulador participa sigue siendo si hay
+GEMINI_API_KEY o si NODE_ENV es production.
+
+Y factura_ingresos tiene is_dirty, sync_attempts y sync_status, pero
+invoice-ingestion no las escribe y pos-sync-engine solo recorre
+transacciones_venta. Una factura cargada sin internet queda marcada como
+sincronizada y no sube nunca.
+
+
+Para encender la autenticacion
+
+Listo de mi lado. Hay que prender las dos juntas:
+
+    backend    ENFORCE_AUTH=true  (o NODE_ENV=production)
+    frontend   VITE_AUTH_ACTIVA=true
+
+Si se prende solo una se rompe. Avisame y las cambiamos al mismo tiempo.
+
+
+Un favor
+
+Este push lo subiste con force y los siete commits del dia anterior
+desaparecieron. Revise y no se perdio nada, pero si yo hubiera tenido trabajo sin
+subir se me borraba. Para adelante mejor no reescribir main.

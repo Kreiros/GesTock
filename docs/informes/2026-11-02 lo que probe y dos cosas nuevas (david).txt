@@ -1,0 +1,227 @@
+02-11-2026
+Lo que probe de tus arreglos, y dos cosas nuevas
+
+
+Marcelo, probe todo con el Docker levantado y contra PostgreSQL de verdad. Los
+cuatro arreglos funcionan y uno quedo redondo.
+
+Antes de nada una correccion mia: te dije que el 500 cortaba los pasos 2 a 6.
+Fui a mirar el codigo y es falso, fracasoTotal solo decide el codigo de estado
+al final. Los seis pasos corren siempre, como dijiste.
+
+
+El respaldo del catalogo quedo exacto
+
+La primera pasada subio justo lo que faltaba:
+
+    "6 ventas respaldadas en la nube y 7 productos respaldados en la nube"
+    catalog_backup: productos_nuevos 7, proveedores_nuevos 2
+
+Son los mismos 7 productos y 2 proveedores que yo habia contado como ausentes. Y
+ahora los dos lados cuadran:
+
+                   local    nube
+    productos        16      16
+    proveedores       5       5
+    ventas           22      22
+
+Segunda pasada: 0 nuevos. Idempotente, tal como lo describiste.
+
+La normalizacion corrio en mi base al arrancar, 6 ventas y 6 lineas de detalle.
+Las seis de siembra quedaron pendientes y subieron en la primera sincronizacion.
+
+El tope de reintentos, probado con una venta que la nube rechaza:
+
+    pasada 1   200  parcial   subidas 1  fallidas 1  detenidas 0  pendientes 1
+    pasada 2   500            subidas 0  fallidas 1  detenidas 0  pendientes 1
+    pasada 5   500                                   detenidas 1  pendientes 0
+    pasada 6   200            fallidas 0             detenidas 1  pendientes 0
+
+Y el correo ya acepta guardar solo el horario:
+
+    POST {"dia_envio":4,"hora_envio":"19:30"}  ->  200, conserva el correo
+    POST {}                                    ->  400 email is required
+
+
+Me quedo con tu cambio del parcial, no lo reviertas
+
+Tu diseño es mejor que el que teniamos. Un parcial es un exito con cuentas y no
+un fracaso, y dejar el 500 para cuando de verdad no subio nada es lo que mi
+aviso necesita para poder decir que las ventas siguen en el equipo.
+
+Ya adapte la pantalla. El parcial sale en ambar y no en verde, y agregue el
+aviso aparte que sugeriste para stopped_sales_count: "Hay 1 venta que no pudo
+subir y necesita revision". Esa tambien la dejo en ambar aunque el servidor
+responda exito, porque una venta detenida no se arregla sola y en verde se lee
+como que esta todo bien.
+
+Probado en pantalla con los dos casos, y va subido con sus pruebas.
+
+
+Primera cosa nueva: el programador escribe 3 ordenes por minuto
+
+Esta es la mas urgente y la verifique dos veces.
+
+El programador revisa cada minuto. Si hoy corresponde y la hora ya paso, llama a
+generateSuggestedOrders, que graba las ordenes, y recien despues intenta el
+correo. Si el correo no sale no se marca el dia, que es lo que dice tu
+comentario, asi que al minuto siguiente repite: vuelve a generar y vuelve a
+grabar.
+
+Medido en mi equipo, con el backend corriendo y sin tocar nada:
+
+    21:42    15 filas creadas hoy
+    22:05    39 filas creadas hoy        333 en total
+
+Tres por minuto, sin parar. Son 4.320 al dia.
+
+Es el mismo problema que te reporte el 27-09, cuando la tabla paso sola de 238 a
+268, entrando por otra puerta: ahi era el GET y lo arreglaste, ahora es el
+programador.
+
+En mi equipo pasa porque no tengo SMTP configurado. Pero el caso que me preocupa
+es el otro: en un minimarket sin internet el correo tampoco sale, y el sistema
+se presenta como offline-first. Ese es justo el escenario que hay que aguantar.
+
+Lo que yo haria es grabar solo cuando el envio salio, o marcar el dia igual y
+acotar el reintento a unas pocas veces.
+
+De paso, con la nube caida el log tira un ERROR de PostgresClient cada 60
+segundos por el mismo camino.
+
+
+Segunda cosa nueva: el aviso de documentos nunca se va a apagar
+
+La sincronizacion informa 4 documentos de factura pendientes de respaldo y yo lo
+muestro en la caja. Fui a mirar por que no bajaba nunca:
+
+    7 facturas en total
+    3 sin ruta de archivo        nunca se guardo el documento
+    4 con ruta, archivo ausente  el archivo ya no esta en el disco
+
+De esas 4, tres se intentan en cada sincronizacion y se cuentan como omitidos
+porque leerDocumento no encuentra el archivo, y la cuarta esta en FALLIDA_OCR,
+que la consulta excluye. Ninguna de las cuatro puede subir nunca.
+
+contarDocumentosSinRespaldo cuenta archivo_respaldado = 0 con ruta no nula, sin
+mirar si el archivo sigue existiendo. Entonces el contador va a decir 4 para
+siempre y el dueño no tiene nada que hacer para bajarlo.
+
+Lo honesto seria descontar los omitidos, o separarlos, para poder decir que al
+documento le falta el archivo en vez de que le falta respaldo. Si me dices como
+lo quieres contar, yo cambio el texto de mi lado.
+
+
+Sobre tus observaciones a los documentos
+
+LA QUE NO ME CUADRA: EL CONTEO DEL DAS
+
+Dices que el DAS define 60 requisitos, que la numeracion llega hasta RF-60 y que
+mi backlog cubre 37. Conte el DAS del repositorio de titulo, el archivo
+Arquitectura Sistema.docx:
+
+    filas de requisito en el DAS    33
+    mas alto definido               RF-55
+    filas en mi backlog             33
+
+Mi documento dice 33 y el DAS tiene 33. No encuentro los 60 por ninguna parte y
+RF-60 no existe en el DAS.
+
+Lo que si encontre, y esto es del DAS y no del backlog: la tabla de endpoints
+referencia cinco requisitos que el documento nunca define.
+
+    RF-47    RF-51    RF-53    RF-57    RF-59
+
+Por eso RF-47, el correo programado, no aparece en mi backlog: no esta definido
+en el DAS. El backlog traza bien contra su fuente, el hueco viene de mas atras.
+
+Asi que no voy a rehacer el backlog con tus 23. Si los agregamos hay que
+agregarlos primero al DAS, porque si no el backlog deja de cuadrar con el
+documento que el mismo cita, y eso es peor que la falta.
+
+El material que escribiste sirve igual. Varios de esos requisitos describen
+cosas que el sistema de verdad hace y que hoy ningun requisito cubre: la carga
+del CAF, la firma XMLDSig, el F29, la impresion ESC/POS, el health. Revisa
+primero el conteo, por si estabas midiendo otra version del archivo.
+
+LAS QUE TOMO: LAS CIFRAS Y LOS ESTADOS
+
+Tienes razon y lo verifique. El backlog declara abiertos cuatro asuntos que ya
+cerramos, y tres los verifique yo mismo el 31-10:
+
+    RF-52/55   defecto abierto   ->  cerrado
+    RF-44      brecha            ->  hecho
+    RF-40      brecha            ->  hecho
+    RF-49/50   pendiente         ->  decidido
+
+Y en el plan de iteracion la iteracion 4 tiene cinco tareas como comprometida o
+por decidir estando hechas o decididas. Las corrijo.
+
+Una sola diferencia: el 112 de 117 lo corrijo en el backlog y en el plan, pero
+no en las retrospectivas. Ahi esa cifra esta dentro de la columna de evidencia
+de un hallazgo de la tercera iteracion, con la fecha al lado. Era lo que medimos
+ese dia, y cambiarlo seria reescribir el registro. El cierre va en la cuarta
+retrospectiva.
+
+EL CORTE DE LA ITERACION 4
+
+De acuerdo. La cita del Plan de Trabajo dice ciclos de dos semanas y la
+iteracion 4 dura tres, asi que se contradice sola.
+
+    Iteracion 4   30-10 al 12-11   cierre de defectos y correo programado
+    Iteracion 5   13-11 al 26-11   empaquetado, manual, plan de pruebas,
+                                   prueba con usuarios y ensayo de la defensa
+
+LA LISTA DE INFORMES
+
+Los dos que dices que faltan los tengo, pero son mios: abri los dos archivos y
+empiezan con "Marcelo,". El del 21-10 se llama La sincronizacion falla con la
+nube real, y el del 19-10 es donde te respondo sobre el panel.
+
+En mi carpeta hay 20 documentos mios y 8 tuyos. Lo mas probable es que los dos
+que cuentas sean otros, con titulo parecido, que nunca me llegaron: acuerdate
+que WhatsApp no me dejo descargar varios.
+
+Mandame esos dos archivos y los archivo. Ahi el conteo queda respaldado, que es
+lo que importa si se evalua el aporte de cada uno.
+
+
+La prueba con usuarios
+
+Tomo tu propuesta y tienes razon en el fondo: lo dijiste hace dos semanas y no
+avanzo, y eso es mio tambien.
+
+Vamos derecho a la segunda alternativa, sin seguir esperando el local. La prueba
+la hacemos con dos o tres personas ajenas al proyecto, sobre el sistema
+completo, y dejamos escrita la diferencia de alcance en el informe final: que no
+es un local real y que por eso no cubre el uso continuado de una caja ni el
+volumen de un dia.
+
+No es un invento nuestro para salir del paso. El informe de la Fase 2 ya declara
+las dos alternativas: "realizar la prueba en un comercio conocido por los
+integrantes o, de no conseguirse, ejecutar un ensayo con usuarios no tecnicos
+sobre el sistema completo, documentando la diferencia de alcance en el informe
+final". Estamos tomando la que ya esta comprometida.
+
+Con esto la unica actividad que dependia de un tercero deja de depender de
+nadie: pasa de estar en riesgo a estar comprometida, y la podemos fechar.
+
+Una cosa que si hay que corregir en el informe final: hoy dice que se adelanto
+la gestion del contacto respecto de la fecha planificada. Si no alcanzamos a
+hacer esa gestion, esa frase no se sostiene. Prefiero sacarla a que nos la
+pregunten.
+
+Ya lo deje escrito con esas palabras en el plan de iteracion, en la tabla de
+riesgos.
+
+El plan de pruebas lo adelante a la primera semana de la iteracion 5 por lo
+mismo: si se concentra todo en la ultima, cualquier cosa que salga mal no
+alcanza a corregirse.
+
+
+Lo que queda
+
+De tu lado el empaquetado en Electron, mas estas dos cosas nuevas.
+
+De mi lado el plan de pruebas y las correcciones de los tres documentos, que ya
+estan hechas.

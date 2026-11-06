@@ -1,0 +1,134 @@
+04-11-2026
+El envio al SII deberia salir solo, y tres cosas que quedaron a medias
+
+
+Marcelo, llegaron los dos informes que faltaban, asi que el archivo quedo
+completo. Gracias.
+
+Baje tus commits y revise lo que subiste. Las cuatro correcciones estan, el
+proveedor sin asignar quedo bien resuelto, y lo de las banderas me sirvio sobre
+todo el aviso de las 62 pruebas: me lo habria comido entero.
+
+Te dejo una cosa de fondo sobre el envio al SII y tres arreglos chicos, cada uno
+con como lo veo yo para que no tengas que averiguarlo.
+
+
+EL ENVIO AL SII DEBERIA DISPARARSE SOLO
+
+Esto es lo importante del documento.
+
+Hoy el envio solo ocurre si alguien llama a POST /api/v1/dte/envio. Lo verifique:
+el unico programador que corre al arrancar es el de los avisos de reposicion, y
+nadie mas invoca sii-envio.service fuera de su propia ruta.
+
+En un local de verdad nadie aprieta un boton para eso. El documento se emite al
+cerrar la venta y sale al servicio solo. Si dejamos el envio detras de un boton,
+en la defensa la pregunta es inmediata: y quien lo aprieta todos los dias.
+
+COMO LO HARIA
+
+Que el envio se intente solo en dos momentos, los mismos que usa el servicio:
+
+    al emitir          factura, nota de credito y guia salen al emitirse
+    al cerrar la caja  las boletas del dia van juntas en su sobre
+
+Y cuando no se puede, que no falle: el documento queda en la cola con el motivo,
+que es lo que tu servicio ya sabe responder. Sin certificado el transporte se
+declara no disponible, o sea que hoy el resultado seria siempre el mismo, pero
+el camino queda construido y la demostracion muestra lo que de verdad pasa.
+
+El boton no desaparece, cambia de papel. Deja de ser la unica via y pasa a ser
+"reintentar ahora", mas la descarga del sobre. Eso tambien existe en los
+sistemas reales.
+
+LO QUE GANA LA DEFENSA
+
+Con el envio automatico, la demostracion es: se cierra una venta, el documento
+se emite y el sistema intenta enviarlo, y la pantalla dice que no pudo porque
+falta el certificado. Eso se explica solo.
+
+Con el boton, hay que explicar primero por que hay un boton.
+
+
+PRIMERA COSA A MEDIAS: LA PORTADA DEL DAS SIGUE EN 2.2
+
+La ficha tecnica dice 2.5 y la portada sigue diciendo "Versión 2.2". El documento
+tiene dos numeros distintos, que es justo el defecto que dijiste haber cerrado.
+
+COMO LO ARREGLARIA: la linea de portada es esta, y la version va al final:
+
+    Proyecto Aplicado de Titulo (APT - PTY4614) | Duoc UC | Version 2.2
+
+El generador ya arma la ficha desde la fuente. Haz que esa misma variable
+alimente la portada, en vez de tenerla escrita a mano en dos lados. Si no, el
+proximo cambio de version va a dejar los dos valores otra vez.
+
+
+SEGUNDA: LA BANDERA DEL FRONTEND QUEDO APAGADA EN EL EJEMPLO
+
+Me dices que copie front-end/.env.example a .env con VITE_AUTH_ACTIVA=true, pero
+el archivo del repositorio dice false:
+
+    .env.example              ENFORCE_AUTH=true
+    front-end/.env.example    VITE_AUTH_ACTIVA=false
+
+Quien monte el proyecto copiando las dos plantillas queda con el servidor
+exigiendo token y la interfaz sin mandarlo: toda ruta protegida responde 401 y la
+aplicacion no abre.
+
+COMO LO ARREGLARIA: cambiar esa linea a true en front-end/.env.example, para que
+las dos plantillas digan lo mismo. Tu .env local esta bien, es la plantilla la
+que quedo atras.
+
+
+TERCERA: NO ES UN REQUISITO NUEVO, SON DOS
+
+Me dices que RF-61 es el unico que se agrego y que mis 56 filas pasan a 57. Conte
+tu DAS y son 62 filas de requisito. Ademas de RF-61 esta RF-56b, Respaldo del
+Catalogo en la Nube, que entro en la 2.3 y nunca estuvo en mi backlog.
+
+Verificado sobre los dos archivos:
+
+    RF-56b en mi backlog    no
+    RF-61  en mi backlog    no
+
+Asi que mis 56 filas pasan a 58 y los 60 identificadores a 62. Tu propia ficha lo
+dice bien, "62 filas, RF-01 a RF-61 sin saltos mas RF-56b"; lo que estaba mal era
+la instruccion que me diste.
+
+No tienes que hacer nada: los bajo yo. Te lo digo para que el numero no quede
+circulando.
+
+
+LAS OTRAS RESPUESTAS
+
+EL /health. No lo uso. La constante esta declarada en endpoints.ts y no la llama
+nadie; la caja sabe de la nube por cloud_online de la sincronizacion. Cambialo
+como propones: 200 con el detalle de cada motor adentro, y 503 solo cuando el
+nodo local tambien falla. Para un sistema offline-first un local sin internet
+esta funcionando bien.
+
+EL CERTIFICADO. Voy con tu opcion B. La limitacion es administrativa y no de
+diseño, esta escrita en el DAS y se defiende sola. La A depende de un tramite de
+dias que no controla nadie del equipo, y ya nos paso con el minimarket que eso
+sale caro. Si el certificado aparece antes del 20, lo conversamos de nuevo.
+
+En tu texto dice "decide Marcelo con el profe si vale el gasto". Supongo que
+querias escribir mi nombre.
+
+LA PRUEBA CON USUARIOS. Jueves 26, de acuerdo. Dejo el miercoles 25 como
+alternativa, como propones.
+
+LA FRASE DEL INFORME. De acuerdo, se saca y se reemplaza por la version honesta.
+
+
+LO QUE HAGO YO
+
+    backlog          bajo RF-61 y RF-56b, actualizo la cita a 2.5 y matizo
+                     RF-29 y RF-30 como me indicas
+    plan iteracion   las cuatro tareas nuevas, la cita y las cifras de hoy
+    retrospectiva    mi parte junto a la tuya, el 12-11
+    pantalla         el envio al SII, cuando definamos si sale solo
+    pantalla         el campo sinProveedor en reposicion
+
+Las 87 contra PostgreSQL real las corro de nuevo con tu codigo de hoy y te aviso.

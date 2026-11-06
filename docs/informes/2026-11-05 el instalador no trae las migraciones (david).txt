@@ -1,0 +1,142 @@
+05-11-2026
+El instalador no trae las migraciones: la aplicacion no abre
+
+
+Marcelo, instale GesTock siguiendo tu guia al pie de la letra y no abre. Cree la
+cuenta, marque la casilla del catalogo, y la ventana se cerro sin que apareciera
+la aplicacion.
+
+Lo reproduje dos veces, la segunda partiendo de cero como pide el Caso 2: carpeta
+de datos borrada, instalador por usuario, cuenta tecleada, casilla marcada.
+
+Antes de nada, lo demas que subiste lo revise y esta todo: sin_proveedor llega en
+replenishment.routes.ts:47, la portada y la ficha del DAS dicen 2.6 las dos, las
+plantillas del frontend dicen true, el /health responde 200 salvo que falle
+SQLite, y el envio automatico se dispara en pos.routes.ts:843 al emitir y en
+caja.routes.ts:87 al cerrar caja. Corri las unitarias y me dan 304 en 22 suites,
+tu mismo numero.
+
+
+EL ERROR
+
+Corri GesTock.exe desde la terminal para ver que decia:
+
+    [ERROR] [InitDB]: Failed during SQLite initialization
+    Error: Migrations directory not found:
+      D:\descargas\GesTock\backend\src\database\sqlite\migrations
+        at SqliteMigrator.migrate (app.asar\dist\...\migrator.js:77:19)
+
+Busca las migraciones en una ruta del proyecto, resuelta contra el directorio de
+ejecucion. Instalado, eso es la carpeta de instalacion, donde no existe ningun
+backend/src.
+
+
+LA CAUSA: LOS .sql NO ESTAN EN EL PAQUETE
+
+Abri el app.asar y los conte:
+
+    archivos dentro del paquete            1.346
+    archivos .sql                              0
+    carpeta sqlite/migrations                 no existe
+    semillas/catalogo-demo.json               si esta
+
+Las 19 migraciones viven en backend/src/database/sqlite/migrations. tsc solo
+compila TypeScript y no copia los .sql a dist, y electron-builder empaqueta
+dist/backend/**/*. Asi que ninguna llega al instalador.
+
+
+COMO QUEDO MI EQUIPO
+
+    %APPDATA%\GesTock\datos\
+      instalacion.json    mi correo, catalogo_demo: true
+      gestock_local_pos.sqlite   16 KB
+      clave-sesion
+
+La base tiene dos tablas, _migrations y sqlite_sequence, y _migrations esta
+vacia: cero migraciones aplicadas. No existe la tabla de usuarios, de modo que la
+cuenta que teclee no se guardo en ninguna parte.
+
+
+LO DE DOCKER NO ES
+
+Me dijiste que habia que tener Docker abierto. Lo probe con el contenedor arriba
+y sano, y falla exactamente igual:
+
+    [ERROR] [InitDB]: Failed during SQLite initialization
+      Migrations directory not found: ...\sqlite\migrations
+    [WARN]  [InitDB]: PostgreSQL initialization failed or offline.
+            Continuing in local mode.
+      Migrations directory not found: ...\postgres\migrations
+
+Lo que mata el arranque es SQLite, que es la base local y no depende de Docker.
+PostgreSQL falla tambien, pero como WARN y sigue en modo local, que es lo que
+corresponde en un sistema offline-first y lo que dice tu propia guia: DEGRADED
+con Docker apagado no es un problema.
+
+De paso queda confirmado algo que iba a poner como advertencia: las migraciones
+de PostgreSQL tampoco estan en el paquete. Es la misma causa, no dos problemas.
+
+
+POR QUE NO TE SALTO A TI, Y POR QUE TU PRUEBA NO LO VIO
+
+El migrador mira primero backend/src/database/sqlite/migrations relativo al
+directorio de ejecucion. Corriendo desde el repositorio (electron:dev, pack:dir,
+o las pruebas) esa carpeta existe y las 19 estan ahi, asi que funciona. El fallo
+solo aparece instalando de verdad.
+
+Y la suite nueva de empaquetado no podia verlo, porque lee el package.json y no
+abre el paquete construido. Hay ademas una comprobacion que conviene que mires:
+
+    expect(archivos.some((a) => a.startsWith('backend/src'))).toBe(false);
+
+Esa linea exige que nada de backend/src entre al paquete, y las migraciones viven
+justo ahi. O sea que la prueba no solo deja pasar el defecto: va a impedirte el
+arreglo mas obvio.
+
+
+COMO LO ARREGLARIA
+
+1. COPIAR LOS .sql A dist DENTRO DE build:desktop. Asi viajan bajo
+   dist/backend/**/*, que ya esta en files, tu regla de no mandar codigo fuente
+   sigue siendo cierta, y la prueba de empaquetado no se rompe. Agregar
+   backend/src a files tambien funcionaria, pero mandaria el codigo al equipo del
+   local, que es justo lo que decidiste evitar.
+
+   Y que el migrador resuelva primero __dirname y despues la ruta del proyecto.
+   Hoy el camino principal es el que solo existe donde el producto nunca corre.
+
+2. QUE instalacion.json SE ESCRIBA DESPUES. Primero inicializar la base y
+   comprobar que quedo, y recien entonces marcar la instalacion. Como esta ahora,
+   el archivo se escribe apenas se teclea la cuenta: el siguiente arranque ya no
+   muestra la ventana del primer inicio, va directo a levantar el backend, falla
+   igual y se cierra. Un fallo del primer arranque deja la instalacion sin forma
+   de reintentar, y borrar la carpeta de datos a mano no es algo que un local
+   sepa hacer.
+
+3. QUE EL FALLO SE VEA. Hoy la ventana se cierra en silencio y hay que correr el
+   .exe desde una terminal para enterarse de algo. Un cuadro de dialogo con el
+   motivo bastaria.
+
+4. QUE NO QUEDEN PROCESOS VIVOS. Despues de los intentos fallidos encontre cuatro
+   GesTock.exe colgados. Por eso mi primer relanzamiento no hizo nada: choco con
+   el bloqueo de instancia unica y salio sin mostrar el error. Si el arranque
+   falla, el proceso deberia terminar.
+
+
+LO QUE ESTO SIGNIFICA PARA EL 26
+
+El instalador es lo que vamos a mostrar y hoy no arranca en una maquina limpia.
+Pruebalo instalando el .exe y no con electron:dev, porque es el unico camino
+donde esto aparece. Cuando lo tengas corregido lo instalo de nuevo aca y te
+confirmo con el detalle de lo que quede en la base.
+
+
+LO DEMAS
+
+El envio automatico quedo como lo planteamos, asi que arranco la pantalla del SII
+con eso definido: el panel con los pendientes, las tres faltas tal cual vienen, y
+una descarga por cada sobre. El catalogo versionado es buena idea, sobre todo
+para que los dos demostremos sobre los mismos datos.
+
+Tus tres arreglos los dejo verificados arriba. El que no puedo revisar todavia es
+el recorrido del primer inicio, que es justo el que falla.

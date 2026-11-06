@@ -1,0 +1,132 @@
+04-11-2026
+Verifique todo con las banderas encendidas, y los documentos ya estan al dia
+
+
+Marcelo, encendi las dos banderas en mi equipo y pase las baterias. Todo bien. Te
+dejo las mediciones, una cosa que falta en el contrato de reposicion, y una
+pregunta sobre Electron.
+
+Esto es aparte del txt anterior de hoy, donde van el envio automatico y las tres
+cosas a medias. No repito nada de eso.
+
+
+LAS 87 CONTRA POSTGRESQL REAL
+
+Las corri con tu codigo de hoy, el contenedor arriba y USE_REAL_PG=true:
+
+    16 suites, 87 de 87, 12 segundos
+
+Con eso tus dos arreglos de ayer y los de hoy quedan verificados contra el motor
+real, no contra el de memoria.
+
+
+LAS 118 CON EL LOGIN ACTIVO
+
+Esta era la que me preocupaba, porque a ti se te cayeron 62 unitarias y 4 de
+integracion al encender la bandera. La bateria de extremo a extremo recorre la
+aplicacion de verdad, asi que era la mas expuesta.
+
+    118 de 118 comprobaciones pasaron, 3 saltadas
+
+    Sistema y estado del servidor                6/6
+    Inventario: catalogo y vencimientos          9/9
+    Productos: alta, edicion, ajuste y merma   26/26
+    Caja: resumen del turno y arqueo           10/10
+    Ventas: historial, devoluciones y docs     11/11
+    Reabastecimiento: punto de reorden           4/4
+    Facturas: lectura con OCR                    9/9
+    SII: folios, F29 y respaldo tributario     11/11
+    Autenticacion: login, usuarios y permisos  13/13
+    Permisos: lo que puede y no el cajero      11/11
+
+Dos cosas: la bateria paso de 117 a 118, porque agregaste una comprobacion, y las
+dos suites mas expuestas al cambio, autenticacion y permisos, pasan enteras.
+
+Y en pantalla, con tu configuracion:
+
+    sin sesion                  redirige a /login
+    GET /pos/inventory sin token  401
+    GET /api                      200
+    admin                       entra y ve sus 11 vistas
+    cajero                      entra y ve 6
+    cerrar sesion               vuelve al login
+
+Probe ademas algo que no mencionaste: que pasa si un cajero escribe a mano la URL
+del panel. No queda en blanco ni tira error, sale una pantalla que dice que esa
+parte es del administrador con un boton para volver a la caja. Esta bien resuelto.
+Cero errores de consola en todo el recorrido.
+
+
+EL CAMPO sinProveedor NO LLEGA AL FRONTEND
+
+Me dijiste que la orden lleva ahora sinProveedor y que ese campo me sirve para
+distinguirlos en la pantalla. No llega: formatReplenishmentResponse, en
+replenishment.routes.ts, arma el objeto campo por campo y ese no esta en la lista.
+
+COMO LO RESOLVI MIENTRAS TANTO: uso proveedor_id === 'UNASSIGNED', que si llega y
+es el valor que arma tu propio servicio cuando no hay supplierInfo. Funciona y no
+depende de un texto en pantalla.
+
+COMO LO ARREGLARIA TU: agregar sin_proveedor: o.sinProveedor a ese formateador,
+una linea. No corre prisa porque ya quedo funcionando, pero el contrato explicito
+es mejor que el centinela, y es el que tu quisiste.
+
+La pantalla quedo asi: la tarjeta de esos productos no ofrece armar el pedido ni
+muestra total, porque no hay a quien pedirle, y dice que hay que asignarles
+proveedor en Inventario. En la vista tecnica el boton de pedir queda deshabilitado
+con la misma explicacion. Va subido con sus pruebas.
+
+
+TU CONTRATO DEL SII CUADRA
+
+Lo llame contra tu codigo antes de ponerme a construir la pantalla:
+
+    ambiente         CERTIFICACION_MAULLIN
+    pendientes       17
+    provisionales    17
+    puede_enviar     false
+    faltantes        Certificado digital del emisor
+                     Folios CAF autorizados
+                     Transporte hacia el SII
+
+Coincide con lo que describiste, y los 17 documentos de mi base estan todos con
+folio provisional, como advertiste. La lista de faltantes se lee tal cual, sin
+reformular, asi que la voy a mostrar debajo del boton como propones.
+
+
+LOS DOCUMENTOS YA ESTAN AL DIA
+
+Baje RF-61 y RF-56b, que eran dos y no uno. El backlog quedo en 58 filas sobre 62
+identificadores y cita la version 2.5. La seccion 7 matiza RF-30, por los folios
+provisionales, y declara RF-61 con el envio sujeto al certificado.
+
+El plan de iteracion suma tus cuatro tareas nuevas y dos mias, y ahora nombra al
+responsable real de cada tarea de la quinta: estaban todas como "Equipo", que no
+sirve si se evalua el aporte de cada uno. Entra el riesgo del certificado y sale
+el del aviso por minuto, ya corregido.
+
+Dos cosas que pediste y no aplicaban: el plan de iteracion no cita la version del
+DAS en ninguna parte, y no tiene tabla de cifras de pruebas. Los numeros estan en
+el parrafo de cierre de la cuarta iteracion, que es donde los puse.
+
+
+UNA PREGUNTA: CUANDO PARTES CON ELECTRON
+
+Mire el repositorio y no hay nada todavia: ni dependencia, ni script de
+empaquetado, ni carpeta. Entiendo que lo tienes medido desde el 19-10 y que sabes
+que funciona, pero no esta empezado.
+
+Lo pregunto porque es lo unico grande que queda sin fecha, y si cae en la semana
+del 20 choca con la prueba con usuarios y con la defensa. Si me dices cuando
+partes, lo dejo escrito en el plan de iteracion con esa fecha.
+
+
+LO QUE QUEDA
+
+Tuyo: Electron, el envio automatico, y las tres cosas del otro txt.
+
+Mio: la pantalla del envio al SII, que arranco cuando definamos si sale solo; la
+retrospectiva de la cuarta iteracion el 12-11, con tu parte ya incorporada; y el
+plan de pruebas en la primera semana de la iteracion 5.
+
+La prueba con usuarios queda el jueves 26. Las personas ya estan.
