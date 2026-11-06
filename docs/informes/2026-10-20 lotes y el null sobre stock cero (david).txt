@@ -1,0 +1,96 @@
+20-10-2026
+Revise los lotes, y el null sobre stock cero
+
+
+Marcelo, hice el pull y lo probe corriendo. Esta bien. Antes de mis respuestas,
+dos cosas que encontre.
+
+Y gracias por avisar lo del LEAST sin que nadie te lo preguntara. Lo busque en
+el historial y era tal cual: entro en 8a3df36 y lo corregiste en 09c31ad.
+
+
+Lo que verifique
+
+La migracion 016 aplicada y la tabla lotes creada, el FEFO enganchado en caja,
+merma y sincronizacion, GET /pos/vencimientos trayendo los campos nuevos, y las
+216 pruebas unitarias pasando.
+
+    resumen: vencidos 3, unidades_en_riesgo_30d 47,
+             productos_sin_detalle_de_lote 1
+
+    Leche Entera Colun 1L          vence 22-09   unidades 34
+    Aceite Vegetal Belmont 900ml   vence 03-10   unidades null
+    Papas Fritas Lays 200g         vence 18-10   unidades 13
+
+La prueba guardiana me gusto asi que la probe yo tambien: cree un archivo falso
+que descontaba stock a escondidas, fallo y lo nombro. Lo borre y volvio a pasar.
+
+
+El 87 de 87 no se cumple en mi equipo, me da 86
+
+    invoice_ocr_ingestion.test.ts
+    expect(duration).toBeLessThan(500)
+    Received: 1210
+
+Es la misma que te comente hace unos dias. No la rompiste tu.
+
+Pero fijate en la ironia: acabas de arreglar un caso donde una prueba pasaba sin
+verificar nada, y el 87 de 87 se apoya en una asercion que depende de que tan
+rapida es la maquina, no del codigo. En la tuya pasa, en la mia no.
+
+Si eso corre en la defensa desde mi notebook, falla delante de la profesora.
+Conviene cerrarlo: o se saca la asercion de tiempo, o se sube a un valor que
+ninguna maquina razonable cruce. Medir latencia esta bien, pero en una prueba
+aparte y declarada como tal.
+
+
+Tu regla del null tiene un hoyo, y cae justo en tu pregunta 3
+
+Definiste que null es que se conoce la fecha pero no la cantidad, y que 0 es que
+no quedan unidades.
+
+Mira el Aceite Vegetal Belmont en mi base: stock_actual 0, lotes registrados 0,
+y reporta null.
+
+El sistema si sabe cuantas unidades hay, cero. Pero como no existe fila de lote
+devuelve null y ademas lo cuenta en productos_sin_detalle_de_lote.
+
+Si hago lo que me pides, mostrar "sin detalle de lote" cuando llega null, la
+pantalla va a decir eso sobre un producto que esta en cero. Es peor que no
+mostrar nada: le da aire de misterio a un dato que es conocido.
+
+El arreglo es tuyo y es chico: si stock_actual es 0, devolver 0 y no null. Asi
+productos_sin_detalle_de_lote queda contando solo los casos que de verdad lo
+son.
+
+
+Mis respuestas a tus tres preguntas
+
+EDICION DE LOTES: de acuerdo, Fase 3, y lo declaramos en el plan.
+
+Un detalle: dices "20 de 610 productos con fecha cargada" y en mi base hay 16
+productos activos y 3 con fecha. Estamos midiendo bases distintas. Si esos
+numeros van al informe final tenemos que ponernos de acuerdo sobre cual es el
+catalogo de referencia, porque no pueden aparecer dos cifras distintas del mismo
+sistema.
+
+EL CAMPO DE FECHA EN LA CONFIRMACION lo tomo, y tienes razon en el momento:
+pedirla cuando el usuario tiene el papel en la mano es la unica forma de que se
+cargue; en una pantalla de edicion posterior no la va a escribir nunca.
+Verifique que la ingesta ya acepta fecha_vencimiento por item asi que no
+necesito nada tuyo. Va opcional por linea, y de acuerdo en que obligarla seria
+peor porque terminariamos con fechas inventadas.
+
+DISTINGUIR NULL DE CERO: si, pero despues de que arregles lo de arriba. En
+pantalla: con cantidad conocida "quedan 34 unidades", en cero "sin stock", y sin
+detalle de lote solo la fecha sin numero inventado.
+
+
+Lo que necesito de ti
+
+    1. Que devuelvas 0 en vez de null cuando el stock del producto es 0
+    2. Que cierres la asercion de los 500 ms, como prefieras
+    3. Cual es el catalogo de referencia para los numeros del informe
+
+Yo arranco con el campo de fecha en la confirmacion de factura y con el panel de
+sugerencias.

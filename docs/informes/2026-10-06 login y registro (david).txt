@@ -1,0 +1,122 @@
+06-10-2026
+Login y registro: lo que falta del backend
+
+
+Marcelo, las pantallas de login, registro y cierre de sesion estan hechas y
+probadas. Te dejo lo que falta de tu lado.
+
+Casi todo lo tenias listo: la tabla de usuarios ya existe en los dos motores y
+las variables del JWT estan en el .env.example. Falta implementar.
+
+
+Lo que ya esta
+
+La tabla usuarios, igual en SQLite y PostgreSQL: id, tenant_id, nombre, email,
+password_hash, rol con CHECK en admin o cajero, created_at, updated_at y UNIQUE
+sobre tenant_id y email. Y en .env.example estan JWT_SECRET y JWT_EXPIRATION.
+No hace falta migracion nueva.
+
+
+Dependencias
+
+    npm i jsonwebtoken bcrypt
+    npm i -D @types/jsonwebtoken @types/bcrypt
+
+Hoy no esta ninguna de las dos en el package.json.
+
+
+Los tres endpoints
+
+El frontend ya llama a estas direcciones exactas. Si cambias alguna, avisame.
+
+POST /api/v1/auth/login recibe tenant_id, email y password, y responde 200 con
+token y usuario (id, tenant_id, nombre, email, rol). 401 si el correo no existe
+o la clave no coincide.
+
+Que el mensaje sea el mismo en los dos casos, algo como "El correo o la clave no
+son correctos". Si distingues entre "no existe" y "clave incorrecta", le estas
+diciendo a cualquiera que correos estan registrados. Y el password_hash nunca va
+en la respuesta.
+
+POST /api/v1/auth/register recibe tenant_id, nombre, email, password y rol, y
+responde 201 con la misma forma que el login, asi la persona queda dentro al
+terminar. 409 si el correo ya existe en ese tenant, que el UNIQUE lo detecta, y
+400 si falta un campo o la clave es muy corta.
+
+De mi lado valido 8 caracteres minimo y que las dos escrituras coincidan, pero
+eso es ayuda visual. La validacion que vale es la tuya, porque cualquiera puede
+llamar la API sin pasar por mi pantalla. La clave con bcrypt, nunca en texto
+plano.
+
+GET /api/v1/auth/me lee el token de la cabecera Authorization y devuelve el
+usuario. Lo uso al arrancar para saber si la sesion guardada sigue viva. 401 si
+vencio, es invalido o no viene.
+
+No necesito endpoint de logout: el JWT no se guarda en el servidor, asi que
+cerrar sesion es borrar el token en el navegador y eso ya lo hago.
+
+
+El middleware, que es lo que protege de verdad
+
+Dos piezas. Una que valide el token y deje el usuario en la peticion, aplicada a
+todo /api/v1 menos login y register. Y otra que revise el rol, para las rutas de
+administracion.
+
+    solo admin    /dashboard, /invoices, /suppliers, /replenishment, /dte, /config
+    cajero        /pos, /caja
+
+De mi lado el cajero no ve en el menu las pantallas de admin, y si escribe la
+direccion a mano le sale un aviso. Pero eso es cosmetico: quien sepa llamar la
+API entra igual.
+
+
+Hay que arreglar el usuario sembrado
+
+init-db.ts, linea 81 en SQLite y 286 en PostgreSQL:
+
+    '$2b$10$demoHashPasswordForAdminDemoUser2026'
+
+No es un hash bcrypt, es texto que lo parece: tiene 43 caracteres y un bcrypt
+real tiene 60, asi que ninguna clave va a coincidir nunca.
+
+Hay que generarlo con bcrypt.hash() y sembrar tambien un usuario cajero, porque
+hoy solo existe el admin. Cuando los siembres pasame los dos correos y las dos
+claves para probar.
+
+
+Lo que el frontend ya hace
+
+Manda Authorization: Bearer en todas las peticiones. Si cualquier endpoint
+responde 401 cierra la sesion y vuelve al login solo, asi que el vencimiento del
+JWT ya queda manejado. Guarda la sesion para no pedir la clave en cada recarga, y
+al cerrar limpia tambien la cache de datos, para que el siguiente usuario no
+alcance a ver nada del anterior.
+
+El reparto de pantallas: el cajero ve 6, que son Caja, Notificaciones,
+Inventario, Cierre de Caja, Historial de Ventas y Configuracion. El admin ve 11,
+esas mas Panel General, Facturas, Proveedores, Reposicion de Stock y Respaldo de
+Facturas. Configuracion la ven los dos, pero el cajero solo alcanza la parte de
+apariencia.
+
+
+Como lo encendemos
+
+Deje VITE_AUTH_ACTIVA=false en el .env del frontend. Con false la app funciona
+como siempre y el login se revisa entrando a /login. Cuando tengas los tres
+endpoints la pongo en true.
+
+Ya lo probe con la llave encendida: sin sesion redirige al login, un cajero que
+escribe /configuracion ve lo que le corresponde, y el boton de salir limpia todo.
+
+
+Un orden que importa
+
+Dijiste que el admin entre por web con Cloudflare y un subdominio gratis. Me
+parece bien, pero el JWT tiene que estar antes.
+
+Hoy el backend no tiene autenticacion de ningun tipo y el app.listen() no fija
+host, asi que ya escucha en todas las interfaces de la red. Con todo en
+localhost da lo mismo, pero apenas abramos el tunel cualquiera con la direccion
+puede leer el inventario o crear productos sin credencial.
+
+Primero esto, despues el tunel.
