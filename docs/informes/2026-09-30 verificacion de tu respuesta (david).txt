@@ -1,0 +1,98 @@
+30-09-2026
+Verificacion de tu respuesta
+
+
+Marcelo, revise cada punto contra el codigo y probando los endpoints con el
+backend corriendo sobre SQLite. Los arreglos de bugs estan bien, pero los cuatro
+endpoints nuevos devuelven 500.
+
+
+Confirmado
+
+RutPay quedo separado del efectivo, cierre-caja.service.ts cerca de la linea
+209, con su propio canal y ventas_rutpay en la respuesta de la sesion. De paso
+sumaste monto_ila del turno, que era el otro punto del informe 1.
+
+El redondeo solo para efectivo esta en pos.routes.ts cerca de la 566, no en la
+420 como dice tu documento, pero esta y queda dentro del if de EFECTIVO.
+
+persistido_local y duration_ms en /invoices/confirm, en
+invoice-ingestion.service.ts. Y el blindaje del parseo JSON del OCR:
+gemini-ocr.provider.ts manda responseMimeType application/json y limpia las
+etiquetas antes del JSON.parse.
+
+
+Los cuatro endpoints nuevos dan 500
+
+Los probe uno por uno. La causa en casi todos es la misma: historial_stock tiene
+un CHECK que solo acepta 'venta', 'ingreso_factura' y 'ajuste'.
+
+POST /pos/products, pos.routes.ts linea 112, inserta 'alta_inicial'. Solo falla
+si stock_actual es mayor que 0, porque el INSERT al historial esta dentro de ese
+if.
+
+Lo peor del caso: el producto si queda creado. El INSERT a productos corre antes
+y no hay transaccion que lo revierta. El usuario recibe un 500, reintenta y
+termina con productos duplicados.
+
+PUT /pos/products/:id da "Provided value cannot be bound to SQLite parameter 1".
+Lo probe mandando solo precio_venta y lote. Los campos que no van en el body
+llegan como undefined a los binds del COALESCE, y node:sqlite no acepta
+undefined: hay que pasar null.
+
+PATCH /pos/products/:id/stock inserta 'ajuste_manual' y el CHECK permite
+'ajuste'.
+
+POST /pos/mermas da "no such column: now". La consulta usa now(), que es
+PostgreSQL; en SQLite va datetime('now'). Ademas inserta 'merma', que tampoco
+esta en el CHECK, asi que al arreglar el now() va a fallar igual. Y la fila
+queda escrita en mermas antes de que falle el historial: tuve que borrarla a
+mano.
+
+Dos caminos: ampliar el CHECK para que acepte 'alta_inicial', 'ajuste_manual' y
+'merma', o usar los valores que ya existen. En los cuatro casos conviene
+envolver las escrituras en una transaccion, para que un fallo no deje datos a
+medias.
+
+
+Un punto que no me cuadra
+
+Tu punto 2.2 dice que en creacion manual, edicion e ingesta de facturas los
+campos lote y fecha_vencimiento se almacenan en disco.
+
+Busque los dos en toda la carpeta invoices/ y no hay ninguna coincidencia. La
+ingesta sigue sin guardarlos. Donde si estan es en POST y PUT de productos, que
+hoy fallan.
+
+Asi que el semaforo FEFO todavia no se alimenta solo: cuando entra mercaderia
+por OCR, el lote y la fecha quedan vacios.
+
+
+Cosas que arreglaste y no pusiste en tu documento
+
+Del informe del 27-09, las encontre revisando el codigo.
+
+El rate limiter paso de 300 a 2000 por ventana, y el keyGenerator usa
+x-tenant-id y x-device-id en vez de la IP. Voy a empezar a mandar X-Device-ID
+desde el frontend.
+
+Y GET /pos/transactions devuelve ahora es_devolucion, referencia_venta_id,
+rut_cliente, tipo_documento_tributario y monto_ila, con producto_id y
+codigo_barra en los items. Con eso saco dos parches del frontend.
+
+
+Sigue abierto
+
+GET /replenishment/suggest sigue escribiendo en la base. Agregaste el flag
+customConfig.persist al servicio, linea 376, pero la ruta GET no lo pasa. Lo
+probe hoy: una sola llamada subio purchase_orders de 288 a 290.
+
+Es agregar persist: false en la llamada de la ruta GET. El POST /suggest puede
+quedarse con la persistencia.
+
+
+Para reproducirlo
+
+Un POST a /pos/products con nombre, sku, stock_actual en 10, lote y
+fecha_vencimiento. Con stock_actual en 0 no revienta, porque se salta el INSERT
+al historial.

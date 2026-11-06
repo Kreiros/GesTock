@@ -1,0 +1,139 @@
+29-10-2026
+Todo lo que queda del backend, en un solo texto
+
+
+Marcelo, junte en un solo archivo todo lo que encontre mientras no estabas.
+Ordenado por gravedad: lo primero es un defecto real que bloquea ventas, lo
+demas son objetivos de la guia que siguen abiertos. Al final va lo que arregle
+yo, para que sepas que cambio antes de hacer tu pull.
+
+
+1. La sincronizacion no sube productos ni proveedores
+
+Este es el importante. La subida de ventas al servidor falla entera.
+
+    insert or update on table "detalle_venta" violates foreign key
+    constraint "detalle_venta_producto_id_fkey"
+
+El lote manda las ventas y su detalle, pero no los productos que ese detalle
+referencia. Si el producto se creo en el terminal y no existe arriba, Postgres
+rechaza el detalle y se cae la operacion completa.
+
+Medido hoy: 16 ventas esperando subir, 0 subidas.
+
+LA PRUEBA YA LO DETECTA SOLA. Escribi una de extremo a extremo que cubre este
+camino, que antes no estaba mirado. Por eso la bateria marca rojo:
+
+    antes    109 de 109, sin fallas
+    ahora    112 de 117, 5 fallas
+
+Las cinco son el mismo problema:
+
+    POST /pos/sync                        esperaba 200, llego 500
+    la subida no deja ventas rechazadas   16 rechazadas
+    sube las ventas que esperaban         esperaban 16, subieron 0
+    sincronizar de nuevo responde         esperaba 200, llego 500
+    una segunda subida no rechaza nada    mismo error
+
+El rojo es correcto, no es un retroceso: antes la bateria no miraba el unico
+camino que estaba roto. Cuando lo arregles, las cinco pasan solas.
+
+Aviso por si lo corren en una demo: va a salir en rojo. Lo honesto ahi es decir
+que falla a proposito, que detecto un defecto reportado y en arreglo. El reporte
+quedo en tests_e2e_frontend/reportes/pruebas-2026-10-27T22-56-35.txt
+
+DONDE HABRIA QUE TOCAR. Mire el arreglo pero no lo hice, porque es tu modulo y
+es el motor que sostiene todo el argumento offline-first. Son unas 40 lineas en
+tres archivos tuyos:
+
+    types.ts                         agregar products al payload
+    pos-sync-engine.service.ts       juntar los productos de las ventas y mandarlos
+    cloud-sync-receiver.service.ts   insertarlos antes del detalle
+
+Y HAY UNA CASCADA, que es decision tuya. Los productos tienen proveedor_id. Si
+subes un producto cuyo proveedor no existe arriba, vuelve a fallar un nivel mas
+arriba: hoy tengo 5 proveedores en el terminal y la nube tiene 3.
+
+O sea que hay que subir productos y proveedores. Ahi aparece la decision que no
+me correspondia tomar: se sincroniza el catalogo completo, o solo lo que las
+ventas del lote necesitan.
+
+
+2. Facturas duplicadas: el stock sube dos veces
+
+El folio 11354 de Froneri Chile SpA esta tres veces en la base. Cada vez que se
+confirma, el stock vuelve a subir por una compra que ya estaba contada.
+
+Puse un aviso en pantalla antes de confirmar, que compara folio y proveedor
+contra GET /invoices. Avisa, pero no bloquea, porque puede existir el mismo
+numero de folio de otro proveedor y esa si es una factura distinta.
+
+El rechazo de verdad es del backend: no deberia aceptar dos veces el mismo folio
+del mismo proveedor, sin importar lo que mande el frontend.
+
+
+3. Los tres intentos de la cola se gastan por fallas del servicio
+
+Cuando el servicio de OCR falla o no responde, igual se descuenta uno de los
+tres intentos. Con tres caidas seguidas la factura queda FALLIDA_OCR sin que el
+documento tenga nada malo.
+
+Lo razonable es distinguir: si el documento es ilegible, gasta intento; si el
+que fallo fue el servicio, no.
+
+
+4. Objetivo 4, el correo automatico
+
+Te lo detalle entero en el texto del 26. El contenido ya esta todo calculado en
+el sistema, y la bandera auto_send ya existe. Falta el envio real del correo y
+la tarea programada que lo dispare el dia que corresponde.
+
+
+5. Objetivo 5, pasarelas de pago
+
+Siguen simuladas. Hay que decidir si se implementa una de verdad o si lo
+declaramos como ajuste de alcance.
+
+
+6. Objetivo 1, empaquetado en Electron
+
+Sigue pendiente y no esta en el cronograma. Si lo hacemos, conviene cerrarlo
+antes de la entrega y no el mismo dia.
+
+
+Tres decisiones que son de los dos
+
+    objetivos 4 y 5         hacerlos, o declararlos como ajuste de alcance
+    tendencias en Electron  prometer la subpagina o sacarla del documento
+    prueba con usuarios     seguimos sin local donde probar
+
+
+Lo que arregle yo estos dias
+
+En Kreiros/GesTock a6393f1 y en Proyecto_titulo e804df7.
+
+MENSAJES TECNICOS EN PANTALLA. El dueño del minimarket estaba viendo esto cuando
+fallaba la sincronizacion:
+
+    Fallo en sincronizacion: insert or update on table "detalle_venta"
+    violates foreign key constraint "detalle_venta_producto_id_fkey"
+
+Ahora ve esto:
+
+    El servidor no pudo completar la operacion. Intenta de nuevo en un
+    momento. Las ventas siguen guardadas en este equipo.
+
+Lo ultimo es lo primero que piensa un dueño cuando algo falla: si perdio las
+ventas. Toque apiError.ts y BotonSincronizar.tsx, y agregue 5 pruebas que
+verifican que no se filtren nombres de tablas.
+
+AVISO DE FACTURA DUPLICADA, lo del punto 2: cuatro archivos del frontend mas 6
+pruebas.
+
+PRUEBA DE EXTREMO A EXTREMO DE LA SINCRONIZACION, la del punto 1.
+
+Nada del backend fue tocado.
+
+
+Si quieres partir por algo, parte por el punto 1: es el unico que esta
+bloqueando datos reales hoy.

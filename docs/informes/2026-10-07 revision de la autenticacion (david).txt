@@ -1,0 +1,132 @@
+07-10-2026
+Revision de la autenticacion
+
+
+Marcelo, revise todo contra el codigo y probando los endpoints con el backend
+levantado. El auth quedo bueno: 97 de 99 comprobaciones de mi bateria pasan.
+Quedan cinco cosas y solo la primera es grave.
+
+
+Lo que quedo funcionando
+
+Los cuatro endpoints responden bien: login da 200 con token y usuario, register
+pide token de admin, /me reconoce el token y /users da 401 sin token.
+
+De las 13 pruebas de autenticacion pasan 12, incluida la que revisa que el
+mensaje de error sea el mismo exista o no el correo. Y nunca devuelve el
+password_hash, ni en el login ni en la lista.
+
+Los dos usuarios quedaron con hashes bcrypt reales de 60 caracteres. Las claves
+son admin123 y cajero123, las saque probando contra el hash.
+
+La separacion de roles es exacta. Con el token del cajero:
+
+    /pos/inventory            200
+    /caja/resumen             200
+    /dte/config               403
+    /replenishment/suggest    403
+    /auth/users               403
+
+
+1. Grave: ENFORCE_AUTH no esta documentada en ninguna parte
+
+El middleware solo exige token si existe ENFORCE_AUTH=true en el .env. Sin esa
+variable deja pasar todo. Comprobado, sin la variable y sin token:
+
+    GET /api/v1/pos/inventory           200
+    GET /api/v1/caja/resumen            200
+    GET /api/v1/dte/config              200
+    GET /api/v1/replenishment/suggest   200
+
+Con ENFORCE_AUTH=true los cuatro dan 401.
+
+El diseño esta bien, es el mismo enfoque que use yo con VITE_AUTH_ACTIVA. El
+problema es que no aparece en .env.example, ni en la guia de despliegue, ni en
+el mensaje del commit, ni en el DAS. Quien despliegue siguiendo la guia va a
+dejar el sistema abierto sin darse cuenta, y justo vamos a abrirlo a internet
+con Cloudflare.
+
+Lo que pido: agregarla al .env.example con un comentario que diga que si no esta
+en true la API queda sin autenticacion, mencionarla en la guia de despliegue, y
+pensar si en produccion no deberia ser al reves. Exigir siempre, salvo que
+exista un AUTH_DISABLED=true para desarrollo: asi el caso inseguro es el que hay
+que pedir explicitamente.
+
+Cuando la enciendas hay que encender tambien VITE_AUTH_ACTIVA=true. Si prende
+solo una se rompe, porque queda el backend pidiendo un token que el frontend no
+manda, o al reves. Avisame y las cambiamos juntos.
+
+
+2. El RUT arreglado no llega a las bases que ya existen
+
+En el codigo quedo bien, verificado en los cuatro lugares: init-db.ts lineas
+144, 281 y 370, y dte-emitter.service.ts linea 44. Todos dicen 76.123.456-0.
+
+Pero mi base sigue devolviendo el viejo:
+
+    GET /api/v1/dte/config -> "rut": "76.123.456-7"
+
+La semilla no sobreescribe lo que ya esta: la fila sii_rut_emisor de
+configuracion_sistema conserva el valor anterior.
+
+Es el mismo caso del CHECK de historial_stock de la semana pasada: se arregla en
+una instalacion nueva y no en la que existe. Y la demo la vamos a hacer sobre
+una base que ya existe. Se resuelve con un UPDATE en el arranque, o con una
+migracion chica.
+
+
+3. Siguen abiertos los tres del OCR
+
+Venian del documento anterior y este push no los toco.
+
+Cuando fallan los dos motores reales, el MockOcrFallback devuelve una factura
+completa inventada y la pantalla la muestra como real. Lo probe: subi "COMERCIAL
+LOS ALERCES, folio 99887, 1 producto" y devolvio "Distribuidora Mayorista
+Central SpA, RUT 76.999.888-K, folio FAC-174455, 2 productos". Alguien puede
+confirmar y meter productos que nunca compro. Propongo que el simulador no
+participe cuando hay GEMINI_API_KEY.
+
+No hay reintento antes de caer al respaldo. Gemini devuelve 503 seguido y a la
+segunda suele responder. Dos o tres intentos con espera creciente, solo para
+503, 429 y fallas de red.
+
+Y las facturas no participan del offline-first: solo transacciones_venta y
+cierres_caja tienen is_dirty y sync_status. Una foto de factura sin internet cae
+al simulador y pasa lo de arriba.
+
+
+4. Detalles del contrato
+
+PATCH /pos/products/:id/stock devuelve stock_nuevo y POST /pos/mermas devuelve
+stock_actual. Es el mismo dato con dos nombres.
+
+Las rutas /dte responden en camelCase y el resto en snake_case.
+
+GET /pos/products/:id/history no viene en orden cronologico estricto cuando
+varios movimientos caen en el mismo segundo. Lo resolvi encadenando por
+cambio_anterior y nuevo_stock, pero un orden estable por fecha y despues id lo
+simplifica.
+
+Y el log de PostgreSQL trae el motivo vacio siempre. Hoy da lo mismo porque no
+hay PostgreSQL local, pero si algun dia falla por credenciales o firewall el
+mensaje va a ser identico.
+
+
+5. El DAS, dos cosas
+
+RNF-SEG-01 y SEG-02 ahora si se cumplen. Pero conviene que el DAS mencione el
+interruptor ENFORCE_AUTH, porque hoy dice que la autenticacion esta activa y eso
+depende de una variable que no aparece en el documento.
+
+Y RNF-SEG-02 dice "hashes de 60 caracteres reales en siembra". Es cierto, pero
+solo para bases nuevas, por lo mismo del punto 2.
+
+
+El orden que le daria
+
+    1. Documentar ENFORCE_AUTH, media hora, y es lo unico que puede dejar el
+       sistema abierto a internet
+    2. El RUT en bases existentes, es un UPDATE
+    3. Que el OCR no invente facturas
+    4. El reintento del OCR
+    5. El resto cuando haya tiempo

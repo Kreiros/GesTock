@@ -1,0 +1,112 @@
+20-10-2026
+Revise el repo antes de tu reunion
+
+
+Marcelo, revise todo el repositorio de titulo como pediste, en su estado de hoy.
+Te separo lo que busque y no aparece, lo que encontre, y dos cifras del informe
+que conviene arreglar hoy.
+
+
+Lo que busque y no esta
+
+    menciones de herramienta en los 124 commits      0
+    lineas Co-Authored-By o Generated with           0
+    emojis en mensajes de commit                     0
+    emojis dentro de comentarios de codigo           0
+    comentarios en ingles dentro del frontend        0
+    encabezados tipo "Helper function to..."         0
+    foo, bar, dummy, lorem                           0
+    frases de relleno en los 14 documentos           0
+    nombres de casos de prueba en ingles             0
+
+Los nombres de las pruebas describen comportamiento y estan en español: "no se
+cae con un codigo desconocido", "avisa por calor y nombra los helados", "detecta
+la respuesta vacia que deja una foto ilegible".
+
+Busque bloques repetidos palabra por palabra entre archivos de prueba. Lo que se
+repite es expect(res.status).toBe(200) y similares, normal en una bateria de
+endpoints. No hay secciones clonadas.
+
+Los comentarios de lo que entro esta semana los revise uno por uno: explican por
+que, no que. El encabezado de lotes.service.ts y el de la migracion 016 son
+buenos ejemplos.
+
+
+Tres cosas que si encontre
+
+CUARENTA Y CINCO EMOJIS en Backend/public/js/app.js: '🔴 AGOTADO', '🛍️ Bolsa
+reutilizable', '🔞 Control Ley de Alcoholes'. Es tu prototipo viejo en JavaScript
+puro y son textos de interfaz, no comentarios.
+
+Mi lectura honesta: un emoji en una interfaz no delata una herramienta, la gente
+los pone. Pero son 45 en un archivo que ya no se usa, al lado de un frontend
+React que no tiene ninguno. Si vas a limpiar algo, ese archivo es el unico foco.
+Tambien se puede dejar, es el prototipo y se nota que lo es.
+
+SEIS ✅ en Arquitectura Sistema.docx, en la tabla de resultados de desempeño,
+"Cumple (< 10 ms) ✅". Es el unico de los 14 documentos con emojis.
+
+Y ahi hay algo mas grueso que el emoji: esa tabla afirma cumplimiento de
+latencias en milisegundos, que es justo lo que acabamos de sacar de las pruebas
+por depender de la maquina, y el informe ahora dice que una asercion de
+milisegundos no verifica el codigo. Si ella lee los dos documentos hay una
+contradiccion. Se arregla igual que en el codigo: declarar la medicion como
+referencia observada en un equipo de desarrollo, no como cumplimiento
+verificado.
+
+Y FALTA UNA PRUEBA MIA en la carpeta de evidencia, unidadesPorVencer.test.ts,
+las 4 de hoy sobre las tres situaciones del vencimiento. Son posteriores a tu
+sincronizacion, cuando corras el script de nuevo entran solas.
+
+
+Dos cifras del informe que no se sostienen, y esto es lo urgente
+
+EL DOCUMENTO SE CONTRADICE A SI MISMO. En el plan de trabajo dice "se
+incorporaron 18 pruebas unitarias de la interfaz" y en la Evidencia 4 dice
+"sobre la interfaz, 26 pruebas unitarias". Mismo documento, mismo dato, dos
+numeros: corregiste uno y quedo el otro. Y hoy no son ni 18 ni 26, son 30 porque
+sume 4 con lo de vencimientos.
+
+LAS LINEAS APORTADAS no se pueden verificar en el repo que ella va a abrir. El
+informe dice 44.187 tuyas y 58.260 mias, pero esas salen del repo de trabajo. En
+el repo de titulo git dice Kreiros 57.383 y David Miranda 1.672, porque quien
+sube el codigo se lleva las lineas y el codigo lo subiste tu.
+
+El parrafo si menciona los dos repositorios, asi que no es una mentira. Pero si
+ella abre la pestaña de contribuciones ve la proporcion al reves de lo que
+afirma el informe, y es justo el indicador de aporte por integrante.
+
+Dos salidas: sacar las lineas y dejar la division por componentes, que es
+verificable abriendo las carpetas; o dejarlas diciendo de donde salen, igual que
+hiciste con lo de "medido sobre la base de datos de la nube". Yo prefiero la
+primera: las lineas de codigo nunca midieron bien el aporte y aca ademas se
+prestan a confusion.
+
+Y LOS COMMITS SON 124, no 120: 65 Kreiros mas 58 David mas 1 Vraneth, que eres
+tu con tu Gmail personal en un commit de Documentacion Fase 1. Si ella cuenta ve
+124 y tres nombres. Lo mas limpio es que agregues ese correo a tu cuenta de
+GitHub y el commit queda atribuido a ti.
+
+
+Lo que verifique como cierto
+
+    30 tablas                                 OK
+    16 migraciones en los dos motores         OK
+    72 rutas                                  OK, las conte una por una
+    87 pruebas de integracion                 OK
+    109 comprobaciones de extremo a extremo   OK, corridas hoy sin fallas
+
+    210 pruebas unitarias de servidor         hoy son 221
+
+La ultima esta a la baja, que es el lado correcto para equivocarse.
+
+
+Resumen para mañana
+
+No hay rastros de herramienta en ninguna parte del repositorio. Hay un archivo
+viejo con emojis y un documento con seis. Y hay dos cifras del informe que
+conviene arreglar hoy, porque son las unicas que ella podria cuestionar con el
+repositorio abierto delante.
+
+Del punto 7 de tu mensaje: no tengo la clave de produccion del servicio de
+reconocimiento, asi que ese pendiente sigue abierto y no depende de mi.

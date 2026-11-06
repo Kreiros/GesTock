@@ -1,0 +1,197 @@
+27-09-2026
+Informe 2: hallazgos del backend
+
+
+Marcelo, aca va solo lo nuevo, mas un anexo al final con lo del primer informe
+que sigue abierto. Todo verificado leyendo el codigo o consultando la base, con
+la evidencia escrita al lado.
+
+
+Que se construyo desde el informe anterior
+
+Proveedores, Dashboard y analitica, Configuracion, Notificaciones, Historial de
+Ventas, Respaldo Facturas y SII, y Reabastecimiento ROP, todas en modo visual y
+tecnico. Mas arreglos grandes a Caja POS, Inventario y Cierre de Caja.
+
+Ya no queda ninguna pantalla pendiente en el menu.
+
+
+Prioridad 1: bugs que ensucian datos o bloquean el uso
+
+GET /replenishment/suggest ESCRIBE EN LA BASE. Es lo mas importante del informe.
+
+generateSuggestedOrders() hace INSERT INTO purchase_orders por cada proveedor en
+cada llamada. Como la ruta es un GET, cualquier pantalla que consulte el ROP va
+dejando filas. replenishment.service.ts lineas 377 y 394, ruta en
+replenishment.routes.ts linea 119.
+
+    268 ordenes acumuladas en la base local
+    de 238 a 268 en una hora de trabajo
+
+Entonces GET /replenishment/purchase-orders no sirve para saber cuando se le
+pidio de verdad a un proveedor: la "ultima orden" es la ultima vez que alguien
+abrio una pantalla. Y la tabla crece sin control.
+
+Yo haria que el GET solo calcule y devuelva, y que la persistencia quede en el
+POST /replenishment/suggest, que ya existe y no se usa. Mientras tanto cachee la
+consulta 5 minutos en el frontend, que es un parche.
+
+EL REDONDEO DE LA LEY 20.956 SE APLICA A TODOS LOS MEDIOS DE PAGO. Sigue abierto
+desde el informe anterior y ahora molesta mas, porque el frontend ya quedo
+correcto: el ticket muestra un monto y el backend guarda otro.
+
+pos.routes.ts linea 128, el redondeo se aplica antes de mirar el metodo de pago.
+La ley rige solo para efectivo, porque no existen monedas de $1 ni $5; con
+tarjeta se cobra el monto exacto.
+
+    venta de Papas Fritas a $1.899 con Transbank
+    pantalla $1.899, base $1.900
+    detalle_venta.subtotal 1899, transacciones_venta.total 1900
+
+Es una linea: aplicar el redondeo solo si metodo_pago es EFECTIVO. Mientras
+tanto el POS avisa al cajero cuando el monto va a diferir.
+
+EL RUT DEL EMISOR SEMBRADO ES INVALIDO. 76.123.456-7 no pasa el modulo 11, el
+digito deberia ser 0. Ese RUT va dentro de cada XML DTE, asi que el SII lo
+rechazaria en produccion. Esta en configuracion_sistema, clave sii_rut_emisor.
+La pantalla de Configuracion ya lo avisa y permite corregirlo, pero conviene
+arreglar la siembra.
+
+EL LIMITE DE PETICIONES ES BAJO Y ES POR IP. security.middleware.ts linea 37:
+300 cada 15 minutos, 20 por minuto. Un POS refresca estado todo el rato, y con
+el frontend como estaba se topaba el limite y el sistema respondia 429 a todo.
+
+Ya baje el trafico sostenido de 11 a 4 peticiones por minuto, asi que hoy
+alcanza. Quedan dos cosas: 300 cada 15 minutos queda justo si se agregan
+pantallas, y lo serio, el limite es por IP. Si el local tiene dos o tres cajas
+detras del mismo router salen con la misma IP publica y se bloquean entre ellas:
+una caja vendiendo deja sin servicio a la otra.
+
+Yo limitaria por X-Tenant-ID o por device_id, y subiria el maximo.
+
+
+Prioridad 2: respuestas a las que les faltan campos
+
+Endpoints que funcionan pero no devuelven datos que si estan en la base.
+
+GET /pos/transactions, pos.routes.ts linea 495, tiene LIMIT 100 fijo sin
+paginacion ni filtros. El historial se pasa de 100 ventas en pocos dias y los
+filtros de la pantalla trabajan solo sobre esas 100; lo aviso en pantalla.
+
+Le faltan es_devolucion y referencia_venta_id: las columnas existen pero no
+salen en el SELECT, asi que reconozco una devolucion por el prefijo DEV- y el
+monto negativo, y no puedo mostrar a que venta anula cada nota de credito.
+
+Falta tambien producto_id en los items. POST /pos/devolucion lo exige, pero el
+listado solo entrega el SKU, asi que tengo que cruzarlo contra /pos/inventory
+para una devolucion parcial. Y faltan rut_cliente y tipo_documento_tributario.
+
+Lo mas barato de todo: agregar esas columnas al SELECT.
+
+Y GET /pos/inventory sigue sin devolver proveedor_id, solo proveedor_nombre, asi
+que el cruce proveedor-producto se hace por nombre.
+
+
+Prioridad 3: endpoints que faltan
+
+No existe ningun POST, PUT ni DELETE de productos, asi que el boton de añadir
+producto esta deshabilitado. El catalogo solo se escribe por siembra, ingesta
+OCR, checkout y sync; tuve que insertar productos a mano en SQLite para probar
+ILA, bolsa reutilizable y redondeo.
+
+Nadie escribe lote ni fecha_vencimiento. Verificado con grep en todo el backend:
+esos campos solo aparecen en SELECT. La logica del semaforo FEFO esta lista,
+pero nada los escribe, asi que las alertas sanitarias solo cubren lo que cargue
+a mano.
+
+Tampoco hay crear o editar una orden de compra, recepcion contra una orden,
+anular una venta, listar devoluciones, mermas, tabla de notificaciones, estado
+borrador en facturas, filtro por periodo en /invoices, ni ajuste manual de
+stock. Ese ultimo bloquea el conteo fisico y la auditoria express.
+
+
+Prioridad 4: endpoints que responden exito sin hacer nada
+
+Delicados porque el usuario cree que la accion se ejecuto.
+
+POST /dte/send-email solo hace un logger.info y responde exito.
+
+sendPurchaseOrdersBatchEmail, en POST /replenishment/send-email, marca las
+ordenes como enviadas y responde que se enviaron. Lo probe: respondio "Ordenes
+de compra enviadas automaticamente a pedidos@almacendontito.cl (2 ordenes, 3
+productos, Total: $70.950)" y se crearon 2 filas en estado enviada. Ningun
+correo salio.
+
+El frontend lo advierte en los dos casos. Si se implementa el envio real, saco
+los avisos.
+
+
+Lo que esta a medias en el modulo SII
+
+Mas completo de lo que esperaba: los 7 bloques de la pantalla tienen endpoint
+real y funcionan. La emision, la firma XMLDSig y el timbrado TED funcionan. Lo
+que falta es el envio al SII, que no existe, asi que todo queda en
+EMITIDO_LOCAL y los RCOF en pendiente.
+
+Los CAF tampoco son reales: getOrCreateActiveCaf() llama a provisionTestCaf()
+cuando no encuentra folios, asi que los rangos 1-5000 son autogenerados. POST
+/dte/caf/upload si sabe importar un CAF real, pero no le hice pantalla porque
+sin un archivo real no hay como probarla.
+
+La tasa PPM viene fija en 1% sin donde configurarla por tenant. No existe el
+libro de compras y ventas ni el envio del RCV, solo la pre-liquidacion F29. Y no
+se puede marcar que factura entro en que F29, porque factura_ingresos guarda
+PROCESSED y nada mas.
+
+
+Una inconsistencia de convencion
+
+Las rutas de /dte leen tenantId en camelCase y el resto del backend tenant_id en
+snake_case. El frontend lo maneja con excepciones por endpoint, pero es fuente
+segura de bugs para quien venga despues.
+
+
+Cosas que ya funcionaban y nadie usaba
+
+Habia harto trabajo hecho sin conectar.
+
+POST /dte/config acepta modeloEmision y los 9 campos del emisor; el frontend
+decia que no habia endpoint para eso y era falso, ya esta conectado. GET
+/dte/config devuelve un bloque pciDssCompliance que nadie leia y que ahora
+alimenta una seccion de Configuracion. GET /dte/f29 arma una pre-liquidacion muy
+completa, separa debito y credito, contabiliza los vouchers por la Res. 176 y
+resta las notas de credito, y estaba sin usar.
+
+POST /pos/devolucion esta muy bien hecho: repone stock, escribe
+movimientos_inventario, inserta la transaccion DEV-, emite la nota de credito
+tipo 61 con nodo Referencia y soporta devolucion parcial. Nunca se habia usado.
+
+Y POST /dte/certification/run-set corre el set de la Res. 74 completo y los 4
+casos pasan. Sirve directo para la defensa.
+
+
+Anexo: del primer informe, lo que sigue abierto
+
+Verificado hoy contra el codigo. Sin endpoint para crear o editar productos;
+lote y fecha_vencimiento nunca se escriben; el redondeo a todos los medios de
+pago; RutPay contado como efectivo en el cierre, cierre-caja.service.ts linea
+219 donde el else final lo mete en efectivo; /pos/status no cuenta los cierres
+pendientes, hoy hay 14 ventas y 3 cierres sucios y reporta 14; GEMINI_API_KEY
+sin configurar, asi que el OCR real no se puede probar; /dte/:id/receipt rotula
+mal todo lo que no sea boleta, linea 231, el ternario solo cubre 39 y 41 y manda
+el resto como nota de credito; /dte/:id/receipt no devuelve el ILA, lo deduzco
+restando; POST /dte/send-email es simulacion; el dashboard sin periodo semanal;
+el dia corta a medianoche UTC, que son las 21:00 en Chile; /pos/inventory sin
+proveedor_id; y no hay webhooks, EDI ni WhatsApp Cloud API.
+
+Quedo resuelto el bug de parametros undefined en el ROP, con workaround en el
+frontend mandando siempre los 3 parametros.
+
+
+Sugerencia de orden
+
+    1. Que GET /replenishment/suggest no escriba, es el que ensucia datos
+    2. Redondeo solo para efectivo, una linea, y hoy el ticket y la base no
+       coinciden
+    3. Columnas faltantes en /pos/transactions, barato y desbloquea harto
+    4. Rate limiter por tenant en vez de por IP

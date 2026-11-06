@@ -1,0 +1,150 @@
+11-10-2026
+Una factura ilegible se pierde
+
+
+Marcelo, entregaste mas de lo que te pedi y lo del respaldo documental era un
+hueco que yo no habia visto.
+
+Verifique tus cuatro entregas contra el backend corriendo y estan las cuatro:
+created_at y ultimo_ingreso_factura en /pos/inventory, origen_creacion y
+factura_origen_folio en /suppliers, GET /invoices/pending responde, y el
+documento se guarda y se recupera. Ya lo conecte todo.
+
+Pero encontre un problema serio que va primero.
+
+
+1. Grave: una factura ilegible se da por procesada y desaparece
+
+Gemini no falla ante una imagen que no se entiende. Devuelve HTTP 200 con todos
+los campos en null:
+
+    {"folio_factura": null, "rut_proveedor": null, "monto_neto": 0,
+     "total_factura": 0, "items_count": 0, "items": [],
+     "ocr_provider": "GoogleAiGemini"}
+
+Como el motor respondio bien, nada lo trata como fallo. Dos consecuencias, las
+dos medidas.
+
+NUNCA LLEGA A LA COLA. Subi una foto ilegible con GEMINI_API_KEY puesta y el
+scan respondio 200 con esa estructura. No hubo 202 y no hubo cola. O sea que la
+cola que construiste no se activa en el caso para el que la construiste, que es
+la foto de una factura de papel que salio mala. Solo entra cuando Gemini da
+error de red o 503, lo comprobe vaciando la key.
+
+Y DESDE LA COLA, LAS BORRA. Deje dos facturas ilegibles en cola con la key
+vacia, puse la key de vuelta y llame a process-pending:
+
+    {"procesadas": 2, "fallidas": 0, "pendientes": 0,
+     "detalle": [{"estado": "PROCESADA", "folio": null},
+                 {"estado": "PROCESADA", "folio": null}]}
+
+Lo que quedo de verdad: cero en la cola, cero facturas nuevas en el historial, y
+los dos archivos huerfanos en disco sin ninguna fila que los apunte.
+
+Las dos desaparecieron. El sistema dijo procesadas y no quedo nada. Y los
+archivos se borran solos a las 24 horas, asi que despues no hay ni como
+recuperarlas.
+
+Para el dueño del local esto es: subi la foto, el sistema me dijo que la
+proceso, y la factura no existe en ninguna parte.
+
+Propongo validar la extraccion antes de darla por buena: si no trae folio ni
+items, no se leyo, aunque el motor haya respondido 200. En /scan tratarlo como
+fallo, con 202 y a la cola o con un aviso claro. Y en process-pending no
+marcarla PROCESADA: dejarla pendiente o pasarla a FALLIDA_OCR segun los
+intentos.
+
+Por ahora deje el mensaje del panel como "Se procesaron N, revisa el historial"
+en vez de "ya estan en el historial", porque hoy el numero que devuelves no
+garantiza que haya quedado algo.
+
+
+2. Son dos casos distintos y hoy son uno solo
+
+    sin internet   reintentar sirve      cola, que es lo que hiciste
+    foto mala      reintentar no sirve   avisar y que saque otra
+
+Hoy los dos caen en el mismo camino. Una foto movida se va a reintentar 3 veces
+para terminar igual de movida, y recien ahi se le dice al usuario.
+
+De mi lado ya lo hice: si el scan vuelve sin items muestro una pantalla que dice
+que no se pudo leer, con cinco consejos concretos (que salga completa, buena luz
+sin flash, el celular derecho, enfocar antes, y subir el PDF si llego por
+correo) y un boton para subir otra. Eso tapa el sintoma en el scan, pero no
+alcanza para la cola.
+
+
+3. Lo que hice en el frontend
+
+EL DOCUMENTO VUELVE AL CONFIRMAR, que era lo critico. POST /invoices/confirm
+reenvia el objeto preview.documento tal cual. Verificado punta a punta: escaneo
+del PDF real, confirm con el documento, la factura queda con archivo_nombre y
+GET /invoices/:id/document devuelve 36.082 bytes con Content-Type
+application/pdf y tu cabecera X-Documento-Origen: local.
+
+El 202 ya se maneja: escanearFactura devuelve una union leida o encolada, y si
+viene encolada muestro tu message, el folio provisional y el nombre del archivo.
+
+La cola quedo como panel arriba del area de subir, con las pendientes y las
+fallidas separadas y un boton "Intentar ahora".
+
+El documento original quedo como columna nueva en la tabla de facturas de
+compra, con un boton por fila: pide el blob y abre pestaña, con descarga de
+respaldo si el navegador la bloquea. En las facturas viejas sin archivo queda
+deshabilitado con tooltip. Un detalle: como pido el blob, tu 404 llega envuelto
+en un Blob en vez de JSON, asi que lo desenvuelvo para mostrar tu mensaje, que
+esta bien redactado.
+
+El boton de sincronizar muestra tu message mas cuantos documentos quedan solo en
+este equipo.
+
+Y las etiquetas ya caducan: con created_at saque el parche provisional, y con el
+ultimo cierre del 24-09 salen 8 de 16 productos en vez de los 8 de factura para
+siempre. ultimo_ingreso_factura quedo como etiqueta "Repuesto" y el origen del
+proveedor como "Leido de factura" con el aviso de revisar el RUT.
+
+Encontre un tipo mal escribiendo las pruebas: PrevisualizacionFactura.folio_factura
+lo tenia como string y tu lo devuelves null cuando no se lee. Corregido a
+string | null.
+
+
+4. Gemini: no pases a 3.8
+
+Llego el aviso de que 3.7 queda deprecado y redirige a 3.8. Medido con la
+factura real, tres muestras de cada uno:
+
+    gemini-3.6-flash     6.468 ms    10.094 ms    24.080 ms
+    gemini-3.8-flash   142.963 ms   117.868 ms   124.008 ms
+
+3.8 tarda dos minutos. Extrae igual de bien, pero mi timeout son 60 segundos asi
+que siempre daria error. Deje 3.6, que es lo que esta en main. 3.5 y 3.7 ya
+devuelven 503.
+
+Sobre cuantas facturas aguanta el plan gratuito: escaneos de a uno con 4
+segundos entre cada uno, las 6 primeras pasaron por Gemini y la septima corto
+con 429. Esperando 100 segundos volvio a funcionar. Es limite por minuto, no
+diario. Para el local no es problema, pero para la defensa mejor no subir mas de
+5 seguidas.
+
+Ojo: el 429 no se ve. Cae al extractor nativo y con un PDF digital sale igual.
+Con foto de papel no hay extractor nativo, asi que ahi si se nota.
+
+
+5. Dos detalles menores
+
+Gemini devuelve el folio como "11354" y tu extractor nativo como "FAC-11354".
+Son la misma factura con dos folios segun quien la leyo. Conviene normalizarlo o
+se van a duplicar.
+
+Y gracias por dejar "data" junto a "invoices" en GET /invoices/. Cuando migre te
+aviso para que saques la vieja.
+
+
+El orden que le daria
+
+    1. La validacion del punto 1, hoy se pierden facturas de verdad
+    2. Lo del punto 2, que es la otra mitad de lo mismo
+    3. El folio normalizado
+
+Lo mio ya esta en main, commits 418e1ff y 0a36dda. Compilacion, lint y build
+limpios, y 18 pruebas unitarias en el frontend, que eran 0 la semana pasada.

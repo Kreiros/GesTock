@@ -1,0 +1,101 @@
+26-10-2026
+El correo de reposicion esta casi hecho
+
+
+Marcelo, revise el cronograma contra el codigo y el objetivo 4 esta casi listo.
+Te lo detallo porque es menos trabajo del que parece, y porque cierra uno de los
+dos objetivos que quedan en el aire.
+
+
+Que queremos que haga
+
+Un correo automatico, un dia fijo de la semana, que le llegue al dueño del local
+con el aviso de lo que viene:
+
+    Mañana pasa Froneri Chile SpA.
+    De ese proveedor tienes bajo el punto de reorden:
+      - Monster 473ml, quedan 3, conviene pedir 16
+      - Aceite Belmont 900ml, agotado, conviene pedir 23
+    Total estimado del pedido: $38.400
+
+La gracia es que llegue antes de que pase el proveedor, no despues. Hoy el dueño
+tiene que acordarse de entrar y mirar la pantalla.
+
+
+Esto ya esta construido, y es casi todo
+
+    dias de visita por proveedor     dias_visita_proveedores
+    cuando pasa el proximo           proximaVisitaTexto y diasHastaVisita
+    que productos estan bajo el rop  generateSuggestedOrders
+    cuanto conviene pedir            suggestedOrderQuantity por item
+    total estimado del pedido        totalEstimado por orden
+    correo del proveedor             proveedorEmail, proveedorTelefono
+    correo del local                 GET/POST /api/v1/config/email
+    bandera de auto envio            auto_send, en esa misma configuracion
+    forma de reportar el envio       emailDispatchStatus
+
+El contenido del correo el sistema ya sabe calcularlo, lo muestra hoy en el
+Panel General y en Reposicion de Stock. Y la bandera auto_send ya existe, asi
+que el diseño ya contemplaba esto.
+
+
+Lo que falta son dos piezas
+
+QUE EL CORREO SALGA DE VERDAD. No hay ninguna libreria de correo en
+package.json. El endpoint POST /replenishment/send-email arma las ordenes y
+devuelve un mensaje, pero no envia nada. Es la pieza de transporte y la eleccion
+es tuya: un SMTP cualquiera sirve, y para la defensa basta con que el correo
+llegue a una casilla real.
+
+EL RELOJ. No hay tarea programada en el proyecto, hoy todo se dispara cuando
+alguien aprieta un boton.
+
+Propongo que el dia y la hora sean configurables y no fijos en el codigo, porque
+cada local tiene su rutina: uno cierra los domingos, otro recibe los martes. Si
+queda en la configuracion junto al correo y la bandera, el dueño lo ajusta solo.
+
+Nada de esto toca la interfaz. La pantalla de Configuracion ya tiene la seccion
+de correo, y si agregas el dia y la hora al mismo endpoint yo los muestro ahi.
+
+
+WhatsApp sale, y hay que declararlo
+
+WhatsApp queda fuera porque la API de WhatsApp Business empezo a cobrar y no
+tiene sentido construir sobre algo que le cuesta plata al minimarket todos los
+meses.
+
+Conviene que quede escrito en el informe final como actividad ajustada, con el
+motivo. El objetivo 4 de la Guia 1.5 dice textual:
+
+    "Desarrollar un orquestador de notificaciones capaz de interactuar con el
+    E-mail/WhatsApp del usuario para enviar alertas de bajo stock y sugerencias
+    de compra."
+
+Dice E-mail/WhatsApp, asi que entregando el correo con envio programado real el
+objetivo se cumple igual. Pero si WhatsApp desaparece sin explicacion parece que
+no alcanzamos. Es el mismo encuadre que usamos con las tendencias: no es que no
+se pudo, es que el servicio cambio sus condiciones y decidimos no depender de
+el.
+
+
+Por que te lo mando ahora
+
+Hoy es semana 12 de 18 y quedan seis:
+
+    02-11            alertas y ordenes de compra sugeridas
+    09-11 a 16-11    pruebas de estres e informe final
+    23-11 a 07-12    material audiovisual y defensa
+
+La fila del 2 de noviembre es justamente esta. Vamos a tiempo si parte ahora.
+
+Y queda un segundo objetivo abierto que no toque aca: el 5, las pasarelas de
+pago en sandbox. Ese lo hablamos aparte porque hay que decidir si se hace o se
+declara.
+
+
+Lo que necesito de ti
+
+    1. Si tomas el correo programado y con que servicio de envio
+    2. Si el dia y la hora van configurables. Si si, mandame la forma del
+       endpoint y lo pongo en la pantalla
+    3. Cuando quieres que hablemos del objetivo 5
