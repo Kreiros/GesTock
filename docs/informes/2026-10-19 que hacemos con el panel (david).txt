@@ -1,0 +1,102 @@
+19-10-2026
+Que hacemos con el panel de tendencias
+
+
+Marcelo, encontraste dos cosas que a mi se me pasaron y corregiste lo que no
+dependia de nosotros sin esperar permiso. Eso ahorro una vuelta completa.
+
+Verifique tu commit contra el backend corriendo antes de contestarte.
+
+
+Lo tuyo esta bien, lo probe
+
+La linea trend.source = source existia. La migracion 014 corre y reconstruye la
+tabla, las 16 filas sobrevivieron, el CHECK admite 'Simulado' y tus 5 pruebas
+pasan.
+
+    proveedor caido    antes MercadoLibre 70 $1.500, ahora Simulado 70 $1.500
+    fuente inventada   antes 500 contra el CHECK, ahora 400 con el motivo
+    "MERCADOLIBRE"     antes 200, ahora 200
+
+Reconstruir la tabla en SQLite era lo mas riesgoso de tu cambio y quedo limpio.
+
+Sobre tu hallazgo del modulo tienes razon, y es peor de lo que yo habia dicho.
+Yo mostre que el numero era arbitrario; tu mostraste que ademas no contiene
+informacion, porque solo depende del ultimo digito del largo: son 10 valores
+posibles y nada mas. Y la linea del service era la grave: arreglar solo el campo
+del simulador no habria servido de nada.
+
+
+Sobre el panel: prefiero sacarlo
+
+Tu opcion (c) esta bien pensada y el dato que propones es real. Revise
+calculateSalesVelocity y consulta detalle_venta contra transacciones_venta sobre
+la ventana de dias. Es venta del local, medida.
+
+Pero hay algo que no vimos ninguno de los dos: en el mismo Panel General ya
+existe "Productos mas vendidos". Sale de topProducts en dashboard.service.ts,
+calculado sobre ventas reales, y se dibuja en GraficoTopProductos.tsx unos
+paneles mas arriba.
+
+Si Tendencias pasa a mostrar la rotacion del local quedan dos paneles en la
+misma pantalla contestando casi la misma pregunta. Hay una diferencia tecnica,
+uno es unidades del periodo y el otro velocidad diaria sobre 30 dias, pero para
+el dueño mirando la pantalla son dos listas de lo mismo.
+
+Dices que sacarlo desperdicia algo construido. Lo construido de verdad es la
+parte falsa; el armazon del panel son unas cien lineas de React.
+
+Y para la defensa la historia es mas firme: detectamos que el dato era simulado,
+lo eliminamos, y verificamos que la informacion real que el usuario necesitaba
+ya estaba cubierta por otro panel. Eso es codigo de menos y una decision
+fundamentada. La (c) suena parecido pero deja una duplicacion que alguien puede
+preguntar.
+
+Si prefieres la (c) igual la hago. Lo importante pasa en las dos: borrar los
+providers falsos, el "479% sobre el mercado" y el texto de referencia externa.
+En la (a) estamos de acuerdo, no va.
+
+
+Un detalle sobre tu arreglo
+
+Esta bien, pero en la practica casi nunca se va a ver, porque los providers no
+pueden fallar: hacen aritmetica, no salen a internet. El respaldo solo entra si
+hay excepcion.
+
+El problema de fondo siguen siendo las formulas, que dejaste intactas a
+proposito. Si sacamos el panel se borran y el punto se cierra solo.
+
+
+Ofertas en Fase 3: de acuerdo
+
+Declararla en el plan de trabajo con responsable y duracion me parece correcto.
+Con el empaquetado y la prueba de usuarios sin iniciar, abrir un tercer frente
+ahora seria imprudente.
+
+
+Empaquetado: tomalo
+
+Toma el empaquetado y pon tu nombre en esa fila del plan. Tu explicacion me dejo
+claro el malentendido que tenia: pensaba que empaquetaba codigo fuente y que
+cada cambio mio obligaba a rehacerlo.
+
+Tus tres condiciones, respondidas con lo que hay hoy: no voy a cambiar donde se
+guardan los datos ni la sesion, no voy a agregar dependencias con compilacion
+nativa, y no voy a cambiar como el frontend encuentra al backend.
+
+Lo reviso con lo ultimo que subi. El indicador de clima, commits f7cd601 y
+c3dc7a7, llama a un servicio externo directo desde el navegador, no pasa por el
+backend, asi que no toca la URL base ni el puerto. Si alguna de las tres cambia
+te aviso antes de escribir la primera linea.
+
+Y tu riesgo del node:sqlite esta bien visto, confirme que el cliente usa
+DatabaseSync. Prefiero que verifiques eso primero y me des el resultado medido
+antes que una fecha.
+
+
+Lo que necesito de ti
+
+    1. Que decides con el panel: sacarlo o pasarlo a rotacion. Yo voto sacarlo
+    2. El resultado de la prueba del node:sqlite en Electron
+
+Mientras tanto no toco el panel ni agrego pantallas nuevas.

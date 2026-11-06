@@ -1,0 +1,136 @@
+31-10-2026
+Verificacion de tus arreglos, y lo que encontre
+
+
+Marcelo, probe todo con el Docker levantado y contra PostgreSQL de verdad, no
+leyendo el codigo. Los cuatro arreglos funcionan.
+
+
+Lo que confirme
+
+LA SINCRONIZACION SUBE LAS VENTAS. Las 16 que llevaban dias atascadas subieron y
+el estado paso a ONLINE con 0 pendientes.
+
+Y el aislamiento por venta es lo mejor del arreglo. Lo probe a proposito: marque
+como pendiente una venta buena y una imposible de subir, y en la misma pasada
+subio la buena y dejo la mala.
+
+    synced_ids  ["df84a891-..."]
+    failed_ids  ["v1-33333333-..."]
+    mensaje     "Se sincronizaron 1 de 2 ventas. 1 quedaron pendientes"
+
+Antes una sola venta mala botaba el lote completo.
+
+EL ENDPOINT DEL CORREO responde tal cual lo documentaste. dia_envio en 9
+devuelve "debe ser un numero entre 1 y 7, donde 1 es lunes", hora_envio en 25:00
+devuelve "debe tener el formato HH:MM en 24 horas", y guardar jueves 19:30
+funciona. Los mensajes se pueden mostrar directo.
+
+TU BATERIA da 117 de 117 en mi equipo, con 4 saltadas.
+
+Y lo del parche de UUID: normalizo cero. Los 16 productos del catalogo ya tienen
+UUID valido, asi que no tenia nada que corregir aca.
+
+
+Cuatro cosas que encontre
+
+1. EL CORREO ES OBLIGATORIO EN CADA POST, NO OPCIONAL
+
+Tu documento dice que los dos campos del horario son opcionales y que asi mi
+pantalla puede conectarse por partes. El horario si es opcional, el correo no:
+
+    {"dia_envio": 4}                      -> email is required
+    {"email": "...", "dia_envio": 4}      -> ok
+
+No es grave porque al guardar mando los tres campos igual, pero conviene
+corregir el documento o el codigo: la frase sugiere que se puede conectar el
+horario sin tocar el correo y no se puede.
+
+2. LA NUBE SOLO RECIBE LOS PRODUCTOS QUE SE VENDIERON
+
+En pos-sync-engine.service.ts, cerca de la linea 55, los productos viajan como
+dependencia de la venta: se consultan por los producto_id del detalle. Para que
+no te rechace la venta esta perfecto, pero la nube hoy tiene 9 de 16 productos y
+3 de 5 proveedores.
+
+Los 7 que faltan entraron por factura el 03-10 y nunca se vendieron.
+
+Si este equipo se muere, esos 7 productos no estan en ninguna parte. El respaldo
+en la nube es parcial y el proyecto se presenta como respaldo en la nube.
+
+3. LAS 6 VENTAS DE SIEMBRA NO PUEDEN SUBIR NUNCA
+
+Sus identificadores son del tipo v1-33333333-0000-0000-0000-000000000001, que
+PostgreSQL rechaza por no ser UUID. Tu parche de normalizacion cubre productos,
+no transacciones_venta.
+
+Hoy no molesta porque estan sembradas como SYNCED y nadie las intenta subir,
+pero el historial de la nube parte el 21-09 y el local el 19-09. Se arregla en
+la semilla, no en el motor.
+
+4. UN RECHAZO POR DATOS NO GASTA INTENTOS
+
+Cerca de la linea 162, sync_attempts solo sube dentro del catch de red. Si la
+nube rechaza la venta por el dato mismo, queda en PENDING con 0 intentos y se
+reintenta en cada sincronizacion, para siempre. Lo vi: despues de fallar seguia
+en 0.
+
+No hay un estado "esta no va a subir nunca" que yo pueda mostrar en pantalla, ni
+un tope para dejarla parada.
+
+UN DETALLE DEL MISMO PUNTO: cuando el push es parcial, la ruta responde 500 y
+retorna antes de los pasos 2 a 5, asi que esa pasada no hace el pull del
+catalogo, no procesa la cola de facturas y no sube los documentos al respaldo.
+Una sola venta mala deja esas tres cosas sin correr. Bastaria con seguir
+adelante y reportar el parcial al final.
+
+
+Lo que hice de mi lado
+
+EL SELECTOR DE DIA Y HORA en Configuracion. Un desplegable de dia y un input
+type="time", como sugeriste. Lee el valor guardado con el GET al abrir, y lo
+probe en serio: lo cambie a jueves 19:30, recargue la pagina entera y sigue
+mostrando jueves 19:30. Si el GET falla, la seccion no dibuja los selectores y
+muestra el error, porque mostrar lunes 08:00 sin saberlo es peor que no mostrar
+nada. Mando el correo siempre en el POST, por lo del punto 1.
+
+EL AVISO DE SINCRONIZACION PARCIAL. Estaba mal de verdad: como el parcial llega
+con 500, el frontend lo trataba como fracaso total y decia "Las ventas siguen
+guardadas en este equipo" aunque algunas hubieran subido. Ahora dice "Subieron 2
+de 3 ventas. La otra sigue guardada aca y se sube al sincronizar de nuevo", y el
+contador de pendientes tambien se actualiza, cosa que antes no pasaba cuando la
+respuesta era error.
+
+No muestro el motivo tecnico que manda el servidor, porque nombra tablas y
+restricciones de la base.
+
+Las dos cosas estan subidas, con pruebas unitarias.
+
+
+Mis respuestas a lo que preguntabas
+
+LAS PASARELAS, OBJETIVO 5: de acuerdo, lo declaramos como ajuste de alcance. Es
+el mismo encuadre de las tendencias y es cierto: una pasarela de verdad exige
+cuenta de comercio y una habilitacion cuyo plazo no depende de nosotros, igual
+que los folios del SII. El despachador ya esta construido y es lo que demuestra
+la competencia. A seis semanas del informe final no vale la pena abrir el
+sandbox de Transbank.
+
+WHATSAPP: lo sacamos porque empezaron a cobrar, y eso es lo que hay que decir
+tal cual. No es que no alcanzaramos, es que el canal dejo de ser gratis durante
+el proyecto. Con el correo y el envio programado real el objetivo se cumple,
+porque la guia dice "E-mail/WhatsApp".
+
+EL AVISO DE SINCRONIZACION PARCIAL lo tome yo, ya esta hecho.
+
+
+Lo que queda
+
+De tu lado, el empaquetado en Electron.
+
+De mi lado, el plan de pruebas. La lista de requisitos priorizada, la evaluacion
+de iteracion y el plan de iteracion ya estan escritos, pero todavia no los subo
+al repositorio de titulo.
+
+Y sigue sin resolverse el minimarket para las pruebas con usuarios. Dijiste de
+decidir un plan B en dos semanas y eso no ha avanzado.

@@ -1,0 +1,92 @@
+19-10-2026
+Reemplazar el panel por sugerencias
+
+
+Marcelo, dos cosas antes de lo demas.
+
+Tienes razon con lo del dashboard: es una recopilacion de lo que esta en otras
+pantallas, si no no seria un dashboard. Retiro mi voto por sacar el panel.
+
+Y una correccion mia: me comprometi a congelar la interfaz mientras empaquetas, y
+eso estaba de mas. Tu propia explicacion lo desmiente, porque el empaquetado toma
+dist/ ya construido y editar componentes de React no te afecta. Lo unico que no
+voy a tocar son las tres cosas que listaste, y ninguna esta en juego.
+
+De las promociones estoy de acuerdo, pero mire los datos antes de contestarte y
+hay una de tus tres ideas que hoy no se puede hacer.
+
+
+Lo que encontre mirando los datos
+
+LA ROTACION DE STOCK se puede y sale gratis: el frontend ya recibe
+velocidad_diaria y dias_inventario_restante por producto, en la misma llamada
+que usa Reposicion. No necesito endpoint nuevo.
+
+LA FECHA DE VENCIMIENTO se puede como regla, pero los datos casi no existen. El
+campo esta y ya llega, pero de 16 productos activos solo 3 tienen fecha cargada,
+y las tres ya pasaron: 22-09, 03-10 y 18-10. Hoy el panel diria "liquida la
+leche" sobre algo vencido hace un mes. La dejo implementada igual porque en
+cuanto haya fechas reales empieza a servir sola.
+
+LO DE PRODUCTOS QUE SALEN JUNTOS hoy no se puede, y no es por codigo:
+
+    ventas registradas                        22
+    ventas con 2 o mas productos               6
+    pares distintos que coincidieron           8
+    veces que se repite el par mas frecuente   1
+
+Ningun par se repite nunca. No es que el analisis quede impreciso: no hay patron
+que encontrar. Con seis canastas no existe frecuencia que medir. Eso necesita
+meses de ventas reales, o sea la prueba en el minimarket.
+
+
+Lo que propongo
+
+Que el panel de sugerencias ocupe el lugar del panel de tendencias falso.
+
+Con eso mueren los dos providers que cuentan letras y el mock, muere el "479%
+sobre el mercado" y el texto de referencia externa, no es pantalla nueva sino el
+mismo espacio con contenido real, y no duplica "Productos mas vendidos" porque
+eso es una lista de lo que se vendio y esto es una recomendacion de que hacer.
+Ademas lo hago yo solo, sin backend, mientras tu verificas lo del node:sqlite.
+
+Asi se cierra tambien la pregunta que quedo abierta: no es sacarlo ni pasarlo a
+rotacion, se reemplaza.
+
+Arranca con las dos reglas que funcionan hoy: rotacion, que se vende rapido y
+queda poco stock; y vencimiento, que vence pronto y todavia hay stock.
+
+Lo de productos que salen juntos lo declaramos como actividad de Fase 3 con el
+numero medido como justificacion. Eso es mejor que decir que no alcanzamos: es
+una decision con evidencia.
+
+
+Una cosa que te toca decidir a ti
+
+Hace tres dias escribiste que las recomendaciones de ofertas eran funcionalidad
+nueva, que chocaban con lo que dijo la profesora, y propusiste declararlas como
+Fase 3. Ahora dices que estaria bien agregarlas.
+
+No tengo drama con el cambio y me parece buena idea. Pero la razon que diste
+entonces sigue siendo cierta: hay dos actividades sin iniciar, acabas de tomar
+el empaquetado, y la prueba con usuarios depende de un tercero que todavia no
+conseguimos.
+
+Lo planteo porque conviene que quede como decision tomada por nosotros y no como
+algo que se nos fue de las manos. Con el alcance que propongo lo defiendo sin
+problema: no es un modulo nuevo, es reemplazar un panel que daba datos
+inventados por uno que usa datos que el sistema ya calcula.
+
+Si lo presentamos asi suma. Si lo presentamos como "ademas agregamos
+promociones", nos pueden pegar con lo que dijo la profesora.
+
+
+Lo que necesito de ti
+
+    1. Si estas de acuerdo con reemplazar el panel
+    2. Si dejamos lo de productos que salen juntos para Fase 3, declarado con el
+       numero medido
+    3. El resultado de la prueba del node:sqlite en Electron
+
+Si me dices que si a las dos primeras empiezo con el panel y tu sigues con el
+empaquetado en paralelo.

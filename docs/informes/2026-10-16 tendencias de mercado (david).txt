@@ -1,0 +1,118 @@
+16-10-2026
+Tendencias de mercado
+
+
+Marcelo, me dijiste que habias hecho lo de tendencias pero que no sabias si
+funcionaba. Lo probe con el backend corriendo.
+
+Lo que funciona funciona: el POST a /trends/sync responde, el GET devuelve
+filas, el panel las dibuja y hay respaldo si el proveedor falla. Nada roto.
+
+El problema es otro. En mercadolibre.provider.ts y en aliexpress.provider.ts no
+hay ningun fetch, ninguna URL, ninguna clave. Nada sale a internet. Los numeros
+salen de contar las letras del nombre del producto:
+
+    demandIndex        = 65 + (keyword.length * 3) % 30
+    averageMarketPrice = 1200 + (keyword.length * 45) % 800
+
+Mande cuatro productos:
+
+    Pan        (3 letras)   demanda 74   precio $1.335
+    Arroz      (5 letras)   demanda 80   precio $1.425
+    Cerveza    (7 letras)   demanda 86   precio $1.515
+    Coca Cola  (9 letras)   demanda 92   precio $1.605
+
+Cada letra suma 3 de demanda y $45 de precio. Para sacarme la duda mande
+"zzzzzzzzz", nueve zetas: demanda 92, precio $1.605. Igual que Coca Cola, porque
+mide lo mismo.
+
+En la base ya se nota. CHANDELLE Crema Chocolate 20x120g y GOODNES Defensas
+Frutilla 48x140g estan los dos con demanda 74 y precio $1.885: un postre y un
+suplemento con el mismo numero, porque los dos nombres miden 33 caracteres.
+
+
+Por que me preocupa
+
+El panel muestra esto:
+
+    NESTLE La Crema Caja 5 - MercadoLibre - demanda 89 - mercado $1.310
+    479% sobre el mercado
+
+Le esta diciendo al dueño que vende 479% mas caro que el mercado, y ese mercado
+es el largo del nombre. El campo source dice MercadoLibre y el panel dice
+"precio de referencia externos", asi que nada avisa que lo calculamos nosotros.
+
+Es lo mismo que nos paso con las facturas: datos simulados mostrados como
+reales. Si en la defensa preguntan de donde sale el 479%, no tenemos que
+responder.
+
+Y hay otra capa: si el proveedor falla entra MockMarketProvider, que devuelve 70
+y $1.500 fijos, tambien como MercadoLibre. Un respaldo simulado de algo que ya
+era simulado.
+
+Siendo justo, la arquitectura esta bien armada: interfaz de proveedor, dos
+implementaciones, respaldo, persistencia dual con su migracion. Falta el pedazo
+que sale a buscar el dato. Quedo el enchufe puesto sin nada conectado.
+
+Hay que decidir entre dos cosas, y es de los dos:
+
+    a) dejarlo pero marcado como estimacion nuestra, sin decir que viene de
+       Mercado Libre
+    b) sacar el panel hasta que tenga datos de verdad
+
+Lo que no puede quedar es diciendo "referencia externa" cuando no lo es.
+
+
+Lo que quiero hacer con tendencias
+
+La idea era traer los productos por API, pero conseguir esas APIs es
+complicado: Mercado Libre pide aplicacion registrada con OAuth y AliExpress
+cuenta de afiliado.
+
+Se me ocurrio otra cosa: tener el apartado igual pero mostrando el sitio adentro
+de GesTock, que el dueño vea los mas vendidos sin salir de la aplicacion.
+
+Probe con un iframe y no se puede. Mercado Libre lo bloquea: "Framing violates
+the Content Security Policy directive: frame-ancestors", solo se dejan incrustar
+dentro de dominios de ellos. AliExpress no da error pero carga una pagina en
+blanco, que es peor porque falla callado.
+
+Es proteccion contra clickjacking, la tienen todos los sitios con login. No se
+evade, y pasarlo por nuestro backend rompe su JavaScript igual y va contra sus
+terminos.
+
+Donde si funciona es en Electron, porque no usa iframes sino una vista de
+navegador de verdad. Para Mercado Libre eso es una pestaña normal, asi que esos
+bloqueos no aplican. Lo confirmamos cuando empaquetemos.
+
+
+Por eso propongo empaquetar primero
+
+Si hago la pantalla ahora en version navegador me queda una lista de enlaces que
+abren pestañas afuera. Funciona pero no es lo que queremos, y despues hay que
+rehacerla. Si empaquetamos primero la hago una sola vez y nace con el sitio
+adentro.
+
+Ademas el empaquetado ya esta en el plan de trabajo: Electron, instalador para
+Windows, dos semanas, Fase 3. No esta atrasado, esta declarado como no iniciado
+porque depende de que la interfaz este estabilizada.
+
+Y ahi esta el detalle: la condicion para empaquetar es que la interfaz deje de
+cambiar. Si seguimos agregando pantallas esa fecha se corre sola. Propongo poner
+la raya ahora, no agrego pantallas nuevas, empaquetamos, y tendencias entra
+despues dentro del instalador.
+
+Dos cosas por cerrar: en el plan de trabajo el responsable del empaquetado dice
+"Por definir" y hay que ponerle nombre antes del informe final, porque la
+rubrica mira el aporte de cada uno. Y decidir quien lo toma: es mas cercano a lo
+tuyo, pero si lo tomo yo tambien me sirve.
+
+
+Lo que necesito que me digas
+
+    1. Que hacemos con el panel mientras, si lo marcamos o lo sacamos
+    2. Si estas de acuerdo con empaquetar primero y tendencias despues
+    3. Quien toma el empaquetado
+
+Lo de los providers no corre apuro si vamos por mostrar el sitio, porque ahi no
+necesitamos la API. Pero el panel actual si hay que resolverlo.
