@@ -129,7 +129,7 @@ npm run test:coverage
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, de naturaleza iterativa y evolutiva, estructurada en tres fases:
 1. **Incepción y Elaboración (Fase 1 - 20%):** Definición del alcance, justificación técnica del negocio (*Business Case*), análisis de los 55 RF y 25 RNF (ISO/IEC 25010), artefactos UML y modelado relacional inicial (15 tablas maestras).
-2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-019 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.6-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **391 pruebas automatizadas** (Jest).
+2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-019 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.6-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **396 pruebas automatizadas** (Jest).
 3. **Transición (Fase 3 - 30%):** Pruebas de estrés y conmutación offline en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa de título.
 
 ---
@@ -142,7 +142,7 @@ Los manuales formales se publican en formato Word en la carpeta [`docs/`](./docs
 3. **[docs/guia_de_despliegue.docx](./docs/guia_de_despliegue.docx)**: Instalacion, variables de entorno, Docker Compose y PM2.
 4. **[docs/manual_de_funcionalidades.docx](./docs/manual_de_funcionalidades.docx)**: Operación del POS, normativas chilenas, DTE, arqueo Z y reabastecimiento ROP.
 5. **[docs/estado_actual_proyecto.docx](./docs/estado_actual_proyecto.docx)**: Informe de avance, Carta Gantt y métricas de estabilidad.
-6. **[docs/evidencia_pruebas_unitarias.docx](./docs/evidencia_pruebas_unitarias.docx)**: Certificado formal de auditoría y matriz de las 391 pruebas automatizadas.
+6. **[docs/evidencia_pruebas_unitarias.docx](./docs/evidencia_pruebas_unitarias.docx)**: Certificado formal de auditoría y matriz de las 396 pruebas automatizadas.
 
 ---
 
