@@ -1,6 +1,12 @@
 // src/features/mercado/utils/busquedaMercado.test.ts
 import { describe, expect, it } from 'vitest'
-import { terminoDeBusqueda, urlDeBusqueda } from '@/features/mercado/utils/busquedaMercado'
+import {
+  VISTAS,
+  pideCuenta,
+  terminoDeBusqueda,
+  urlDeBusqueda,
+  urlDeVista,
+} from '@/features/mercado/utils/busquedaMercado'
 
 describe('terminoDeBusqueda', () => {
   it('saca el envase, que no sirve para buscar en el mercado', () => {
@@ -35,5 +41,32 @@ describe('urlDeBusqueda', () => {
 
   it('no arma nada si el nombre queda vacio al limpiarlo', () => {
     expect(urlDeBusqueda('mercadolibre', '500ml')).toBe('')
+  })
+})
+
+describe('urlDeVista', () => {
+  it('apunta a la pagina de tendencias de busqueda', () => {
+    expect(urlDeVista('tendencias')).toBe('https://tendencias.mercadolibre.cl/')
+  })
+
+  it('apunta a la pagina de mas vendidos', () => {
+    expect(urlDeVista('mas_vendidos')).toBe('https://www.mercadolibre.cl/mas-vendidos')
+  })
+
+  it('las dos vistas viven en mercado libre, que es donde se ven sin cuenta', () => {
+    VISTAS.forEach((vista) => {
+      expect(new URL(vista.url).hostname.endsWith('mercadolibre.cl')).toBe(true)
+    })
+  })
+})
+
+describe('pideCuenta', () => {
+  // mercado libre manda el listado de un producto a /gz/account-verification sin sesion
+  it('avisa que mercado libre pide sesion para el listado de un producto', () => {
+    expect(pideCuenta('mercadolibre')).toBe(true)
+  })
+
+  it('aliexpress muestra su busqueda sin cuenta', () => {
+    expect(pideCuenta('aliexpress')).toBe(false)
   })
 })
