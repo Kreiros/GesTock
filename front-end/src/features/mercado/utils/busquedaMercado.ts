@@ -1,12 +1,39 @@
 // src/features/mercado/utils/busquedaMercado.ts
 
+// las dos paginas que mercado libre deja ver sin pedir cuenta
+export const VISTAS = [
+  {
+    id: 'tendencias',
+    nombre: 'Tendencias de busqueda',
+    url: 'https://tendencias.mercadolibre.cl/',
+    descripcion: 'Lo que mas se busca en Mercado Libre esta semana, y lo que mas crecio.',
+  },
+  {
+    id: 'mas_vendidos',
+    nombre: 'Mas vendidos',
+    url: 'https://www.mercadolibre.cl/mas-vendidos',
+    descripcion: 'Los productos mas vendidos, agrupados por el rubro que usa Mercado Libre.',
+  },
+] as const
+
+export type VistaMercado = (typeof VISTAS)[number]['id']
+
+export function urlDeVista(vista: VistaMercado): string {
+  return VISTAS.find((v) => v.id === vista)!.url
+}
+
 // los dos sitios que el local consulta para saber a cuanto se vende algo
 export const SITIOS = [
-  { id: 'mercadolibre', nombre: 'Mercado Libre', base: 'https://listado.mercadolibre.cl/' },
   { id: 'aliexpress', nombre: 'AliExpress', base: 'https://es.aliexpress.com/w/wholesale-' },
+  { id: 'mercadolibre', nombre: 'Mercado Libre', base: 'https://listado.mercadolibre.cl/' },
 ] as const
 
 export type SitioMercado = (typeof SITIOS)[number]['id']
+
+// mercado libre manda el listado de un producto a /gz/account-verification si no hay sesion
+export function pideCuenta(sitio: SitioMercado): boolean {
+  return sitio === 'mercadolibre'
+}
 
 // el formato del producto trae medidas y envase que ensucian la busqueda
 export function terminoDeBusqueda(nombre: string): string {
