@@ -39,7 +39,8 @@ export function pideCuenta(sitio: SitioMercado): boolean {
 export function terminoDeBusqueda(nombre: string): string {
   return nombre
     // el formato de caja va primero: si no, 20x120g pierde el 120g y deja el 20x suelto
-    .replace(/\b\d+\s*x\s*\d+\s*[a-z]*\b/gi, ' ')
+    // y la medida termina en numero en 6x200cm3, por eso el \d* del final
+    .replace(/\b\d+\s*x\s*\d+\s*[a-z]*\d*\b/gi, ' ')
     .replace(/\d+\s*(ml|cc|g|kg|lt|l|un)\b/gi, ' ')
     .replace(/[()]/g, ' ')
     .replace(/\s+/g, ' ')

@@ -128,7 +128,8 @@ export function MercadoPage() {
         </>
       ) : (
         <Typography variant="caption" color="text.secondary">
-          {descripcion}
+          {descripcion} Para ver el listado de uno de estos productos, Mercado Libre pide iniciar
+          sesion.
         </Typography>
       )}
 
