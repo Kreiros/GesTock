@@ -1,0 +1,132 @@
+07-11-2026
+El parche del visor aplicado, reparar la instalacion, y RF-51 al dia
+
+
+David, tu parche esta aplicado tal cual y el defecto era mio: lo introduje al
+arreglar los clics muertos. Tambien quedaron la frase del DAS y el criterio de
+aceptacion, y agregue una forma de actualizar la aplicacion instalada sin
+desinstalarla.
+
+La decision del instalador no cambia: no se publica. Te explico abajo por que,
+con tu argumento sobre la mesa.
+
+
+EL PARCHE DEL VISOR
+
+Aplicado como lo escribiste, en los dos lugares: fueraDeSitio descarta lo que no
+es de los dos mercados y solo abre afuera lo que si lo es, y el manejador de
+ventanas lleva el mismo filtro.
+
+Lo que mas me sirvio de tu informe no fue el parche sino como lo ubicaste.
+Parchear setWindowOpenHandler y ver que no cambiaba nada es justo el momento en
+que uno sigue probando a ciegas; anotar cada llamada con una marca distinta por
+camino y dejar que el registro diga por donde entra es lo que convierte una
+sospecha en un dato. Las dos lineas con la hora y el dominio valen mas que
+cualquier explicacion.
+
+A mi tampoco se me habria ocurrido que un pixel de medicion viajara por el marco
+principal.
+
+Y el defecto es consecuencia directa de mi arreglo anterior: pase de bloquear en
+silencio -clics muertos- a abrir todo afuera -ventanas solas-. Las dos reglas se
+corrigieron una a la otra, y ahora la prueba de empaquetado fija las dos juntas,
+con el descarte antes de la apertura, para que no vuelva a irse a ninguno de los
+dos extremos.
+
+
+EL MURO DE LA CUENTA: DE ACUERDO EN NO HACER NADA
+
+Agregar /gz/account-verification abriria Chrome en cada clic, que es peor que el
+muro. Lo dejo como esta.
+
+
+RF-51 Y LO QUE PODEMOS PROMETER
+
+Tu prueba de las tres formas, fuera de GesTock y en un navegador normal, es la
+que decide esto, y por eso reescribi el criterio de aceptacion:
+
+    tendencias y mas vendidos       se ven sin cuenta
+    listado de un producto          pide cuenta, por las tres vias
+    AliExpress                      no pide nada
+
+El requisito ya no promete la consulta de un producto en Mercado Libre. Dice que
+se puede ver que se esta vendiendo, nombra la medicion y explica que la busqueda
+puntual quedo en su pestaña con AliExpress por omision.
+
+Tenias razon tambien en la frase vieja, con un matiz: en el Markdown ya estaba
+corregida, y lo que seguia diciendo "RF-51, retirado" era el espejo .docx. Ese
+parrafo no lo reconstruye el generador, asi que quedo atras al reabrir el
+requisito. Como el .docx es el que tu lees, para efectos practicos tenias toda
+la razon. Corregido en los dos repositorios.
+
+
+REPARAR LA INSTALACION
+
+Esto sale de algo que vengo haciendo mal. Cada vez que cambiaba el instalador lo
+construia y daba por hecho que la aplicacion del equipo quedaba al dia, y no:
+son dos pasos.
+
+    npm run app:actualizar     construye el instalador y lo aplica encima
+    npm run app:reparar        solo aplica el instalador ya construido
+
+Reinstala sobre la instalacion existente, sin desinstalar. El instalador
+reemplaza los archivos del programa y no toca la carpeta de datos del usuario,
+de modo que la base, las cuentas, los documentos y la clave de sesion
+sobreviven. Lo comprobe: despues de reparar, los 18 productos y la cuenta de
+administrador siguen ahi.
+
+La orden cierra la aplicacion si esta abierta -con ella corriendo el instalador
+no puede reemplazar su propio ejecutable-, busca el instalador mas reciente y
+comprueba que el programa quedo en su sitio en vez de dar por buena la salida.
+
+Lo que NO pude hacer es un boton de "Reparar" dentro del instalador, con su
+opcion en pantalla. Eso necesita escribir una pagina propia de NSIS, y no me
+parece algo para agregar sin poder verlo funcionando a tres semanas de la
+defensa. Lo que hay es el equivalente por linea de ordenes, que hace lo mismo.
+
+Quedo ademas como regla del proyecto: cambiar algo que viaje en el instalador
+obliga a reinstalar y a comprobar que la copia instalada lleva el cambio.
+
+
+EL INSTALADOR NO SE PUBLICA
+
+Tu argumento es bueno: tuviste que bajar las dependencias de Electron para
+construirlo, y son unos 100 MB. Lo plantee asi y la decision se mantiene.
+
+El razonamiento es que publicar obliga a mantener: cada cambio pide una version
+nueva, y la que quede colgada sera la que alguien descargue creyendo que es la
+actual. Para un proyecto que no entra en produccion, esa disciplina cuesta mas
+de lo que rinde. Y la descarga de Electron se hace una sola vez por equipo: ya
+la hiciste, no la vuelves a hacer.
+
+Si lo necesitas armado y no quieres construirlo, te lo paso por fuera cuando me
+digas.
+
+
+LAS CIFRAS DE HOY
+
+    unitarias de servidor      22 suites    316 de 316
+    exclusivas de backend      21 suites    305 de 305
+    unitarias de interfaz      16 archivos  122 de 122
+    empaquetado                 1 suite      23 de 23
+    tsc en los dos lados                    sin errores
+
+Las pruebas de empaquetado subieron a 23: entraron el descarte de terceros, el
+filtro del manejador de ventanas y la orden de reparar.
+
+La aplicacion instalada en este equipo ya tiene tu pantalla de Tendencias de
+Mercado y el parche: lo verifique leyendo el contenido del paquete instalado.
+
+Lo que no puedo confirmar yo es que las ventanas dejaron de abrirse solas. Tu lo
+mediste antes y despues en tu equipo; de mi lado solo esta el codigo y las
+pruebas. Si al instalar esta version vuelves a ver alguna, dimelo con la
+direccion y la miro.
+
+
+LO QUE QUEDA
+
+De mi lado no queda nada de lo que nombraste.
+
+De tu lado: cerrar RF-51 en el backlog cuando lo veas funcionando, la
+retrospectiva el 12-11 con mi parte ya escrita, y el plan de pruebas, que reviso
+cuando quieras.
