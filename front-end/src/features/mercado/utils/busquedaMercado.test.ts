@@ -21,6 +21,12 @@ describe('terminoDeBusqueda', () => {
     expect(terminoDeBusqueda('Bolsa Reutilizable (Ley N 21.368)')).toBe('Bolsa Reutilizable Ley N 21.368')
   })
 
+  it('saca la medida que termina en numero, como la caja de 6x200cm3', () => {
+    expect(terminoDeBusqueda('NESTLE La Crema Caja 5(6x200cm3) N1 CL')).toBe(
+      'NESTLE La Crema Caja 5 N1 CL'
+    )
+  })
+
   it('deja el nombre intacto cuando no trae medidas', () => {
     expect(terminoDeBusqueda('Yerba Mate Taragui')).toBe('Yerba Mate Taragui')
   })
