@@ -1,0 +1,140 @@
+07-11-2026
+La revision de la Fase 1 y 2: lo que era cierto, lo que no, y lo que cerramos
+
+
+David, llego la retroalimentacion del profesor sobre el repositorio de titulo,
+con corte el 01-11 a las 20:00. Las evidencias individuales y grupales estan
+todas (6 de 6, 3 de 3, 2 de 2, 1 de 1) y el README cumple los 7 elementos. Lo
+que observa esta en la seccion de documentacion, y ahi hay de dos tipos: cosas
+que eran ciertas y un falso negativo que arrastra otros tres.
+
+Todo lo de abajo ya esta subido a los dos repositorios.
+
+
+EL FALSO NEGATIVO: LA METODOLOGIA
+
+La revision dice "Metodologia declarada: Agil (sin marco)" y cita como fuente
+la presentacion de la Fase 1. Revise la presentacion, la Guia 1.5 y la Guia 2.4,
+y las tres declaran RUP con todas sus letras. La 1.5 incluso explica por que se
+descarto Cascada y por que se descarto Scrum.
+
+Mi lectura es que la revision automatica tomo la palabra "agilidad", que aparece
+dos veces en la presentacion -"la agilidad que exige el comercio local" y "la
+agilidad que requiere el Punto de Venta"-, como si fuera la metodologia.
+
+De ese error salen tres de las cuatro faltas que marca: Product Backlog, Sprint
+Backlog y Retrospectivas. Son los artefactos de Scrum, y los pide porque creyo
+que eramos agiles. Ademas, los tres ya existian en las evidencias desde el 03-11
+y el 04-11, despues del corte, asi que la revision no podia verlos.
+
+Para que no vuelva a pasar, ahora hay un documento propio de metodologia que lo
+deja escrito de una vez:
+
+    Product Backlog.docx    es la Lista de Requisitos Priorizada de RUP
+    Sprint Backlog.docx     es el Plan de Iteracion
+    Retrospectivas.docx     es la Evaluacion de Iteracion
+
+Conservan el nombre que pide la pauta para que el revisor los encuentre, y el
+documento explica a que corresponde cada uno. Los README de los dos repositorios
+dicen RUP y nada mas.
+
+Si te parece, cuando le escribamos al profesor lo planteamos asi, con la
+diapositiva y la pagina de la 1.5 a mano. El propio informe lo invita: "si algo
+no calza con lo que ya subieron, me escriben".
+
+
+LO QUE SI ERA CIERTO
+
+Varias cosas estaban descritas dentro de otro documento y no como archivo propio,
+y la pauta pide archivo propio. Tenia razon. Ahora estan separados, con su espejo
+Word y copiados a "Evidencias de documentacion":
+
+    Metodologia.docx                 marco, justificacion, fases, iteraciones
+    Product Vision.docx              para quien, que necesidad, que lo diferencia
+    Definition Of Done.docx          antes vivia en la 1.5 y en tu informe
+    Requisitos No Funcionales.docx   los 31, cada uno con su metodo de verificacion
+    Plan De Pruebas.docx             tipos, casos, criterios y estado medido
+    Innovacion.docx                  antes vivia solo en el README
+
+La Product Vision la marcaba como "con poco contenido" porque la encontro en
+RevisionFacturaTecnica.tsx y RevisionFacturaVisual.tsx, que no tienen nada que
+ver. Otro falso positivo, pero el documento propio no existia, asi que da igual.
+
+
+LAS PRUEBAS DE RENDIMIENTO
+
+Era el unico tipo de prueba sin cubrir, y tambien tenia razon. Ahora hay una
+bateria propia en tests_rendimiento/, con siete escenarios sobre carga fija y
+percentiles:
+
+    npm run test:rendimiento
+
+    catalogo de caja               p95  12,4 ms    referencia 200 ms   dentro
+    inventario                     p95  21,9 ms    referencia 200 ms   dentro
+    historial de ventas            p95  54,3 ms    referencia 200 ms   dentro
+    semaforo de vencimientos       p95  24,6 ms    referencia 200 ms   dentro
+    busqueda por codigo (SQLite)   p95   0,0 ms    referencia  10 ms   dentro
+    venta, una caja                p95 192,1 ms    referencia  15 ms   SOBRE
+    venta, cuatro cajas            p95 464,2 ms    referencia  15 ms   SOBRE
+
+Las dos ventas quedan sobre la referencia y lo deje registrado tal cual, sin
+mover la vara. El documento de arquitectura ahora acota que los 15 ms del
+RNF-REND-01 se miden en el procesamiento del servidor, no en el viaje HTTP. Ahi
+la mediana es 4 ms, dentro del limite, pero 6 de las 80 ventas de la corrida
+tardaron entre 175 y 282 ms, y eso lleva el p95 a 190 ms.
+
+Esa cola queda como hallazgo abierto: todavia no se de donde sale. Lo que si
+descarte es la conmutacion a la base local, que registro una sola sonda de
+conectividad en toda la corrida. Si en la defensa preguntan, esa es la
+respuesta, y el informe de la corrida esta en las evidencias.
+
+
+UNA CIFRA QUE ESTABA MAL
+
+Al contar los requisitos para el plan de pruebas aparecio un error en el
+documento de arquitectura: decia 25 requisitos no funcionales y especificaba 31.
+Siempre fueron 31; lo que estaba mal era la frase. Corregido en el Markdown, en
+el Word y en la evidencia.
+
+
+LAS CIFRAS DE HOY
+
+Todas medidas hoy, nada copiado de una corrida anterior:
+
+    unitarias de servidor      22 suites    316 de 316
+    integracion                16 suites     87 de  87   contra PostgreSQL real
+    unitarias de interfaz      16 archivos  122 de 122   Vitest
+    rendimiento                 7 escenarios  sin errores, 2 sobre referencia
+    extremo a extremo          11 modulos   117 de 117   la tuya del 30-10
+
+La de integracion no se habia vuelto a correr desde el 07-10 porque exige el
+contenedor de PostgreSQL. Hoy lo levante y pasaron las 87.
+
+Tus 122 pruebas de Vitest estaban en el plan como "pendiente de medicion". Las
+corri yo para cerrar la tabla: pasan todas. Si las vuelves a correr en tu equipo
+y te da otro numero, avisame y lo ajusto.
+
+La de extremo a extremo es la unica con fecha anterior, porque necesita la
+aplicacion completa levantada. Si la vuelves a correr antes de la entrega, me
+pasas el resultado y actualizo la fecha.
+
+
+UN AVISO DE DOCKER
+
+docker compose up se queja de que falta JWT_SECRET en el .env. Es del servicio
+de la aplicacion, no del de PostgreSQL, y no afecta las pruebas. Pero si alguien
+levanta el compose completo desde cero sin .env, falla. Esta en la guia de
+despliegue; lo menciono por si te toca.
+
+
+LO QUE QUEDA
+
+De mi lado no queda nada de la revision.
+
+De tu lado:
+- Leer Metodologia.docx y Plan De Pruebas.docx. Son los que mas probablemente
+  nos pregunten, y en el plan tu nombre aparece en las pruebas de interfaz, la
+  bateria de extremo a extremo y el ensayo de aceptacion con usuario.
+- Decidir si le escribimos al profesor por lo de la metodologia, o si
+  dejamos que la proxima revision lo encuentre sola.
+- La retrospectiva del 12-11 sigue en pie, con mi parte ya escrita.
