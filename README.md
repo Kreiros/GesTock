@@ -35,7 +35,7 @@ Cumple estrictamente con las normativas del **Servicio de Impuestos Internos (SI
 - **Seguridad & Red:** Helmet CSP, CORS dinámico, Rate Limit granular por `X-Device-ID` e IPv6, JWT (`jsonwebtoken`), Bcrypt (`bcryptjs`).
 - **Inteligencia Artificial:** Google Gemini AI API (`gemini-3.6-flash` con fallback en `pdf-parse`).
 - **Infraestructura:** Docker, Docker Compose multi-stage.
-- **Testing:** 316 pruebas unitarias en 22 suites (medidas el 07-11-2026), 87 pruebas de integración en 16 suites contra PostgreSQL y SQLite reales (última corrida el 07-10-2026), 117 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
+- **Testing:** 316 pruebas unitarias en 22 suites (medidas el 07-11-2026), 87 pruebas de integración en 16 suites contra PostgreSQL y SQLite reales (medidas el 07-11-2026), 117 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
 
 ---
 
