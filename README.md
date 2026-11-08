@@ -35,7 +35,7 @@ Cumple estrictamente con las normativas del **Servicio de Impuestos Internos (SI
 - **Seguridad & Red:** Helmet CSP, CORS dinámico, Rate Limit granular por `X-Device-ID` e IPv6, JWT (`jsonwebtoken`), Bcrypt (`bcryptjs`).
 - **Inteligencia Artificial:** Google Gemini AI API (`gemini-3.6-flash` con fallback en `pdf-parse`).
 - **Infraestructura:** Docker, Docker Compose multi-stage.
-- **Testing:** Jest (269 pruebas automatizadas, 100% aprobadas).
+- **Testing:** 316 pruebas unitarias en 22 suites (medidas el 07-11-2026), 87 pruebas de integración en 16 suites contra PostgreSQL y SQLite reales (última corrida el 07-10-2026), 117 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
 
 ---
 
@@ -128,9 +128,9 @@ npm run test:coverage
 
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, de naturaleza iterativa y evolutiva, estructurada en tres fases:
-1. **Incepción y Elaboración (Fase 1 - 20%):** Definición del alcance, justificación técnica del negocio (*Business Case*), análisis de los 55 RF y 25 RNF (ISO/IEC 25010), artefactos UML y modelado relacional inicial (15 tablas maestras).
-2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-019 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.6-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **401 pruebas automatizadas** (Jest).
-3. **Transición (Fase 3 - 30%):** Pruebas de estrés y conmutación offline en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa de título.
+1. **Incepción y Elaboración (Fase 1 - 20%):** Definición del alcance, justificación técnica del negocio (*Business Case*), análisis de los 62 RF y 31 RNF (ISO/IEC 25010), artefactos UML y modelado relacional inicial (15 tablas maestras).
+2. **Construcción (Fase 2 - 50%):** Backend Node.js/TypeScript con persistencia dual transaccional, evolución del esquema a **29 tablas definitivas** (migraciones 001-019 y tabla permanente `_migrations`), Frontend React 19 con RBAC, IA OCR multimodal (Gemini `gemini-3.6-flash`), normativas chilenas (redondeo Ley N° 20.956, DTEs con timbre TED) y certificación con **403 pruebas automatizadas** (Jest).
+3. **Transición (Fase 3 - 30%):** Plan de pruebas ejecutado, pruebas de rendimiento con percentiles, conmutación offline en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa de título.
 
 ---
 
@@ -142,7 +142,13 @@ Los manuales formales se publican en formato Word en la carpeta [`docs/`](./docs
 3. **[docs/guia_de_despliegue.docx](./docs/guia_de_despliegue.docx)**: Instalacion, variables de entorno, Docker Compose y PM2.
 4. **[docs/manual_de_funcionalidades.docx](./docs/manual_de_funcionalidades.docx)**: Operación del POS, normativas chilenas, DTE, arqueo Z y reabastecimiento ROP.
 5. **[docs/estado_actual_proyecto.docx](./docs/estado_actual_proyecto.docx)**: Informe de avance, Carta Gantt y métricas de estabilidad.
-6. **[docs/evidencia_pruebas_unitarias.docx](./docs/evidencia_pruebas_unitarias.docx)**: Certificado formal de auditoría y matriz de las 401 pruebas automatizadas.
+6. **[docs/evidencia_pruebas_unitarias.docx](./docs/evidencia_pruebas_unitarias.docx)**: Certificado formal de auditoría y matriz de las 403 pruebas automatizadas.
+7. **[docs/metodologia.docx](./docs/metodologia.docx)**: Metodología RUP declarada y justificada, fases, las cinco iteraciones y la correspondencia de artefactos.
+8. **[docs/product_vision.docx](./docs/product_vision.docx)**: Documento de Visión: problema, usuarios, beneficio principal, diferenciación y alcance declarado.
+9. **[docs/requisitos_no_funcionales.docx](./docs/requisitos_no_funcionales.docx)**: Los 31 requisitos no funcionales bajo ISO/IEC 25010, con método de verificación y estado medido.
+10. **[docs/plan_de_pruebas.docx](./docs/plan_de_pruebas.docx)**: Plan de Pruebas: tipos, casos por épica, criterios de entrada y salida, y resultados de la batería de rendimiento.
+11. **[docs/definition_of_done.docx](./docs/definition_of_done.docx)**: Criterios de aceptación del incremento.
+12. **[docs/innovacion.docx](./docs/innovacion.docx)**: Aportes de innovación implementados y verificados, y lo que queda pendiente.
 
 ---
 
