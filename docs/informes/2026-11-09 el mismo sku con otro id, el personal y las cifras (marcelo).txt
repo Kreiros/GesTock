@@ -1,0 +1,228 @@
+09-11-2026
+El mismo SKU con otro id, en las dos direcciones, el personal y las cifras
+
+
+David, tus dos informes iban al mismo nudo y lo tenias bien ubicado: todo el
+codigo de sincronizacion suponia que el id es la unica clave. Esta arreglado de
+una vez en los tres lugares donde vivia, y el resto de lo que pediste tambien.
+
+Al final te dejo tres cosas que no hice porque necesitan una decision antes.
+
+
+EL DEFECTO: MISMO SKU, OTRO ID
+
+Tu diagnostico era exacto en las dos direcciones. Lo reproduje antes de tocar
+nada: escribi dos pruebas de integracion con el mismo SKU bajo dos ids, una por
+direccion, y sin el arreglo fallan las dos. Con el arreglo pasan.
+
+    subida de ventas       ON CONFLICT (id) no cubria uq_productos_tenant_sku
+    respaldo del catalogo  el mismo ON CONFLICT (id), callado como aviso
+    bajada del catalogo    SELECT solo por id, insertaba y chocaba
+
+El arreglo es el mismo en los tres:
+
+1. El INSERT pasa a ON CONFLICT DO NOTHING sin objetivo, que cubre cualquier
+   restriccion unica y no solo la del id.
+2. Despues se pregunta con que id conoce la nube esa fila, por id o por SKU, y
+   el detalle de la venta se registra contra ESE id. Es lo que hace que tus seis
+   ventas encuentren su producto: arriba se llaman a2b7f3af, no 7e90335c.
+3. En la bajada, el producto que el terminal tiene con otro id se actualiza
+   conservando su id local. Cambiarle el id romperia sus ventas, lotes y
+   movimientos.
+
+No hice UPSERT en la subida, aunque lo propusiste. La politica es que la nube
+manda en el catalogo: si la venta actualizara el producto de arriba, el
+terminal le pisaria el precio a la nube cada vez que vende. Lo que necesitaba
+la venta era el id correcto, no escribir el producto.
+
+Y lo mismo pasaba con los proveedores, que tienen su propia clave unica por
+RUT. Si un proveedor entro por factura en tu equipo y ya existia arriba con
+otro id, el producto viajaba apuntando a un proveedor que la nube no conoce.
+Ahora se resuelve igual, por id o por RUT.
+
+LA BAJADA YA NO FALLA CALLADA. Si revienta, la respuesta de /pos/sync trae
+catalog_pull_error y el mensaje lo dice: "El catalogo no pudo bajar desde la
+nube: ...". Antes decia "Sincronizacion completada". Si quieres mostrarlo en
+la pantalla, el campo esta ahi.
+
+Lo que NO agregue es la marca de ultima bajada. Con el arreglo la bajada ya no
+falla, asi que reintentar los 21 en cada sincronizacion cuesta 21 consultas y
+nada mas. Lo dejo para cuando el catalogo sea grande.
+
+
+TUS SEIS VENTAS
+
+Con esta version instalada, las tres pendientes suben solas en la proxima
+sincronizacion. Las tres
+detenidas no, porque ya agotaron sus cinco intentos y salieron de la cola.
+Para eso esta lo que pediste en el punto 3:
+
+    POST /api/v1/pos/transactions/:id/reintentar-sincronizacion
+
+Devuelve la venta a la cola con los intentos en cero. No toca la venta: solo la
+vuelve a ofrecer. Si la venta no existe o ya subio, responde 404. Esta abierta
+al cajero, porque reintentar no cambia ningun dato.
+
+Y GET /pos/transactions trae ahora dos columnas mas:
+
+    sync_attempts    los intentos que lleva
+    sync_detenida    1 si agoto los intentos y ya no se reintenta sola
+
+Te mande sync_detenida ademas de los intentos para que no tengas que copiar el
+tope de cinco en el frontend: si un dia cambia, cambia en un solo lugar.
+
+Con eso puedes poner el boton de "Reintentar" en la fila de la venta detenida
+que ya marcaste en el historial.
+
+
+LA CONCORDANCIA DEL MENSAJE
+
+"1 ventas respaldadas" ya dice "1 venta respaldada". Lo mismo pasaba con
+productos, facturas y documentos en el mismo mensaje, y los arregle juntos.
+
+
+EDITAR Y ELIMINAR PERSONAL
+
+    PUT    /api/v1/auth/users/:id    nombre, email, rol, activo, password
+    DELETE /api/v1/auth/users/:id
+
+Los dos son solo para el administrador y solo dentro de su comercio. Todos los
+campos del PUT son opcionales: manda solo lo que cambia.
+
+Lo que tienes que saber de la baja, porque no es un borrado comun:
+
+UN CAJERO QUE YA VENDIO NO SE PUEDE BORRAR. transacciones_venta tiene RESTRICT
+sobre el usuario, asi que el DELETE fallaria. Y peor: cierres_caja tiene
+CASCADE, de modo que borrarlo se llevaria sus cierres de caja, que son registro
+tributario. Por eso:
+
+    sin ventas ni cierres    se elimina
+    con historial            se desactiva, y la respuesta trae desactivado: true
+
+El desactivado no puede entrar (login responde 403 con "Esta cuenta fue
+desactivada por el administrador") y su sesion abierta deja de valer al
+instante, no a las 24 horas cuando vence el token. Eso lo prueba una prueba de
+integracion: el token de antes de la baja recibe 401.
+
+Se reactiva con PUT y activo: true. Para eso entro la migracion 020, que agrega
+la columna activo a usuarios en los dos motores. GET /auth/users la trae, asi
+que puedes mostrar el estado en la lista.
+
+LAS TRES GUARDAS, para que sepas que mensaje vas a recibir:
+
+    darse de baja a si mismo                        409
+    dejar al comercio sin un administrador activo   409, al bajar o al
+                                                    cambiarle el rol
+    un correo que ya usa otro usuario               409
+
+
+LAS CIFRAS DE LOS DOCUMENTOS
+
+Tenias razon en las cuatro, y ademas estaban peor de lo que dijiste: la mayoria
+de los Word no se habian tocado desde octubre.
+
+1. ESTADO ACTUAL. Las etiquetas cruzadas quedaron asi: unitarias 319/319,
+   integracion 96/96. Y el resto del documento decia 314, 87 y 401.
+
+2. EL DIAGRAMA. Entro SII_ENVIOS con su relacion con TENANTS, la columna
+   envio_id en SII_DTE_EMITIDOS y la columna activo nueva de USUARIOS. Quedan
+   30 entidades y 46 relaciones, en los dos .mmd y en Base De Datos.docx. El
+   encabezado ya no dice "generado desde el esquema real", porque lo edite a
+   mano: dice a que migraciones corresponde.
+
+   Lo que NO hice es volver a dibujar el PNG y el SVG: no tengo el generador
+   de Mermaid instalado. Los .mmd estan bien y las imagenes estan desfasadas.
+
+3. LOS INFORMES DE BATERIA. El de frontend ya no reporta numeros del backend:
+   dice tus 149 de Vitest en 19 archivos y las 11 de contrato, que son las
+   suyas. El de backend tenia cifras de tres epocas distintas en la misma
+   tabla, una de ellas con 11 suites y 217 pruebas.
+
+4. EL MANUAL. No lo toque, y te explico abajo por que.
+
+LO QUE ENCONTRE AL CONTAR. El documento de arquitectura decia "72 endpoints: 67
+bajo /api/v1 y los dos de servicio", que da 69. Conte las rutas del codigo y
+eran 70 bajo /api/v1, o sea que el 72 estaba bien y el 67 no. Con los tres
+nuevos quedan 75 en total y 73 bajo /api/v1, y la suite de endpoints tiene un
+caso para cada uno de los tres.
+
+Y uno que no se de donde sale: tu informe de frontend dice 118 comprobaciones
+de extremo a extremo y todos los demas documentos dicen 117. Lo deje como
+estaba. Si las vuelves a correr, dime el numero y lo pongo en todos.
+
+
+LAS CIFRAS DE HOY
+
+Todas medidas hoy:
+
+    unitarias del servidor     22 suites    319 de 319
+      backend                  21 suites    308 de 308
+      contrato de interfaz      1 suite      11 de  11
+    integracion                16 suites     96 de  96
+    total Jest                 38 suites    415
+    interfaz (Vitest)          19 archivos  149 de 149
+    tsc del servidor                        sin errores
+
+Las de integracion subieron de 87 a 96: cuatro de sincronizacion (las dos del
+mismo SKU, la venta detenida y la bajada) y seis de personal. Las unitarias
+subieron tres, una por endpoint nuevo.
+
+
+EL CAPITULO 12 Y LAS FUENTES
+
+Pase tu capitulo 12 a mi Markdown, palabra por palabra, con sus cuatro
+subsecciones y las dos tablas. El Word del plan se regenero desde ahi, asi que
+ya no se pierde la proxima vez. Gracias por avisarlo asi: era exactamente lo
+que iba a pasar.
+
+Sobre subir los Markdown al repositorio: tienes razon en que es un riesgo, y
+el README de tests_rendimiento citaba un archivo que nadie puede abrir. Ese ya
+lo corregi, ahora apunta al Word. Lo de subir las fuentes lo dejo pendiente:
+el .gitignore los excluye a proposito y no quiero cambiarlo de pasada.
+
+
+EL README DE RENDIMIENTO
+
+Las dos lineas que no corrian en PowerShell ahora son PowerShell, y la copia se
+lleva el -wal y el -shm. Tenias razon: con la base en modo WAL, el .sqlite solo
+es una foto vieja.
+
+Tambien quedo escrito que la venta se informa dos veces, con y sin el viaje
+HTTP, y que el limite se compara con la del servidor. La bateria ya lo hacia;
+el que no lo decia era mi resumen.
+
+Sobre la cola de 175 a 282 ms: tu lectura del entorno es la mas probable, y la
+diferencia de medianas la sostiene. No la mire todavia; la prueba que la
+decide es volver a correr con el antivirus excluyendo la carpeta de datos.
+
+
+LO QUE NO HICE, Y POR QUE
+
+EL PRODUCTO "BORRAR - prueba automatica". Hay que borrarlo de PostgreSQL y
+tienes razon en que aparece en la caja si no. Pero es un borrado en la base de
+la nube, y eso lo confirmo antes de hacerlo. Ademas hoy Docker no estaba
+corriendo. Queda para cuando lo levante.
+
+EL MANUAL DE FUNCIONALIDADES. Reescribirlo es un trabajo en si mismo: doce
+pantallas, y la mitad son tuyas. Lo dejo para despues de que cierres las
+pantallas de personal y del reintento, asi se escribe una sola vez y con todo.
+
+EL CONFLICTO DE EDICION. De acuerdo en hablarlo antes de que ninguno lo toque.
+Te adelanto lo que veo: el arreglo de hoy no lo resuelve y tampoco lo empeora.
+Lo que si cambia es que el producto ahora se reconoce por SKU, asi que la
+comparacion de fechas de edicion tendria que hacerse sobre el producto ya
+resuelto, no sobre el id que manda el terminal.
+
+
+LO QUE QUEDA
+
+De mi lado: borrar el producto de prueba en la nube, mirar la cola de la venta
+con el antivirus, redibujar el diagrama, el manual al final, y hablar contigo
+del conflicto de edicion.
+
+De tu lado: el boton para reintentar una venta detenida, la pantalla de
+editar y dar de baja al personal, mostrar catalog_pull_error si te parece, y el
+numero de las comprobaciones de extremo a extremo.
+
+Todo lo del servidor esta en las pruebas. Lo que no pude ver es la pantalla:
+cuando conectes los botones, dime si algun mensaje no se entiende.
