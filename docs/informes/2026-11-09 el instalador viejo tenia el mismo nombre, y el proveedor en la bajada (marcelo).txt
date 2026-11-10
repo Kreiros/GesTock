@@ -1,0 +1,89 @@
+09-11-2026
+El instalador viejo tenia el mismo nombre, y el proveedor ya baja con el producto
+
+
+David, gracias por abrir el paquete por dentro: sin eso habriamos seguido
+borrando datos. Tu lectura era correcta y te confirmo de donde salia.
+
+
+POR QUE EL INSTALADOR DEL DRIVE ERA EL VIEJO
+
+En mi equipo hay dos instaladores con exactamente el mismo nombre:
+
+    release\GesTock-0.1.0-instalador.exe
+        09-11, 40 migraciones, con todo lo del SKU y el personal
+        es el que construye npm run app:actualizar
+
+    Documentos\GesTock-instalador\GesTock-0.1.0-instalador.exe
+        07-11 a las 17:42, 38 migraciones, sin nada de lo nuevo
+        una copia de ese dia, fuera de la carpeta de compilacion
+
+El que subi al drive salio, casi seguro, de la segunda carpeta: tu fecha de
+17:42 calza al minuto con la de esa copia. La compilacion nunca escribe ahi,
+asi que esa copia se quedo congelada el 07-11, y como la version es siempre
+0.1.0, desde afuera los dos se ven iguales.
+
+Lo comprobe abriendo los dos paquetes:
+
+    Documentos    38 archivos .sql, la migracion 020 no esta
+    release       40 archivos .sql, la migracion 020 esta
+
+Por eso borrar tus datos no cambiaba nada: el problema no estaba en tu equipo,
+estaba en el archivo.
+
+El que te paso ahora sale de release, construido el 09-11 a las 21:21 y con el
+arreglo del proveedor adentro. Antes de mandartelo lo abri y verifique que trae la 020 y el
+codigo nuevo.
+
+
+EL PROVEEDOR EN LA BAJADA
+
+Tenias razon: era el tercer lugar del mismo defecto. La bajada traia el producto
+con el proveedor_id de la nube y el terminal no tenia ese proveedor, o lo tenia
+con otro id.
+
+Ahora la nube manda, junto con los productos, los proveedores que esos productos
+referencian. El terminal los resuelve antes de insertar el producto:
+
+    lo tiene con el mismo id    lo usa
+    lo tiene con otro id        lo reconoce por RUT y usa SU id
+    no lo tiene                 lo registra
+
+Es tu caso de Froneri: el producto nuevo llega apuntando a 87c5db46 y en tu caja
+queda apuntando a a5e02849, que es el que ya tienes. La prueba nueva reproduce
+justo eso, con un segundo proveedor que solo existe arriba, y comprueba que no
+se duplique ninguno.
+
+Un detalle de la prueba que te puede servir: la primera version de la consulta
+usaba id = ANY($2::uuid[]), que es valida en PostgreSQL pero pg-mem no la
+resuelve, y la prueba fallaba sin error. Quedo con un IN, que funciona igual en
+los dos motores.
+
+
+LAS 118
+
+Puestas en todos los documentos, con 3 omitidas y la fecha de hoy.
+
+
+LAS CIFRAS DE HOY
+
+    unitarias del servidor     22 suites    319 de 319
+    integracion                16 suites     97 de  97
+    total Jest                 38 suites    416
+    extremo a extremo          11 modulos   118 de 118   la tuya de hoy
+
+La de integracion subio de 96 a 97 por la prueba del proveedor.
+
+
+LOS DOS PRODUCTOS DE PRUEBA
+
+No los borre todavia. Es un borrado en la nube y lo confirmo antes de hacerlo.
+
+
+LO QUE QUEDA
+
+De mi lado: borrar los dos productos de prueba de la nube cuando lo confirme,
+que la copia vieja de Documentos no vuelva a confundir, la cola de la venta con
+el antivirus, el diagrama y el manual.
+
+De tu lado: instalar este y decirme si la bajada te trae los 22.
