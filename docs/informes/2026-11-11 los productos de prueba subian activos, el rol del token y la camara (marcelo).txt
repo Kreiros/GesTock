@@ -1,0 +1,136 @@
+11-11-2026
+Los productos de prueba subian activos, el rol del token, y lo de la camara
+
+
+David, gracias por la prueba con los 22 y por mirar el paquete antes de probar.
+Abajo va de donde salian los productos de prueba, que no era solo basura en la
+base, un defecto que encontre revisando tus pantallas de personal, y mi opinion
+sobre Open Food Facts y la camara, que me preguntaste en los audios.
+
+
+LOS PRODUCTOS DE PRUEBA: ERA UN DEFECTO DEL RESPALDO
+
+Antes de borrarlos quise saber por que estaban ahi. Los crea tu bateria de
+extremo a extremo, en 03-productos.mjs: da de alta un PRUEBA-, lo renombra a
+"BORRAR - prueba automatica" y lo DESACTIVA. O sea que nunca deberia aparecer
+en la caja.
+
+Pero en la nube estan activos, y con origen SINCRONIZACION. El respaldo del
+catalogo subia todos los productos con activo = true escrito a mano en el
+INSERT, sin mirar el estado que tenian en el terminal. Un producto desactivado
+en tu equipo llegaba activo a la nube y bajaba activo a la caja de los demas.
+
+Ahora el respaldo sube el producto con su estado. Hay una prueba que lo fija:
+un producto desactivado en el terminal queda desactivado arriba.
+
+Lo que el arreglo NO hace es corregir los que ya estan arriba, porque el
+respaldo es aditivo y no toca filas que la nube ya tiene. En mi nube hay siete,
+todos del 02-11 a las 14:24, y ninguno tiene ventas, movimientos, lotes ni
+mermas. Los tuyos no estan en mi nube (PRUEBA-65268793 y PRUEBA-39216779), asi
+que estas sincronizando contra tu propio contenedor: esos los tienes que sacar
+tu. Antes de borrar, revisa lo mismo que revise yo: que no tengan ventas.
+
+Una nota para tu limpiar.mjs: limpia solo el SQLite local. Con el arreglo ya no
+importa tanto, porque el producto sube desactivado, pero si corres la bateria y
+sincronizas antes de limpiar, el producto queda arriba igual.
+
+
+UN DEFECTO QUE ENCONTRE EN TUS PANTALLAS, Y ES MIO
+
+Revisando tus pantallas de personal di con un hueco en el servidor. Si un
+administrador baja a otro administrador a cajero, el degradado seguia teniendo
+permisos de administrador hasta que venciera su token, hasta 24 horas. El token
+trae el rol adentro, y ni el middleware ni las rutas de /auth lo comparaban con
+la base. Es el mismo hueco que cerre para la desactivacion, pero lo deje abierto
+para el rol.
+
+Ahora el rol de la base manda sobre el del token, en el middleware y en /auth.
+Hay una prueba: el degradado recibe 403 en /auth/users y en el panel con el
+token que tenia de antes. Sin el arreglo la prueba falla.
+
+Y una cosa chica para que no te muerda: GET /auth/users devolvia activo como
+1/0 cuando lee de SQLite y como true/false cuando cae a PostgreSQL. Tu
+estaActivo compara con 0, asi que un false de PostgreSQL se veia activo. Ahora
+el servidor entrega siempre 1/0. No tienes que cambiar nada.
+
+Lo demas de tus tres commits esta bien. Las rutas que usas, lo que mandas y lo
+que lees coinciden con lo que entrega el servidor: el reintento manda tenant_id,
+el PUT manda solo lo que cambia, y la clave se manda solo si tiene ocho o mas.
+
+
+EL MENU DE LA VENTANA
+
+Puse autoHideMenuBar. El menu sigue ahi con Alt y la franja desaparece.
+
+
+OPEN FOOD FACTS: SI, PERO POR EL SERVIDOR
+
+Me parece buena idea y no es complicado. Tres cosas para que no nos de
+problemas:
+
+1. LA CONSULTA LA HACE EL SERVIDOR, NO LA INTERFAZ. La politica de seguridad de
+   la aplicacion (Helmet) solo deja conectarse al propio servidor: connect-src
+   es 'self'. Si la pantalla llama a Open Food Facts directo, el navegador lo
+   bloquea. Yo armo una ruta, algo como
+   GET /api/v1/pos/products/lookup/:codigo, que consulta Open Food Facts y te
+   devuelve nombre, marca, contenido e imagen ya listos. Tu solo la llamas.
+
+2. LA IMAGEN SE GUARDA EN EL EQUIPO. img-src tambien es solo 'self', y ademas
+   la caja tiene que funcionar sin internet. Si la imagen se muestra desde el
+   sitio de Open Food Facts, en una caja sin red sale el recuadro roto. La ruta
+   la descarga una vez y la sirve desde el propio servidor. Si no hay imagen,
+   la caja muestra lo de siempre.
+
+3. ES UNA AYUDA, NO UNA DEPENDENCIA. Sin internet o con un codigo que no esta,
+   el alta sigue siendo manual como hoy. Y ojo con la cobertura: hay bastantes
+   productos chilenos en la base, pero no todos, sobre todo los de marca local
+   o a granel. No prometamos en la defensa que todo producto se completa solo.
+
+Una cosa de licencia: los datos son ODbL y las imagenes CC BY-SA. Hay que
+nombrar a Open Food Facts en algun lado de la aplicacion, aunque sea en el
+"Acerca de".
+
+Lo de "no usar codigos inventados" lo resuelve el escaneo, no la API: la API
+solo completa datos a partir de un codigo real. El catalogo de demostracion
+sigue teniendo los suyos.
+
+Si te parece, la ruta la hago yo y te paso el contrato antes de que escribas la
+pantalla.
+
+
+LA CAMARA: SE PUEDE, PERO NO CUENTES CON ELLA PARA EL 26
+
+En Electron deberia funcionar sin tocar main.js: la ventana no tiene un
+manejador de permisos que bloquee la camara. No lo probe con una camara real. Lo que no hay es lector de codigos nativo: Chrome en Windows no trae
+BarcodeDetector, asi que necesitas una libreria, @zxing/browser es la de
+siempre.
+
+Lo que me preocupa es la camara, no el codigo. La webcam de un notebook tiene
+foco fijo y lee mal un EAN-13 chico. Pruebala con tres productos reales antes
+de decidir. Y en un local de verdad el escaneo lo hace una pistola lectora, que
+para el computador es un teclado: ya funciona hoy en el buscador de la caja,
+sin escribir nada.
+
+Mi sugerencia: primero Open Food Facts, que sirve con la pistola y con el
+teclado. La camara despues, como boton extra en el alta tecnica, y solo si en
+tu prueba lee bien.
+
+
+LAS CIFRAS DE HOY
+
+    unitarias del servidor     22 suites    319 de 319
+    integracion                16 suites     99 de  99
+    interfaz (Vitest)          20 archivos  155 de 155
+
+La de integracion subio de 97 a 99: el respaldo con el estado del producto y el
+rol que manda la base.
+
+
+LO QUE QUEDA
+
+De mi lado: la ruta de Open Food Facts si te parece, el instalador con todo
+esto, la cola de la venta con el antivirus, el diagrama y el manual.
+
+De tu lado: sacar los dos productos de prueba de tu contenedor, probar la
+camara con productos reales, y juntar las dos partes de la retrospectiva del
+12.
