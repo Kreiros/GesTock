@@ -1,11 +1,12 @@
 11-11-2026
-Los productos de prueba subian activos, el rol del token, y lo de la camara
+Los productos de prueba subian activos, el rol del token, Open Food Facts y la camara
 
 
 David, gracias por la prueba con los 22 y por mirar el paquete antes de probar.
 Abajo va de donde salian los productos de prueba, que no era solo basura en la
 base, un defecto que encontre revisando tus pantallas de personal, y mi opinion
-sobre Open Food Facts y la camara, que me preguntaste en los audios.
+sobre Open Food Facts y la camara, que me preguntaste en los audios. La ruta de
+Open Food Facts ya esta hecha: abajo va el contrato.
 
 
 LOS PRODUCTOS DE PRUEBA: ERA UN DEFECTO DEL RESPALDO
@@ -24,9 +25,9 @@ Ahora el respaldo sube el producto con su estado. Hay una prueba que lo fija:
 un producto desactivado en el terminal queda desactivado arriba.
 
 Lo que el arreglo NO hace es corregir los que ya estan arriba, porque el
-respaldo es aditivo y no toca filas que la nube ya tiene. En mi nube hay siete,
-todos del 02-11 a las 14:24, y ninguno tiene ventas, movimientos, lotes ni
-mermas. Los tuyos no estan en mi nube (PRUEBA-65268793 y PRUEBA-39216779), asi
+respaldo es aditivo y no toca filas que la nube ya tiene. En mi nube habia
+siete, todos del 02-11 a las 14:24, sin ventas, movimientos, lotes ni mermas:
+ya los borre. Los tuyos no estan en mi nube (PRUEBA-65268793 y PRUEBA-39216779), asi
 que estas sincronizando contra tu propio contenedor: esos los tienes que sacar
 tu. Antes de borrar, revisa lo mismo que revise yo: que no tengan ventas.
 
@@ -63,45 +64,81 @@ EL MENU DE LA VENTANA
 Puse autoHideMenuBar. El menu sigue ahi con Alt y la franja desaparece.
 
 
-OPEN FOOD FACTS: SI, PERO POR EL SERVIDOR
+OPEN FOOD FACTS: LA RUTA YA ESTA
 
-Me parece buena idea y no es complicado. Tres cosas para que no nos de
-problemas:
+Me parecio buena idea y ya la arme. Va por el servidor, porque la politica de
+seguridad de la aplicacion (Helmet) solo deja conectarse al propio servidor y
+mostrar imagenes de el: connect-src e img-src son 'self'. Si la pantalla
+llamara a Open Food Facts directo, el navegador lo bloquearia.
 
-1. LA CONSULTA LA HACE EL SERVIDOR, NO LA INTERFAZ. La politica de seguridad de
-   la aplicacion (Helmet) solo deja conectarse al propio servidor: connect-src
-   es 'self'. Si la pantalla llama a Open Food Facts directo, el navegador lo
-   bloquea. Yo armo una ruta, algo como
-   GET /api/v1/pos/products/lookup/:codigo, que consulta Open Food Facts y te
-   devuelve nombre, marca, contenido e imagen ya listos. Tu solo la llamas.
+EL CONTRATO
 
-2. LA IMAGEN SE GUARDA EN EL EQUIPO. img-src tambien es solo 'self', y ademas
-   la caja tiene que funcionar sin internet. Si la imagen se muestra desde el
-   sitio de Open Food Facts, en una caja sin red sale el recuadro roto. La ruta
-   la descarga una vez y la sirve desde el propio servidor. Si no hay imagen,
-   la caja muestra lo de siempre.
+    GET /api/v1/pos/products/lookup/:codigo?tenant_id=...
 
-3. ES UNA AYUDA, NO UNA DEPENDENCIA. Sin internet o con un codigo que no esta,
-   el alta sigue siendo manual como hoy. Y ojo con la cobertura: hay bastantes
-   productos chilenos en la base, pero no todos, sobre todo los de marca local
-   o a granel. No prometamos en la defensa que todo producto se completa solo.
+    200  encontrado
+         {
+           success: true,
+           en_catalogo: { id, nombre, sku } o null,
+           data: {
+             codigo, nombre, marca, contenido,
+             imagen,            data URL (data:image/jpeg;base64,...) o null
+             fuente: 'Open Food Facts'
+           }
+         }
 
-Una cosa de licencia: los datos son ODbL y las imagenes CC BY-SA. Hay que
-nombrar a Open Food Facts en algun lado de la aplicacion, aunque sea en el
-"Acerca de".
+    404  el codigo no esta en Open Food Facts
+    503  sin internet, o Open Food Facts no contesto en 6 segundos
+    400  el codigo no tiene entre 8 y 14 digitos
+
+    En el 404 y el 503 tambien viene en_catalogo, y un message listo para
+    mostrar que dice que el producto se puede ingresar a mano.
+
+Lo que conviene que sepas para la pantalla:
+
+1. EN_CATALOGO te avisa si ese codigo de barras ya esta en tu caja. Asi puedes
+   decir "este producto ya existe" antes de dar de alta un duplicado, aunque
+   Open Food Facts no lo tenga.
+
+2. EL NOMBRE sale en espanol si la base lo tiene, y si no, el generico. La
+   MARCA es la primera de la lista: Open Food Facts a veces trae varias
+   separadas por coma.
+
+3. LA IMAGEN viene incrustada como data URL, la miniatura frontal, de unos 14 a
+   20 KB. La puedes poner directo en un <img src=...> sin tocar la politica de
+   seguridad, porque data: ya esta permitido. Si la imagen falla, el producto
+   viene igual con imagen en null.
+
+4. ES UNA AYUDA, NO UNA DEPENDENCIA. Sin internet el alta sigue siendo manual,
+   como hoy. Y ojo con la cobertura: hay productos chilenos en la base, pero no
+   todos, sobre todo los de marca local o a granel. No prometamos en la defensa
+   que todo producto se completa solo.
+
+La probe contra Open Food Facts de verdad, no solo con respuestas simuladas: un
+codigo conocido (3017620422003) devolvio nombre, marca, contenido e imagen, y
+uno inventado devolvio no encontrado. Tiene cinco pruebas unitarias que no
+salen a internet.
+
+LO QUE TODAVIA NO HACE: guardar la imagen con el producto. Hoy la imagen sirve
+para que la persona confirme que es el producto correcto en el alta, pero no
+queda en el catalogo, asi que todavia no se puede mostrar en la caja. Para eso
+hace falta una columna en productos (una migracion, la 021) y que el alta la
+reciba. No la agregue sin hablarlo contigo, porque cambia el contrato del POST
+de productos y el tamano de la base. Dime si la quieres y la armo.
+
+LA LICENCIA: los datos son ODbL y las imagenes CC BY-SA. Hay que nombrar a Open
+Food Facts en la pantalla donde se usa, aunque sea un "Datos de Open Food
+Facts" chico bajo la imagen. Por eso la respuesta trae el campo fuente.
 
 Lo de "no usar codigos inventados" lo resuelve el escaneo, no la API: la API
 solo completa datos a partir de un codigo real. El catalogo de demostracion
 sigue teniendo los suyos.
 
-Si te parece, la ruta la hago yo y te paso el contrato antes de que escribas la
-pantalla.
-
 
 LA CAMARA: SE PUEDE, PERO NO CUENTES CON ELLA PARA EL 26
 
 En Electron deberia funcionar sin tocar main.js: la ventana no tiene un
-manejador de permisos que bloquee la camara. No lo probe con una camara real. Lo que no hay es lector de codigos nativo: Chrome en Windows no trae
+manejador de permisos que bloquee la camara. No lo probe con una camara real.
+Lo que no hay es lector de codigos nativo: Chrome en Windows no trae
 BarcodeDetector, asi que necesitas una libreria, @zxing/browser es la de
 siempre.
 
@@ -111,26 +148,31 @@ de decidir. Y en un local de verdad el escaneo lo hace una pistola lectora, que
 para el computador es un teclado: ya funciona hoy en el buscador de la caja,
 sin escribir nada.
 
-Mi sugerencia: primero Open Food Facts, que sirve con la pistola y con el
-teclado. La camara despues, como boton extra en el alta tecnica, y solo si en
+Mi sugerencia: primero la ruta de Open Food Facts, que ya esta y sirve con la
+pistola y con el teclado. La camara despues, como boton extra en el alta tecnica, y solo si en
 tu prueba lee bien.
 
 
 LAS CIFRAS DE HOY
 
-    unitarias del servidor     22 suites    319 de 319
+    unitarias del servidor     23 suites    325 de 325
     integracion                16 suites     99 de  99
     interfaz (Vitest)          20 archivos  155 de 155
 
 La de integracion subio de 97 a 99: el respaldo con el estado del producto y el
-rol que manda la base.
+rol que manda la base. Las unitarias subieron seis: las cinco de Open Food Facts
+y el caso de la ruta en la suite de endpoints, que ya son 76.
 
 
 LO QUE QUEDA
 
-De mi lado: la ruta de Open Food Facts si te parece, el instalador con todo
-esto, la cola de la venta con el antivirus, el diagrama y el manual.
+De mi lado: la columna para guardar la imagen si la quieres, la cola de la
+venta con el antivirus, el diagrama y el manual. El instalador con todo esto
+queda en el drive.
 
-De tu lado: sacar los dos productos de prueba de tu contenedor, probar la
-camara con productos reales, y juntar las dos partes de la retrospectiva del
+En mi nube ya borre los siete productos de prueba, despues de comprobar que no
+tenian ventas, movimientos, lotes, mermas ni ordenes de compra.
+
+De tu lado: la pantalla que llama a la ruta, sacar los dos productos de prueba
+de tu contenedor, probar la camara con productos reales, y juntar las dos partes de la retrospectiva del
 12.
