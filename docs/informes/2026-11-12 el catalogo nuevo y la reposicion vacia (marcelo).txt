@@ -1,0 +1,111 @@
+12-11-2026
+El catalogo nuevo carga entero, y la reposicion quedaba vacia
+
+
+David, traje tus tres commits y revise lo que contaste. La foto funciona y el
+catalogo carga sin un solo rechazo. Encontre una cosa que dejaba vacia la
+pantalla de reposicion en la demo y la arregle con tres numeros en tu JSON.
+Abajo va el detalle, una duda sobre un dato y lo que queda.
+
+
+TUS TRES COMMITS
+
+    b5aea6d   la foto: recuadro, camara, achicado y los dos catalogos
+    425449e   el catalogo con las fichas de foto limpia
+    336fdf1   las celdas del inventario
+
+Llegaron encima de la historia reescrita, asi que sincronizaste bien. Tocan
+solo la interfaz y semillas/catalogo-demo.json, nada del servidor.
+
+
+EL CATALOGO CARGA ENTERO
+
+Lo pase por mi cargador y por la misma validacion que usa el alta:
+
+    productos                    25
+    con foto                     23
+    rechazados por la imagen      0
+    foto mas pesada              43 KB, lejos del tope de 300
+    codigo de barras real        25 de 25
+
+Las 100 pruebas de integracion pasan. Lo de elegir a mano las fichas con foto
+limpia esta muy bien visto, y tienes razon en que es el punto honesto a
+sostener el 26: la demo se ve bien porque se eligio, un local real no va a
+quedar asi.
+
+
+LO QUE ROMPIA: NINGUN PRODUCTO BAJO SU MINIMO
+
+Tu catalogo nuevo rompio una prueba que ya existia, en
+catalogo_demo.unit.test.ts. Exige que al menos un producto de la demo quede
+con el stock en su minimo o por debajo, para que la pantalla de reposicion y el
+aviso al proveedor tengan algo que mostrar.
+
+En el catalogo nuevo todos los productos estaban sobre su minimo. O sea que el
+26, al abrir reposicion, la pantalla iba a salir vacia y el aviso no tenia nada
+que mandar.
+
+Baje el stock de tres productos, de tres proveedores distintos, para que el
+aviso muestre mas de uno:
+
+    COLUN Leche Entera 1 L         36 a 8,   minimo 12   Cooperativa Colun
+    WATTS Nectar Naranja 1,5 L     18 a 4,   minimo 6    Distribuidora Mayorista
+    QUAKER Avena 700 g             16 a 3,   minimo 6    Distribuidora de Alimentos
+
+Solo cambie esos tres numeros. El resto del archivo, el orden y el formato
+quedaron como los dejaste. Con eso pasan las 329 pruebas unitarias.
+
+Esta en el commit 981a230, y la copia de la evidencia en 4e807dc. Si
+preferias otros productos, cambialos tranquilo: lo que importa es que quede al
+menos uno bajo su minimo.
+
+
+UNA DUDA SOBRE UN DATO
+
+El Pisco Mistral aparece con Embonor Coca-Cola como proveedor. No me parece
+plausible que una embotelladora de bebidas venda pisco, y alguien de la
+comision lo puede notar. No lo toque porque es tu dato: revisalo y, si es un
+error, ponle otro proveedor del catalogo.
+
+
+TU LIMPIEZA DE LA NUBE
+
+De acuerdo con desactivar en vez de borrar. Con ventas colgando de esos
+productos, borrar se llevaba la evidencia de la sincronizacion.
+
+En mi contenedor no lo pude revisar todavia porque Docker estaba apagado.
+Cuando lo levante miro primero, sin cambiar nada, cuantos hay de prueba y
+repetidos, y recien ahi hago el mismo UPDATE.
+
+Lo de la migracion 021 queda claro: el servidor la aplica al arrancar, y el
+error que viste salio de correr el sembrador antes de levantar el codigo nuevo.
+
+
+LA FOTO CAMBIADA QUE NO SUBE
+
+Lo tengo anotado igual que tu. Mi propuesta para el 26 es asumirlo y
+explicarlo, no arreglarlo: es el mismo limite que tiene el precio, y
+arreglarlo bien es el conflicto de edicion que quedamos de hablar antes de
+tocar. Si lo arreglamos solo para la foto, la foto y el precio quedarian con
+reglas distintas, y eso es mas dificil de defender que un limite declarado.
+
+Si prefieres arreglarlo, lo vemos juntos con el conflicto de edicion.
+
+
+LAS CIFRAS DE HOY
+
+    unitarias del servidor     24 suites    329 de 329
+    integracion                16 suites    100 de 100
+    interfaz (Vitest)                       172, segun tu informe
+
+
+LO QUE QUEDA
+
+De mi lado: revisar mi nube cuando levante Docker, volver a dibujar el PNG y el
+SVG del diagrama, el manual, y mirar con el antivirus la cola de la venta.
+
+De tu lado: el proveedor del Pisco Mistral, y juntar las dos partes de la
+retrospectiva de hoy.
+
+Y de los dos, lo que dijiste al final y comparto: correr la demo entera una
+vez, de principio a fin, sobre una instalacion limpia, antes del 26.
