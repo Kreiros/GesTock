@@ -1,0 +1,86 @@
+12-11-2026
+El diagrama redibujado y el manual reescrito
+
+
+David, cerre las dos cosas de mi lado que veias en riesgo para el 26: el
+diagrama entidad-relacion y el manual. Abajo va como quedaron y que conviene
+que revises tu, porque el manual habla de tus pantallas.
+
+
+EL DIAGRAMA
+
+Las imagenes eran del 30-10, de antes de SII_ENVIOS, de usuarios.activo y de
+productos.imagen. Las volvi a generar desde los dos .mmd, que ya estaban al dia:
+
+    diagrama_entidad_relacion_completo   PNG 10.150 x 4.342   y SVG
+    diagrama_entidad_relacion_general    PNG  6.528 x 2.410   y SVG
+
+Las genere con el generador oficial de Mermaid y el Chrome del equipo, con fondo
+blanco y al tamano natural del diagrama. La primera pasada salio de 2.352
+pixeles de ancho porque Mermaid achica el diagrama a la pagina, y con treinta
+tablas no se leia nada: apague ese achicado. Mire la imagen general antes de
+reemplazar las viejas: se lee bien y trae SII_ENVIOS con su relacion a TENANTS.
+
+Estan en la carpeta Diagramas de la evidencia, donde estaban las viejas.
+
+
+EL MANUAL
+
+Tenia menos de 300 palabras y no nombraba tendencias de mercado, respaldo de
+facturas, cierre de caja ni mermas, como dijiste. Ahora tiene unas 2.600 y va
+por pantalla y por rol:
+
+    1. Antes de empezar     instalacion, entrar, roles, modo visual y tecnico,
+                            la conexion y la sincronizacion
+    2. Todo el personal     caja, cierre de caja, inventario, notificaciones,
+                            historial de ventas, configuracion de cada persona
+    3. Administrador        panel, facturas, proveedores, reabastecimiento,
+                            SII, tendencias de mercado, configuracion del negocio
+    4. Lo que hace solo     guardado local, sincronizacion, reintentos, cola de
+                            facturas, aviso de reposicion
+    5. Limites              el catalogo de la demo, los cambios sin internet,
+                            la camara, el envio al SII
+
+Cada pantalla dice para que sirve, como se usa y que conviene saber. Esta en
+docs/MANUAL_FUNCIONALIDADES.md y su espejo manual_de_funcionalidades.docx, que
+en la evidencia es Manual De Funcionalidades.docx.
+
+LO CONTRASTE CONTRA EL CODIGO, NO CONTRA LA MEMORIA. Al revisarlo encontre
+cinco cosas que habia escrito mal y las corregi antes de dartelo:
+
+    lo que habia escrito                  lo que hace el codigo
+    sincroniza sola al volver internet    solo con el boton Sincronizar
+    avisa cuando se agotan los folios     no emite y dice que rango se acabo
+    la comuna es una opcion aparte        va en los datos del emisor
+    el margen sugiere el precio           se aplica al ingresar una factura
+    el aviso de reposicion es diario      sale el dia que se configura
+
+Los atajos de teclado los saque de tu BarraAtajos: F1 ayuda, F2 buscar, F3
+cantidad, F4 cobro rapido, ESC vaciar. Las secciones de la configuracion y que
+rol ve cada una, de ConfiguracionPage.
+
+LO QUE TE PIDO: LEELO CON TUS PANTALLAS ABIERTAS. La mayoria de lo que
+describe es tuyo, y yo lo saque del codigo, no de usarlo. Si un nombre de boton,
+un orden de pasos o un texto no calza con lo que se ve, corrigelo directo en el
+.md o dimelo y lo cambio. En especial:
+
+    - el alta con Open Food Facts y la foto, que es lo mas nuevo
+    - el panel general, que describi por los datos que entrega el servidor
+    - las notificaciones, que deje generico porque no encontre las
+      categorias escritas en un solo lugar
+
+Los limites de la seccion 5 son los que hemos ido declarando: la demo se ve
+bien porque se eligio a mano, la foto o el precio cambiados sin internet no
+suben, la camara es para fotos y no para codigos, y el SII va en certificacion.
+Conviene que la comision los lea de nosotros y no los descubra.
+
+
+LO QUE QUEDA
+
+De mi lado: mirar con el antivirus la cola de la venta.
+
+De tu lado: leer el manual contra tus pantallas, el proveedor del Pisco Mistral,
+revisar si alguna corrida tuya usa el tenant de la demo, y la retrospectiva.
+
+Y de los dos: correr la demo entera una vez, de principio a fin, sobre una
+instalacion limpia.
