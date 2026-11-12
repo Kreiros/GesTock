@@ -1,0 +1,127 @@
+11-11-2026
+La columna de la imagen, con el alta, el inventario, el catalogo y la sincronizacion
+
+
+David, esta lo que pediste en los tres puntos, y un cuarto que no pediste pero
+que sin el la foto se perdia en la otra caja. Abajo va el contrato para que
+armes el recuadro sin adivinar.
+
+Antes de empezar traje tu commit 53d8b40, la sugerencia en el alta y el
+catalogo en la caja tecnica. Es solo pantalla y usa bien la ruta: lee data y
+en_catalogo como los devuelve el servidor, tambien en el 404 y el 503.
+
+La investigacion de cobertura me cambio la cabeza. Tienes razon en que la foto
+propia importa mas que la de Open Food Facts, y lo de los codigos de caja de la
+factura no lo sabia: la ingesta y la API no se alimentan entre si. Lo anoto
+para la defensa.
+
+
+1. LA COLUMNA
+
+Migracion 021, en los dos motores: productos.imagen, de tipo TEXT. Guarda la
+foto como data URL, data:image/...;base64,..., la misma forma que ya te
+devuelve la ruta de Open Food Facts. Asi la foto de las dos fuentes entra por
+el mismo lado y la pones directo en un <img src=...>.
+
+Guardo la data URL en la fila y no un archivo aparte, que era la otra opcion
+que me diste. La razon es la sincronizacion: un archivo no viaja con el
+producto, y la otra caja quedaria con el producto y sin la foto. Con 20 KB por
+foto el peso es el que calculaste.
+
+
+2. EL ALTA, LA EDICION Y EL INVENTARIO
+
+    POST /api/v1/pos/products        acepta imagen
+    PUT  /api/v1/pos/products/:id    acepta imagen
+    GET  /api/v1/pos/inventory       devuelve imagen en cada producto
+
+Las reglas, para que sepas que mandar:
+
+    formato     data URL JPEG, PNG o WebP en base64
+    tope        300 KB de texto; sobre eso responde 400
+    otro sitio  una direccion https://... responde 400: la foto tiene que
+                venir incrustada, porque la caja la muestra sin internet
+
+En el PUT la imagen NO sigue la regla del resto de los campos. Los demas
+usan COALESCE, donde mandar null significa "dejalo como esta". Con la foto eso
+no sirve, porque no habria forma de quitarla. Entonces:
+
+    no mandas imagen        la foto queda como estaba
+    mandas imagen: "data:"  la reemplaza
+    mandas imagen: null     la quita
+
+El tope de 300 KB es holgado a proposito. Si achicas a 400 pixeles como dijiste
+queda en unos 20 KB, y el tope solo esta para que una foto de camara sin
+achicar no infle la base y cada sincronizacion. Si un dia ves un 400 con "supera
+los 300 KB", es que el achicado no corrio.
+
+GET /pos/products, el de la caja, NO trae la imagen. Lo deje fuera a proposito:
+esa lista se pide seguido, y con mil productos serian 20 MB en cada consulta.
+La caja la puede sacar del inventario, que ya se pide una vez. Si para la caja
+necesitas otra cosa, dime y lo vemos.
+
+
+3. EL CATALOGO DE DEMOSTRACION LEE LA IMAGEN
+
+El cargador lee el campo imagen de cada producto de semillas/catalogo-demo.json
+y lo guarda en la columna, en SQLite y en la nube. Pasa por la misma validacion
+que el alta: una imagen que no cumple el formato o el tope se descarta con un
+aviso en el registro, y el producto se carga igual sin ella.
+
+De acuerdo con congelar el resultado en el JSON y no llamar a Open Food Facts al
+instalar. Tu medicion del limite de tasa lo deja claro, y que el catalogo de la
+demo sea reproducible vale mas que tenerlo vivo.
+
+UN AVISO QUE TE PUEDE MORDER. La carga del catalogo es aditiva: un producto que
+ya existe, por id o por SKU, se deja como esta. Eso significa que en un equipo
+que ya tiene la demo vieja, tu JSON nuevo no cambia nada: los productos con el
+mismo id o SKU se quedan sin foto y con su codigo inventado. Solo una
+instalacion limpia trae el catalogo nuevo. Si cambias los SKU, ademas, vas a
+tener los viejos y los nuevos juntos. Para la defensa conviene instalar limpio.
+
+
+4. LO QUE NO PEDISTE: LA FOTO VIAJA
+
+Sin esto la foto se veia en la caja donde la sacaste y en ninguna otra.
+
+    respaldo del catalogo   un producto nuevo sube con su foto
+    bajada del catalogo     un producto nuevo baja con su foto
+    bajada, ya existente    la foto de la nube reemplaza la local, pero si
+                            arriba no hay foto, la del terminal se queda
+
+Lo ultimo es a proposito: la nube manda en el catalogo, pero una foto que
+falta arriba no es una orden de borrarla. Si el dueno saco una foto en una caja
+sin internet, no queremos que la proxima bajada se la lleve.
+
+Lo que la sincronizacion NO hace: si cambias la foto de un producto que la nube
+ya tiene, esa foto nueva no sube por el respaldo, que solo sube productos
+nuevos. Sube cuando la edicion se hace con la nube conectada, porque el PUT la
+replica en el momento. Es el mismo limite que ya tiene el precio, y es parte del
+conflicto de edicion que dejamos para hablar.
+
+
+LAS PRUEBAS
+
+    imagen_producto.unit.test.ts       4   formato, tope, otro sitio, sin foto
+    all_endpoints                          el alta la guarda, el inventario la
+                                           devuelve, omitirla la deja, null la
+                                           quita, una URL responde 400
+    sync_conflict_resolution           1   sube, baja, y la ausente no borra
+
+Y las cifras, medidas hoy:
+
+    unitarias del servidor     24 suites    329 de 329
+    integracion                16 suites    100 de 100
+
+El instalador nuevo trae la migracion 021, son 42 archivos .sql. Va al drive
+apenas lo suba.
+
+
+LO QUE QUEDA
+
+De mi lado: la cola de la venta con el antivirus, el diagrama, que ya tiene la
+columna en el .mmd pero no en la imagen, y el manual.
+
+De tu lado: el JSON del catalogo, el recuadro de la foto con subir y tomar con
+la camara, el achicado, y mostrarla en el catalogo visual y en el tecnico. Y
+juntar las dos partes de la retrospectiva del 12.
