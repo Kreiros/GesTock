@@ -1,0 +1,87 @@
+12-11-2026
+Revise mi nube: la tienda de la demo estaba limpia, y desactive el catalogo viejo
+
+
+David, levante Docker y revise mi PostgreSQL como sugeriste. Mi tienda de la
+demo no tenia la basura que encontraste en la tuya: la basura esta en otro
+lado. Lo unico que afectaba la demo era el catalogo viejo, y lo desactive igual
+que tu, sin borrar nada.
+
+
+LO QUE HABIA
+
+                            productos   ventas
+    total                       1.008      762
+    la tienda de la demo           18       24
+    772 tiendas de prueba         990      738
+
+LA TIENDA DE LA DEMO ESTABA LIMPIA. Sus 18 productos eran 10 del catalogo de
+demostracion viejo y 8 que entraron por OCR de facturas, los GOODNES,
+CHANDELLE y NESTLE. Ningun "prueba", "Rollback" ni nombre repetido.
+
+LA BASURA ESTA EN 772 TIENDAS APARTE, llamadas "Almacen Don Tito SpA" mas un
+hash, "Empresa A", "Empresa B" y "Tenant POS E2E". Las crearon las pruebas de
+integracion al correr contra el PostgreSQL de verdad: cada prueba se arma su
+propia tienda. Ahi estan la "Bebida Cola 1.5L" 666 veces, "Prod Rollback",
+"Producto A" y "Producto B".
+
+Esas no las toque. No se ven en ninguna pantalla, porque cada una muestra solo
+los datos de su propia tienda, y no afectan la demo. Si tu "Bebida Cola"
+repetida 33 veces estaba en la tienda de la demo, es porque alguna corrida tuya
+uso el tenant de la demo. Vale la pena que lo mires, porque la proxima corrida
+la vuelve a ensuciar.
+
+
+LO QUE SI AFECTABA LA DEMO: EL CATALOGO VIEJO
+
+El catalogo de demostracion viejo seguia activo en la nube. En una instalacion
+limpia con tu catalogo nuevo, la primera sincronizacion iba a bajar tambien
+estos ocho, y la caja quedaba con los dos catalogos mezclados:
+
+    Aceite Vegetal Belmont 900ml          10 ventas
+    Bebida Energetica Monster 473ml        4 ventas
+    Coca Cola 350ml Lata                   3 ventas
+    Papas Fritas Lays Clasicas 200g        1 venta
+    Yerba Mate Taragui 500g                1 venta
+    Cerveza Corona Extra 355ml
+    Harina Selecta Sin Polvos 1kg
+    Leche Entera Colun 1L
+
+Antes de tocarlos comprobe que ninguno de los ocho SKU estuviera en tu JSON
+nuevo: ninguno esta.
+
+Los deje en activo = false en una sola transaccion, como hiciste tu. Varios
+tienen ventas, y borrarlos se llevaba la evidencia. Desaparecen de la caja,
+siguen en el inventario como inactivos, y se revierten con un UPDATE.
+
+    desactivados                           8
+    quedan activos en la tienda de la demo 10
+    ventas                                762, intactas
+
+Los que siguen activos son el Pisco Mistral y la bolsa, que tambien estan en tu
+catalogo nuevo, y los ocho que entraron por factura, que son la prueba de que
+la ingesta funciona.
+
+UNA COSA SOBRE LAS CAJAS QUE YA TIENEN EL CATALOGO VIEJO. La bajada copia el
+estado activo desde la nube, asi que en la proxima sincronizacion esos ocho se
+desactivan solos tambien en la caja. Eso lo digo por el codigo, no lo probe en
+una caja: si en la tuya siguen apareciendo despues de sincronizar, avisame.
+
+
+LA MIGRACION 021 EN MI NUBE
+
+Mi nube tenia hasta la 020, porque el servidor nuevo no habia arrancado con
+Docker encendido. Abri la aplicacion instalada y la aplico al arrancar: ahora
+son 21, la columna imagen existe, y los datos quedaron igual.
+
+
+LO QUE QUEDA
+
+De mi lado: volver a dibujar el PNG y el SVG del diagrama, el manual, y mirar
+con el antivirus la cola de la venta.
+
+De tu lado: revisar si alguna corrida tuya usa el tenant de la demo, el
+proveedor del Pisco Mistral, y la retrospectiva de hoy.
+
+Y de los dos: correr la demo entera una vez, de principio a fin, sobre una
+instalacion limpia.
