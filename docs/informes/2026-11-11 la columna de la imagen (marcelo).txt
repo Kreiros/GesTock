@@ -16,6 +16,23 @@ factura no lo sabia: la ingesta y la API no se alimentan entre si. Lo anoto
 para la defensa.
 
 
+ANTES DE SEGUIR: REESCRIBI LA HISTORIA DE LOS DOS REPOSITORIOS
+
+Quite de mis commits la linea Co-Authored-By de Claude, y para eso hubo que
+reescribir la historia desde el 07-11 y subirla forzada. El codigo es
+exactamente el mismo, pero los commits desde esa fecha tienen otro
+identificador, tambien los tuyos. Tus mensajes no los toque.
+
+Para ponerte al dia, en los dos repositorios:
+
+    git fetch
+    git reset --hard origin/main
+
+Si tienes algo sin subir, guardalo antes en una rama o pasamelo, porque el
+reset lo descarta. Un git pull normal te va a ofrecer mezclar dos historias:
+no lo aceptes.
+
+
 1. LA COLUMNA
 
 Migracion 021, en los dos motores: productos.imagen, de tipo TEXT. Guarda la
