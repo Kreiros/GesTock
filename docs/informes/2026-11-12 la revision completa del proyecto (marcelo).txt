@@ -1,0 +1,138 @@
+12-11-2026
+La revision completa del proyecto: siete hallazgos corregidos y los README al dia
+
+
+David, revise el proyecto entero antes del ensayo del 26: compile los dos lados,
+corri todas las baterias, audite las dependencias y lei el servidor por zonas de
+riesgo. Encontre siete cosas y las corregi todas, cada una con una prueba que
+falla sin el arreglo. Abajo van, lo que toca tu lado, y los README.
+
+
+LO QUE PASO LIMPIO
+
+    servidor           compila sin errores
+    interfaz           compila sin errores, lint sin avisos, build bien
+    unitarias          335 de 335, 26 suites
+    integracion        101 de 101, sobre pg-mem y sobre PostgreSQL real
+    interfaz (Vitest)  172 de 172
+
+De tu lado no encontre nada que corregir en el codigo. Dos notas chicas:
+
+    - el build avisa que el archivo principal pesa 500 KB. En una aplicacion
+      de escritorio que carga del disco no es un problema; no lo toque.
+    - en la barra del inventario tecnico hay un simbolo de advertencia en el
+      texto ("Criticos FEFO"). Es texto de pantalla, asi que esta bien.
+
+
+LOS SIETE HALLAZGOS
+
+1. LA VENTA COBRABA EL PRECIO QUE MANDABA LA PANTALLA. El servidor usaba el
+   precio_unitario y la cantidad que llegaban en la peticion. Una peticion
+   armada a mano vendia a cualquier precio, una cantidad negativa sumaba stock
+   en vez de restarlo, y un id de producto de otro comercio le descontaba
+   existencias a ese comercio.
+
+   Ahora cada linea se resuelve contra el catalogo antes de tocar nada: el
+   precio sale de la base, la cantidad tiene que ser mayor que cero, y el
+   producto tiene que ser activo y del comercio de la venta. Si algo no calza,
+   400 con el motivo.
+
+   NO CAMBIA NADA EN TU PANTALLA: ya mandabas el precio_venta del producto, asi
+   que el total es el mismo. Lo unico nuevo es que un producto desactivado ya
+   no se puede vender.
+
+2. SE PODIA DEVOLVER DOS VECES LA MISMA VENTA. La devolucion acotaba cada linea
+   a lo vendido, pero no restaba lo ya devuelto. Dos devoluciones de la misma
+   venta emitian dos notas de credito y reponian el stock dos veces. Ahora
+   resta lo devuelto, rechaza cantidades negativas, y si no queda nada responde
+   400 con "No queda nada por devolver de esa venta: ya se devolvio completa".
+   Si quieres, ese mensaje se puede mostrar tal cual.
+
+3. UNA SESION SIN COMERCIO DECLARADO VEIA LA DEMO. Muchas rutas usan el comercio
+   de demostracion cuando la peticion no dice cual. El middleware solo
+   comparaba el comercio declarado con el de la sesion, asi que si no se
+   declaraba ninguno no habia nada que comparar. En una nube con varios
+   comercios, una sesion de otro comercio leia el inventario de la demo.
+
+   Ahora, con sesion valida y sin comercio declarado, el middleware pone el de
+   la sesion. Y editar un producto o ajustar su stock exige que sea del
+   comercio: antes bastaba el id.
+
+4. LAS FECHAS TRIBUTARIAS ESTABAN EN UTC. Se calculaba "hoy" con toISOString(),
+   que da la fecha UTC, tres horas adelantada en Chile. Una boleta emitida a las
+   22:00 salia con fecha del dia siguiente, y el panel del dia cambiaba de dia
+   a las 21:00: en la noche mostraba solo lo vendido despues de las nueve, y en
+   la manana sumaba lo de la noche anterior. El grafico por hora salia corrido
+   tres horas.
+
+   Ahora la fecha de emision, la marca de firma, el CAF, el RCOF, el sobre del
+   SII, el mes del F29 y el panel usan el reloj local del equipo. Lo vas a
+   notar en el panel si lo miras de noche.
+
+5. LOS ERRORES INTERNOS LLEGABAN AL CLIENTE. 27 respuestas de error del
+   servidor mandaban el mensaje interno de la falla, que puede mostrar nombres
+   de tablas o rutas de archivo. En produccion ya no se manda; en desarrollo
+   si, para depurar. Revise tu codigo: no leias ese campo error en ningun lado,
+   asi que no te afecta.
+
+6. LAS PRUEBAS ESCRIBIAN EN LA BASE DE LA NUBE. Las pruebas de integracion
+   contra el PostgreSQL real usaban la misma base que la aplicacion, y cada una
+   crea su propio comercio. De ahi salian las 772 tiendas "Almacen Don Tito SpA"
+   que encontre ayer en mi nube.
+
+   Ahora, con USE_REAL_PG=true, las pruebas usan su propia base,
+   gestock_test_db, que se crea sola. Lo comprobe: corri las 101 contra el
+   PostgreSQL real y la nube quedo con los mismos 1.034 comercios y 1.008
+   productos que antes. Si corres las pruebas contra tu contenedor, ya no te lo
+   ensucian.
+
+7. AVISOS DE SEGURIDAD EN DEPENDENCIAS. Tres en el servidor (body-parser,
+   ip-address y qs, que vienen con Express) y dos en la interfaz
+   (follow-redirects, que viene con axios, y zod). Todos se arreglaban dentro de
+   versiones compatibles, sin saltar de version mayor. Cambio tu
+   package-lock.json: cuando traigas el commit corre npm install en front-end.
+   Ahora los dos lados dan cero avisos.
+
+
+LO QUE APRENDI DE LA REVISION Y CONVIENE QUE SEPAS
+
+La evidencia del backend no traia jest.setup.ts, que su configuracion exige, asi
+que npm test fallaba si alguien lo corria desde el repositorio de titulo. Lo
+agregue al sincronizador junto con el nuevo jest.global-setup.ts.
+
+
+LOS README
+
+Los revise contra el proyecto, no contra la memoria. El de GesTock decia:
+
+    better-sqlite3                  usamos node:sqlite
+    Node 20                         node:sqlite pide 22.13 o superior
+    Material UI 6                   es la 9
+    11 vistas de administrador      son 12, desde que entro Mercado
+    una clave de API por defecto    no existe; API_KEY es opcional
+    migraciones 001 a 010           van en la 021
+    baterias de 269 pruebas         son 436 del servidor y 172 tuyas
+    sincronizacion automatica       se hace con el boton
+
+Y el del repositorio de titulo decia Tailwind y Lucide en la interfaz, Node 20,
+87 pruebas de integracion, otra clave de API inventada, y el enlace al
+documento de arquitectura apuntaba a un nombre de archivo que ya no existe.
+Tambien prometia "latencia menor a 15 ms" y "100% de disponibilidad": lo deje
+con lo que medimos, la mediana de 4 ms y la cola declarada como hallazgo
+abierto, porque esos son los numeros que podemos defender.
+
+Los dos tienen ahora la aplicacion de escritorio, las ordenes para correr cada
+bateria, y tu rol con lo que hiciste de verdad: modos visual y tecnico, fotos y
+Open Food Facts, y las pruebas de interfaz y de extremo a extremo. Revisa que tu
+fila diga lo que quieres que diga.
+
+
+LO QUE QUEDA
+
+De mi lado: mirar con el antivirus la cola de la venta.
+
+De tu lado: npm install en front-end por el lockfile, leer el manual contra tus
+pantallas, el proveedor del Pisco Mistral, y revisar tu fila en los README.
+
+Y de los dos: correr la demo entera una vez, de principio a fin, sobre una
+instalacion limpia.
