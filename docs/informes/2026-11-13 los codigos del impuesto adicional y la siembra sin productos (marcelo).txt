@@ -1,0 +1,161 @@
+13-11-2026
+Los codigos del impuesto adicional no eran los del SII, la siembra sin productos y el plan en once casos
+
+
+David, lei tu informe y traje tus seis commits antes de tocar nada. La prueba
+con Esteban sirvio mucho: el billete de 2.000, la categoria y los botones del
+cierre son justo lo que solo sale mirando a alguien usar el sistema. Y lo de la
+bolsa y el sello me hizo revisar algo mas grande, que te cuento primero porque
+toca tu archivo.
+
+
+LOS CODIGOS DEL IMPUESTO ADICIONAL NO ERAN LOS DEL SII
+
+Tu arreglo del sello estaba bien para lo que se veia. Pero al mirar de donde
+salian el 25 y el 26, fui a la tabla oficial: el formato DTE del SII, version
+2.5 de febrero de 2026, pagina 52. Ese codigo no es solo una etiqueta nuestra:
+viaja tal cual al documento tributario, en CodImpAdic. Y nuestra tabla estaba
+corrida entera:
+
+    codigo   para el SII                          en GesTock
+    24       licores y piscos, 31,5%              no se usaba
+    25       vinos, 20,5%                         analcoholica, 10%
+    26       cervezas, 20,5%                      analcoholica azucar alta, 18%
+    27       analcoholicas y minerales, 10%       cervezas y vinos, 20,5%
+    271      analcoholicas azucar alta, 18%       no se usaba
+    28       impuesto especifico al diesel        licores, 31,5%
+
+O sea que la boleta de la Coca Cola Zero, incluso despues de tu arreglo, se
+declaraba como vino, y la del Pisco Mistral como diesel. Las tasas si estaban
+bien, por eso los totales cuadraban y ninguna prueba lo vio: las pruebas
+comparaban el codigo contra la misma tabla equivocada. Es tu misma leccion del
+sello, un nivel mas abajo.
+
+Como el error es de los dos lados y las dos mitades tienen que cambiar juntas
+o quedan descalzadas, lo corregi todo en un commit, incluido ila.ts, que es tuyo.
+Te dejo exacto lo que cambie ahi para que lo revises:
+
+    las constantes        ANALCOHOLICA 27, AZUCAR_ALTA 271, VINOS 25,
+                          CERVEZAS 26, LICORES 24. Antes eran AZUCAR_BAJA,
+                          AZUCAR_ALTA, CERVEZA_VINO y DESTILADOS. Solo se
+                          usaban dentro de ila.ts y su prueba
+    esAlcohol             ahora reconoce los tres codigos de alcohol
+    esAzucarAlta          sigue siendo un solo codigo, ahora el 271
+    el selector del alta  seis opciones en vez de cinco, contando la de solo
+                          IVA: vinos y cervezas van separados, como en el SII
+    ila.test.ts           tus pruebas con los nombres nuevos, y dos mas: que
+                          la tabla sea exactamente la del SII, y que ningun
+                          producto use el 28
+
+En el JSON: Crush al 271, la Zero y el nectar light al 27, la cerveza al 26 y el
+pisco al 24. Las tasas no cambian.
+
+De mi lado: el emisor de documentos con los nombres nuevos, el control de venta
+de alcohol con 24, 25 y 26, y la migracion 022, que reescribe los codigos ya
+guardados en las bases que existen. Va en un solo UPDATE con CASE, porque con
+sentencias sucesivas el 25 pasaria a 27 y despues ese 27 a 26. El 27 viejo, que
+juntaba cervezas y vinos, pasa a 26, salvo que el nombre diga vino, que pasa a
+25. Tiene su prueba con una fila de cada codigo.
+
+Tus pruebas del catalogo siguen pasando: la de la tasa por codigo, la de las
+bebidas zero y light, y la de los tramos.
+
+
+LOS SEIS PRODUCTOS DE INIT-DB
+
+Tenias razon y lo decidimos: init-db ya no siembra productos. Saque los seis y
+tambien las ventas inventadas que les ponia, en las dos siembras, la local y la
+de la nube. Sigue creando la tienda, los usuarios, los medios de pago, los
+proveedores y la configuracion.
+
+Ahora una instalacion limpia parte vacia, o con los 25 del JSON si se marca la
+casilla. Es lo que ya decia el comentario de init-db y lo que dice el manual.
+
+Dos cosas que conviene que sepas:
+
+    - en las bases que ya existen, la tuya y la mia, los seis siguen ahi: no los
+      borre, porque borrar productos de una base con ventas no es algo que haga
+      una migracion sin preguntar. Para ver la version limpia hay que instalar
+      de cero, que es lo que igual vamos a hacer para la demo.
+    - con eso la reposicion de la demo vuelve a mostrar tres productos bajo el
+      minimo, no cinco.
+
+Habia pruebas que usaban esos productos. Saque la suite que probaba el historial
+sembrado (tres pruebas) y una de sincronizacion que miraba esas mismas ventas,
+porque ya no hay nada que probar ahi. Las otras cuatro que necesitaban un
+producto ahora crean el suyo.
+
+
+EL PLAN EN ONCE CASOS
+
+De acuerdo con sacar la factura. El capitulo 12 quedo en el orden de tu ficha v2:
+
+     1  entrar al sistema
+     2  vender en efectivo con dos mil pesos
+     3  la bolsa
+     4  buscar el precio del queso rallado
+     5  agregar un producto nuevo con su foto
+     6  cobrar con tarjeta
+     7  ver que hay que pedir a cada proveedor
+     8  cerrar la caja
+     9  la devolucion                      si el tiempo alcanza
+    10  vender sin conexion                si el tiempo alcanza
+    11  exploracion libre
+
+Tambien recogi tus dos ideas: que cada caso se hace con la cuenta que la ficha
+dice a su lado, y que un caso que no se alcanzo se anota "no se hizo" y no queda
+en blanco. La factura paso a los limites declarados del ensayo, con su motivo:
+con una persona nueva se come sola la media hora, y ese flujo ya lo cubren las
+pruebas automaticas de la lectura de facturas.
+
+UNA COSA QUE TE TOCA: tu ficha v2 no la tengo. En el repositorio sigue la mia de
+doce tareas, que ahora no calza con el plan. Subela encima, en
+docs/ficha_prueba_de_usuario.docx, y la borras de cualquier otro lado. Cuando
+este arriba la paso a la evidencia.
+
+
+LO DEMAS DE TU INFORME
+
+    el manual       el .md no esta en el repositorio a proposito: el
+                    .gitignore deja los docs/*.md locales y sube solo el
+                    .docx, que es el que se entrega. Si quieres corregir
+                    algo, dimelo o edita el .docx. Las seis categorias de
+                    notificaciones ya estan en los dos, gracias
+    la foto en el   bien hecho: era mejor hacer cierta la frase que
+    inventario      corregirla
+    npm audit       de acuerdo, la frase para el 26 es "npm audit
+                    --omit=dev da cero". Es mas precisa y es la que se puede
+                    repetir delante de la comision
+    Esteban y los   su comentario de la jerarquia entre dueno y trabajadores
+    roles           es buena evidencia para el informe final: dice que el
+                    control por rol hace falta, y el sistema lo tiene
+
+
+LAS CIFRAS DE HOY
+
+    unitarias del servidor     336 en 27 suites
+    integracion                98 en 15 suites, sobre pg-mem y sobre
+                               PostgreSQL real
+    interfaz                   198 en 26 archivos, las tuyas mas las dos de
+                               la tabla del SII
+
+Todas pasando. Actualice el README principal, la guia de despliegue, la arquitectura, el
+informe de pruebas y el estado del proyecto. En los .docx las suites salian con
+cuatro numeros distintos para lo mismo; quedaron todas con lo medido hoy.
+
+Reinstale la aplicacion sobre la instalacion existente y comprobe que lleva la
+migracion 022 y que los datos siguen intactos.
+
+
+LO QUE QUEDA
+
+De tu lado: subir tu ficha v2 encima de la mia, revisar lo que cambie en ila.ts,
+las dos cosas de diseno que dejaste en pausa y tu fila de accesibilidad en los
+README.
+
+De mi lado: pasar tu ficha a la evidencia cuando la subas.
+
+Y de los dos: correr la demo entera, de principio a fin, sobre una instalacion
+limpia y en un equipo con disco de estado solido. Con esto la demo cambia en dos
+cosas que conviene mirar ese dia: la caja parte con 25 productos y no 31, y el
+selector del impuesto adicional tiene seis opciones.
