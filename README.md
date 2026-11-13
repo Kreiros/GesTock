@@ -36,7 +36,7 @@ Cumple con las normativas del **Servicio de Impuestos Internos (SII)**, la **Ley
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 335 pruebas unitarias en 26 suites y 101 pruebas de integración en 16 suites (medidas el 12-11-2026, sobre `pg-mem` y sobre PostgreSQL real), 172 pruebas de interfaz en 22 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
+- **Pruebas:** 336 pruebas unitarias en 27 suites y 98 pruebas de integración en 15 suites (medidas el 13-11-2026, sobre `pg-mem` y sobre PostgreSQL real), 198 pruebas de interfaz en 26 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
 
 ---
 
@@ -65,7 +65,7 @@ docker compose up --build
 npm install
 cp .env.example .env
 
-# Migraciones secuenciales 001 a 021 (el servidor también las aplica al arrancar)
+# Migraciones secuenciales 001 a 022 (el servidor también las aplica al arrancar)
 npm run migrate:sqlite   # caja local SQLite
 npm run migrate:pg       # nube PostgreSQL, si está levantada
 
@@ -100,9 +100,9 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 335 pruebas unitarias del servidor y de contrato (26 suites)
-npm test                     # 101 pruebas de integración (16 suites) sobre pg-mem
-npm --prefix front-end run test   # 172 pruebas de interfaz (Vitest)
+npm run test:unit            # 336 pruebas unitarias del servidor y de contrato (27 suites)
+npm test                     # 98 pruebas de integración (15 suites) sobre pg-mem
+npm --prefix front-end run test   # 198 pruebas de interfaz (Vitest)
 npm run test:e2e:frontend    # 118 comprobaciones de extremo a extremo, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
 npm run test:coverage:total  # cobertura del servidor
@@ -144,7 +144,7 @@ Las pruebas usan una base propia, `gestock_test_db` (configurable con `PGDATABAS
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, iterativa e incremental, organizada en tres fases académicas:
 1. **Incepción y Elaboración (Fase 1 - 20%):** alcance, caso de negocio, análisis de los 62 RF y 31 RNF (ISO/IEC 25010), artefactos UML y modelo relacional inicial (15 tablas).
-2. **Construcción (Fase 2 - 50%):** backend Node.js/TypeScript con persistencia dual, esquema de **29 tablas** (migraciones 001-021 más la tabla de control `_migrations`), frontend React 19 con roles, ingreso de facturas con IA, normativas chilenas (redondeo, DTE con timbre TED) y **436 pruebas automatizadas** del servidor (Jest) más 172 de interfaz (Vitest).
+2. **Construcción (Fase 2 - 50%):** backend Node.js/TypeScript con persistencia dual, esquema de **29 tablas** (migraciones 001-022 más la tabla de control `_migrations`), frontend React 19 con roles, ingreso de facturas con IA, normativas chilenas (redondeo, DTE con timbre TED) y **434 pruebas automatizadas** del servidor (Jest) más 198 de interfaz (Vitest).
 3. **Transición (Fase 3 - 30%):** ejecución del plan de pruebas, pruebas de rendimiento, operación sin conexión en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa.
 
 ---
