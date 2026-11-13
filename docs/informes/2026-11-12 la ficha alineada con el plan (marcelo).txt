@@ -1,0 +1,93 @@
+12-11-2026
+La ficha alineada con el plan: doce tareas, la preparacion y la ley de la bolsa
+
+
+David, decidimos que la ficha cubra los nueve casos del plan y conserve tus tres
+tareas nuevas. Arme la ficha nueva a partir de la tuya, copiando tus bloques
+para que conserve el formato, y puse el capitulo 12 del plan en el mismo orden.
+Aplique tambien los otros cinco ajustes del informe anterior.
+
+
+DONDE ESTA
+
+    docs/ficha_prueba_de_usuario.docx     en GesTock
+    Ficha Prueba De Usuario.docx          en la evidencia de documentacion
+
+Esa es la que hay que usar. Borra tu Plan de Pruebas.docx suelto y la ficha
+vieja, para que no se mezclen.
+
+
+LAS DOCE TAREAS, EN EL ORDEN DE UN TURNO
+
+Ahora la tarea N de la ficha es el caso N del plan, asi el informe final puede
+citar uno y otro sin traducir numeros:
+
+     1  entrar al sistema
+     2  vender en efectivo: Coca Cola Zero, Club Social y un Zuko, con dos mil
+        pesos; el vuelto es $210
+     3  la bolsa
+     4  cobrar con tarjeta: una mantequilla
+     5  buscar un precio: el queso rallado          tuya
+     6  devolver las galletas de la primera venta
+     7  ingresar una factura
+     8  agregar un producto nuevo con su foto       tuya
+     9  ver que hay que pedir a cada proveedor
+    10  vender sin conexion: un yogur griego
+    11  cerrar la caja
+    12  exploracion libre                           tuya
+
+Cambie dos cosas de tus tareas para que no choquen con las nuevas: la de buscar
+un precio ahora es el queso rallado, porque la mantequilla se usa en la tarjeta;
+y la venta en efectivo lleva tres productos, que es lo que dice el plan.
+
+UNA COSA QUE ENCONTRE AL ARMAR LA TAREA 4: todos los precios del catalogo de la
+demo terminan en cero. El redondeo del efectivo solo se nota si el total no
+termina en cero, asi que con este catalogo la diferencia entre efectivo y
+tarjeta nunca se ve. La tarea 4 observa lo que si se ve: que con tarjeta no
+sale boleta y se entrega el comprobante de la tarjeta, y si lo imprime. Quedo
+dicho en el plan. Si quieres mostrar el redondeo, habria que poner un producto
+con precio como $995; es tu JSON, decidelo tu.
+
+
+LOS OTROS CINCO AJUSTES
+
+    tiempo              treinta minutos, igual en la ficha y en el plan
+    ley de la bolsa     21.100 en la ficha y en el nombre del producto del
+                        catalogo; la app ya decia 21.100. Lo cambie en tu JSON
+                        porque es una sola linea; el boton reconoce la bolsa
+                        por su SKU, asi que no le afecta
+    cuenta              administrador toda la sesion, para que llegue a
+                        Reposicion y a Facturas; queda escrito en la ficha
+    preparacion         un recuadro "Antes de cada participante" con seis
+                        pasos: instalacion limpia, catalogo marcado en el
+                        primer inicio, turno abierto con $20.000, la cuenta en
+                        un papel, la factura en PDF y un producto real a mano,
+                        y como cortar la nube sin que lo note
+    datos personales    codigo P1, P2, P3 en vez del nombre, rango de edad, y
+                        una linea de consentimiento leida en voz alta
+
+Lo que no toque de tu ficha: la regla de no ayudar, el texto para antes de
+empezar, la tabla de lo que no sirve probar, las preguntas finales y las
+observaciones del observador.
+
+La revise abierta en Word, no solo por dentro: son seis paginas y las tablas de
+las doce tareas salen con el formato de las tuyas.
+
+
+LO QUE TIENES QUE TENER PARA LA PRIMERA SESION
+
+Dos cosas que la ficha pide y que no estan en el repositorio:
+
+    - una factura de proveedor en PDF para la tarea 7. Sirve una de las que ya
+      leyo el OCR en tus pruebas.
+    - un producto real con codigo de barras para la tarea 8, que no este ya en
+      el catalogo de la demo.
+
+
+LO QUE QUEDA
+
+De tu lado: borrar las versiones viejas, conseguir la factura y el producto, y
+leer la ficha completa antes de la primera sesion por si algo no calza con como
+pensabas conducirla.
+
+De mi lado: nada pendiente de esto.
