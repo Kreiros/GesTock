@@ -1,0 +1,89 @@
+12-11-2026
+La cola de la venta era el disco, no el antivirus
+
+
+David, mire la cola de la venta que te dije que iba a revisar con el antivirus.
+Tu lectura de que dependia del entorno era la correcta, pero no era el antivirus:
+era el disco. Te cuento como lo separe, porque cambia lo que decimos el 26.
+
+
+EL ANTIVIRUS
+
+Antes de tocar nada lo lei. En mi equipo Windows Defender esta apagado y el
+antivirus activo es Avast. No le agregue exclusiones ni lo pause: eso es una
+decision de seguridad del equipo y no hizo falta, como vas a ver abajo.
+
+
+COMO LO SEPARE
+
+Corri la bateria de rendimiento con escritura sobre una copia desechable de la
+base, nunca sobre la real, y cronometre aparte las dos fases que el servidor
+mide: la transaccion de la venta y la emision del documento tributario. Lo hice
+con la copia en tres discos del mismo equipo:
+
+    base en   disco              venta mediana   venta p95   sobre 100 ms
+    C:        estado solido NVMe      4 ms          8 ms        0 de 80
+    E:        estado solido NVMe      4 ms          5 ms        0 de 80
+    G:        mecanico SATA         398 ms        900 ms       80 de 80
+
+Avast protege los tres discos por igual. Si fuera el antivirus, E: tambien
+seria lento, y no lo es. La cola es del disco mecanico.
+
+Por fase, en el disco mecanico, la transaccion sola tomo 102 ms en la mediana y
+el documento 292 ms. Cada venta confirma unas cuatro escrituras en SQLite: la
+venta, la reserva del folio y el registro del documento. SQLite, con la
+configuracion que usamos, sincroniza el disco en cada confirmacion, y un disco
+mecanico tiene que esperar el giro cada vez: unos 100 ms por confirmacion.
+
+La corrida del 7 de noviembre, la de la cola entre 175 y 282 ms, la hice con la
+base del proyecto, que esta en ese disco mecanico. La tuya, con la cola casi
+nula, seguro fue en un disco de estado solido. Por eso salimos distintos.
+
+UNA TRAMPA QUE ME PASO Y TE PUEDE PASAR: al cortar el servidor lanzado con npx,
+el proceso de Node sigue escuchando en el puerto 3000, y la siguiente corrida
+mide contra la base anterior sin avisar. Hay que cerrarlo por el puerto, no por
+el proceso de npx. Lo note porque la segunda corrida no registro ninguna venta.
+
+
+LO QUE CAMBIA EN LOS DOCUMENTOS
+
+RNF-REND-01 deja de ser hallazgo abierto: se cumple con la base en un disco de
+estado solido, que queda declarado como requisito de hardware de la caja. Esta
+asi en el documento de arquitectura, en el de requisitos no funcionales, en el
+plan de pruebas (con la tabla de los tres discos) y en la guia de despliegue,
+que ahora tiene la fila del disco en los requisitos.
+
+La aplicacion instalada guarda sus datos en la carpeta del usuario, que en mi
+equipo esta en el disco de estado solido, y ahi la venta no tiene cola.
+
+PARA LA DEFENSA: si preguntan por el requisito de 15 ms, la respuesta es que se
+cumple con margen en un disco de estado solido, que en un disco mecanico no, y
+por que. Es un limite declarado con su causa medida, no un numero escondido.
+
+
+LO QUE NO HICE: ACELERAR LA VENTA EN DISCO MECANICO
+
+Se puede. Hay dos caminos y ninguno lo tome sin hablarlo:
+
+    agrupar las escrituras de la venta y del documento en una sola transaccion:
+        bajaria a una sola espera de disco por venta, unos 100 ms. Cambia como
+        se relacionan la venta y el documento: hoy, si el documento falla, la
+        venta queda igual, y eso hay que conservarlo.
+
+    bajar synchronous de SQLite a NORMAL:
+        mucho mas rapido, pero ante un corte de luz se pueden perder las
+        ultimas ventas. En un punto de venta no me parece aceptable.
+
+Si para el 26 vamos a usar un equipo con disco de estado solido, que es lo
+normal hoy, no hace falta ninguno.
+
+
+LO QUE QUEDA
+
+De mi lado: nada pendiente de lo que tenia anotado.
+
+De tu lado: npm install en front-end por el lockfile, leer el manual contra tus
+pantallas, el proveedor del Pisco Mistral, y tu fila en los README.
+
+Y de los dos: correr la demo entera una vez, de principio a fin, sobre una
+instalacion limpia, y en un equipo con disco de estado solido.
