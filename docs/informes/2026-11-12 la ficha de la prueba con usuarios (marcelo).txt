@@ -1,0 +1,114 @@
+12-11-2026
+La ficha de la prueba con usuarios: esta muy bien, con seis ajustes antes de usarla
+
+
+David, lei la ficha de registro y el plan de pruebas que van con la prueba de
+usuarios. La ficha esta muy bien pensada: la regla de no ayudar, pedir que
+piensen en voz alta, anotar las palabras exactas y llenarla el mismo dia son
+justo lo que hace que el resultado sirva. Abajo van seis ajustes que conviene
+hacer antes de la primera sesion, y un problema con el plan que adjuntaste.
+
+Antes de escribir esto revise lo que dicen las tareas contra el sistema: los
+productos existen, la venta de la tarea 1 se paga con los dos mil pesos, y la
+caja acepta cerrar sin turno abierto ofreciendo abrirlo.
+
+
+EL PLAN QUE ADJUNTASTE ES LA VERSION VIEJA
+
+El Plan de Pruebas.docx que venia con la ficha es del 6 de noviembre, la copia
+suelta que me dijiste que ibas a borrar cuando juntamos el capitulo 12. No hay
+que usarlo, porque contradice lo que hay hoy:
+
+    dice                                       hoy
+    298 unitarias, 109 de interfaz             335 y 172
+    87 de integracion "contra PostgreSQL real,  101, y por omision corren sobre
+      no contra un motor en memoria"              pg-mem: eso es falso tal como
+                                                  esta escrito
+    72 rutas                                   76
+    18 productos, cuatro bajo el minimo        25 productos, tres bajo el minimo
+
+El plan oficial es docs/plan_de_pruebas.docx, el que esta en los dos
+repositorios, con tu capitulo 12 adentro. Ese es el que hay que mostrar.
+
+
+LOS SEIS AJUSTES A LA FICHA
+
+1. LAS TAREAS NO CALZAN CON LOS CASOS DEL PLAN. El plan oficial promete nueve
+   casos y la ficha tiene siete tareas distintas. Faltan en la ficha: entrar
+   con la cuenta, cobrar con tarjeta, la devolucion, ingresar una factura y
+   seguir vendiendo sin conexion. Y la ficha agrega buscar un precio, el alta
+   con foto y la exploracion libre, que estan muy bien pero no estan en el
+   plan.
+
+   Hay que elegir: o la ficha cubre los nueve casos mas los tres nuevos, o
+   cambiamos el capitulo 12 para que diga lo que de verdad vamos a probar. Lo
+   que no puede pasar es que el informe final muestre resultados de casos que
+   el plan no tiene, o que el plan prometa casos que nadie probo. Yo agregaria
+   a la ficha al menos la tarjeta, la devolucion y la venta sin conexion, que
+   son las que mas muestran del sistema.
+
+2. EL TIEMPO NO ALCANZA. La ficha dice quince minutos y el plan veinte. Con
+   siete tareas, las preguntas finales y una persona que piensa en voz alta,
+   quince minutos no dan; si sumas los casos del punto 1, menos. Yo pondria
+   treinta y lo diria en los dos documentos igual.
+
+3. LA LEY DE LA BOLSA ESTA MAL. La tarea 2 cita la Ley 21.368, y el producto del
+   catalogo tambien dice "(Ley N° 21.368)". La aplicacion, en el boton y en su
+   ayuda, y el README dicen Ley 21.100, que es la de las bolsas plasticas en el
+   comercio; la 21.368 es la de plasticos de un solo uso. Revisalo antes de la
+   prueba y del 26: si alguien de la comision lo nota, son dos leyes distintas
+   en la misma pantalla. Hay que dejar las dos en la 21.100: la ficha y el
+   nombre del producto en el JSON.
+
+4. FALTA DECIR CON QUE CUENTA SE ENTRA. La pantalla de Reposicion es solo del
+   administrador, asi que con la cuenta de cajero la tarea 5 solo puede llegar
+   a Notificaciones. Y el plan dice que se crean las dos cuentas. Agrega en la
+   ficha una fila "Cuenta usada" y decide de antemano cual se usa en cada
+   tarea; si no, el resultado de la tarea 5 depende de la cuenta y no de la
+   persona.
+
+5. FALTA LA PREPARACION ANTES DE CADA PERSONA. Tal como esta, la segunda persona
+   no parte igual que la primera:
+
+    - si la primera vendio y cerro la caja, la segunda encuentra el turno
+      cerrado y las ventas ya hechas;
+    - si nadie abrio el turno, las ventas de las tareas 1 y 2 no entran en el
+      cierre de la tarea 6, y la "diferencia" que se le pide entender no tiene
+      sentido.
+
+   Yo agregaria un recuadro "Antes de empezar" con: instalacion limpia o la
+   base restaurada, catalogo de demostracion cargado (en el primer inicio hay
+   que marcar la casilla del catalogo, si no la instalacion parte vacia),
+   turno abierto con un fondo inicial conocido, y la cuenta con la que se va
+   a entrar. Asi todas las personas parten del mismo lugar y los resultados se
+   pueden comparar.
+
+6. LOS DATOS PERSONALES. La ficha pide nombre y edad. Para un informe academico
+   conviene usar un codigo (P1, P2, P3) en vez del nombre, pedir el rango de
+   edad y no la edad exacta, y dejar una linea de consentimiento: "acepto que
+   mis respuestas se usen en el informe del proyecto, sin mi nombre". Es poco
+   trabajo y evita que la comision pregunte.
+
+
+LO QUE ESTA BIEN Y NO HAY QUE TOCAR
+
+    - los encargos en vez de pasos, y no decir en que pantalla esta
+    - "haz lo que harias si estuvieras solo" como unica respuesta
+    - avisar antes lo que no sirve probar, con el motivo: SII en
+      certificacion, la camara para fotos y no para codigos, la pistola
+      lectora, y la foto cambiada sin internet
+    - la tarea 1 con dos mil pesos: la Coca Cola Zero ($990) y el Club Social
+      ($450) suman $1.440, asi que hay vuelto y se ve si lo entiende
+    - la exploracion libre al final, que es de donde salen las sorpresas
+    - las cuatro preguntas finales, sobre todo la de lo que esperaban que
+      pasara y no paso
+
+
+LO QUE QUEDA
+
+De tu lado: decidir el punto 1 conmigo, y ajustar la ficha con los otros cinco
+antes de la primera sesion. Y borrar el Plan de Pruebas.docx suelto para que no
+se vuelva a mezclar con el oficial.
+
+De mi lado: si cambiamos los casos, actualizo el capitulo 12 del plan oficial
+para que diga lo mismo que la ficha.
