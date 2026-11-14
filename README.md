@@ -137,7 +137,7 @@ Las pruebas usan una base propia, `gestock_test_db` (configurable con `PGDATABAS
 | Integrante | Rol en el Proyecto | Responsabilidades Principales |
 |---|---|---|
 | **Marcelo Alejandro Pino Valverde** | Líder de Proyecto / Arquitectura de Software & Backend Developer | Arquitectura 4+1, persistencia dual (PostgreSQL + SQLite) y sincronización, motor DTE/SII, Circuit Breaker, algoritmos ROP, ingreso de facturas con Gemini, seguridad JWT/Bcrypt, empaquetado de escritorio y pruebas del servidor. |
-| **David Miranda Tobar** | Desarrollador Frontend / Diseñador UX-UI | Diseño de interfaces, SPA en React 19 / Vite / Material UI, modos visual y técnico, caja y turnos, fotos y Open Food Facts en el alta, accesibilidad, pruebas de interfaz y de extremo a extremo. |
+| **David Miranda Tobar** | Desarrollador Frontend / Diseñador UX-UI | Diseño de interfaces, SPA en React 19 / Vite / Material UI, dos modos de interfaz según la soltura del usuario (visual con tarjetas y fotos, técnico con tablas densas y atajos de teclado), caja y turnos, fotos y Open Food Facts en el alta, pruebas de interfaz y de extremo a extremo. |
 
 ---
 
