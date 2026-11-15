@@ -1,0 +1,145 @@
+15-11-2026
+La boleta sin impuesto adicional, la boleta con tarjeta y lo que no viajaba
+
+
+David, traje tus tres commits antes de tocar nada: la impresion por marco oculto,
+el mensaje sin conexion y el README. La ficha ya la pasaste tu a la evidencia, asi
+que no la vuelvo a pasar. Gracias por correr la demo entera: los cuatro hallazgos
+de hoy salieron de ahi, y tu nota de metodo la comparto.
+
+Tu duda de la boleta era la mas importante, asi que la cuento primero.
+
+
+LA BOLETA NO LLEVA IMPUESTO ADICIONAL: TENIAS RAZON
+
+Lo confirme en la fuente primaria y no en proveedores. El texto vigente del DL 825
+que publica el SII dice en el inciso final del articulo 43:
+
+    "No se encuentran afectas a este impuesto adicional las ventas del
+    comerciante minorista al consumidor"
+
+El impuesto lo pagan el importador, el productor y el distribuidor (letras a, b y
+c), y cualquier vendedor que le vende a otro vendedor (letra d). El Oficio SII
+N 359 de 2007 lo confirma: el minorista no lo recarga ni lo usa como credito. Para
+el almacen el ILA es costo, y ya viene dentro del precio de compra.
+
+Nuestra boleta lo desglosaba en cada venta. Con una cerveza de 10.000:
+
+                    antes      ahora
+    neto            7.168      8.403
+    IVA             1.362      1.597
+    ILA             1.469          0
+    total          10.000     10.000
+
+El total no cambia, por eso nadie lo vio. Lo que cambia es lo que se declara: el
+IVA salia mas bajo de lo que corresponde y el F29 sumaba un ILA que el almacen no
+debe.
+
+Lo que cambie en el emisor:
+
+    boleta (39 y 41)        solo neto e IVA, neto = precio / 1,19, sin
+                            CodImpAdic ni ImptoReten
+    nota de credito         igual que la boleta que anula; si anula una
+                            factura, conserva el ILA
+    factura                 sigue con el desglose: la venta a otro comercio si
+                            esta afecta (letra d)
+
+El codigo del impuesto se queda en el producto: lo usan la factura y la
+verificacion de edad, que no cambian. Las boletas que ya estan emitidas no se
+tocan.
+
+TE TOCA UNA COSA AQUI: el carrito de la caja todavia muestra la linea de ILA,
+porque useTotalesCarrito llama a desglosarImpuestos con la tasa de cada producto.
+El total es el mismo, pero el desglose en pantalla ya no calza con la boleta.
+Cuando el comprobante es boleta, la tasa que se le pasa tiene que ser 0. Cuando es
+factura, se mantiene. El chip "ILA 20.5%" de la tabla puede quedarse, porque
+describe al producto y no a la boleta.
+
+
+LA VENTA CON TARJETA SIN BOLETA: NO ERA UN DESCUIDO, PERO ESTABA MAL ELEGIDO
+
+El emisor no se equivocaba: hacia lo que decia la configuracion. El modelo de
+emision por defecto era MODELO_B, en el que el voucher de la tarjeta reemplaza a la
+boleta. Eso es legal: la Res. Ex. SII 176 de 2020 le da valor de boleta al
+comprobante de pago electronico. Pero solo cuando lo emite un operador de medios de
+pago autorizado, que informa la venta al SII.
+
+En la demo la pasarela es simulada, asi que no hay operador y el cliente se iba sin
+ningun documento tributario. Tu primer reclamo del 09-11 tenia razon.
+
+Lo que cambie:
+
+    por defecto     MODELO_A: siempre se emite boleta, tambien con tarjeta
+    MODELO_B        sigue disponible en Configuracion, para un comercio con
+                    terminal de un operador autorizado
+    bases que ya    la migracion 023 cambia el MODELO_B sembrado por MODELO_A,
+    existen         porque nadie lo habia elegido. Si despues alguien elige
+                    MODELO_B, se respeta
+
+El estado PAGADA lo deje como esta. Marca que la pasarela aprobo el cobro, y el
+cierre de caja y el F29 ya cuentan PAGADA y COMPLETADA. Con esto la venta con
+tarjeta queda con su folio, y la nota de credito de una devolucion referencia una
+boleta de verdad.
+
+TAMBIEN ES TUYO, Y ES CHICO: en SeccionModeloSii la primera opcion sigue siendo
+MODELO_B, y su texto dice que "la pasarela ya informa el debito al SII". Te sugiero
+poner MODELO_A primero y que el texto de MODELO_B diga que vale solo con el
+terminal de un operador autorizado.
+
+
+EL IMPUESTO ADICIONAL Y EL FOLIO AHORA VIAJAN
+
+Era como dijiste: el respaldo y la bajada nombraban las columnas una por una, y el
+impuesto y el folio no estaban en ninguna de las dos. Ahora:
+
+    respaldo (sube)     el producto nuevo sube con codigo, tasa y folio. El que
+                        la nube ya tenia se completa solo si alla estan vacios,
+                        y no se pisa lo que la nube ya sabe
+    bajada              el producto nuevo baja con los tres campos. En el que
+                        ya existe, un codigo en 0 de la nube no borra el del
+                        terminal, y el folio se completa si falta
+
+Tu nube, con todo en 0, se corrige sola en el proximo respaldo desde un terminal
+que tenga los codigos. Una caja reinstalada que baja de cero ya no pierde el
+impuesto ni la verificacion de edad.
+
+La prueba hace las dos vueltas: un producto nuevo que sube, uno que ya estaba
+arriba en 0 y se completa, uno que baja de la nube, y una nube que vuelve en 0 y
+no borra el del terminal.
+
+
+LA LINEA DE LA MIGRACION
+
+Tenias razon: la 022 miraba solo el codigo. Como la 022 ya corrio en tu base y en
+la mia, la linea va en una migracion nueva, la 023: donde quedo 271 con tasa 10,
+vuelve al 27. La tasa es lo que se cobro, asi que manda ella. Tiene su prueba, con
+una Zero en 271 al 10 y un Crush en 271 al 18 que no se toca.
+
+
+LAS CIFRAS DE HOY
+
+    unitarias del servidor     337 en 27 suites
+    integracion                100 en 15 suites, sobre pg-mem
+
+Todas pasan. Hoy no las corri sobre PostgreSQL real porque Docker no estaba
+arriba en mi equipo. La ultima corrida real es la del 13-11, con 98, y la repito
+cuando lo levante. La interfaz no la toque, asi que valen tus 199.
+
+Actualice el README, la arquitectura, la guia de despliegue, el informe de pruebas,
+el estado del proyecto, el manual (el comprobante y el impuesto adicional) y el
+mapa de procesos, con sus .docx.
+
+Reinstale la aplicacion sobre la instalacion existente y comprobe que lleva la
+migracion 023 y el emisor nuevo, y que los datos siguen intactos.
+
+
+LO QUE QUEDA
+
+De tu lado: que el carrito no muestre ILA cuando el comprobante es boleta, y el
+orden y el texto del selector del modelo de emision.
+
+De mi lado: repetir las pruebas sobre PostgreSQL real.
+
+Y de los dos: volver a correr la demo entera en una instalacion limpia. Esta vez
+la venta con tarjeta tiene que salir con boleta y folio, y la boleta de la
+cerveza sin ILA.
