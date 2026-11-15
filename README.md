@@ -37,7 +37,7 @@ Cumple con las normativas del **Servicio de Impuestos Internos (SII)**, la **Ley
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 352 pruebas unitarias en 28 suites y 104 pruebas de integración en 17 suites (medidas el 15-11-2026 sobre PostgreSQL real; en `pg-mem` corren 103, porque la de migraciones concurrentes necesita la base real), 199 pruebas de interfaz en 26 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
+- **Pruebas:** 353 pruebas unitarias en 28 suites y 104 pruebas de integración en 17 suites (medidas el 15-11-2026 sobre PostgreSQL real; en `pg-mem` corren 103, porque la de migraciones concurrentes necesita la base real), 199 pruebas de interfaz en 26 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
 
 ---
 
@@ -101,7 +101,7 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 352 pruebas unitarias del servidor y de contrato (28 suites)
+npm run test:unit            # 353 pruebas unitarias del servidor y de contrato (28 suites)
 npm test                     # 104 pruebas de integración (17 suites); 103 sobre pg-mem
 npm --prefix front-end run test   # 198 pruebas de interfaz (Vitest)
 npm run test:e2e:frontend    # 118 comprobaciones de extremo a extremo, con el servidor levantado
