@@ -17,6 +17,7 @@ Cumple con las normativas del **Servicio de Impuestos Internos (SII)**, la **Ley
   * **Ley N° 20.956**: redondeo a la decena más próxima en pagos en efectivo; no aplica a pagos electrónicos.
   * **Ley N° 21.100**: venta de bolsas reutilizables estandarizadas a $1.000.
   * **Resolución Exenta N° 176**: por defecto se emite boleta también con tarjeta; un comercio con terminal de un operador autorizado puede elegir que el voucher la reemplace.
+* **Cobro con tarjeta**: conexiones con Transbank POS Integrado (SDK oficial por USB o serie), Mercado Pago Point y SumUp, en tres modos: simulado (por defecto), sandbox del proveedor y producción. La venta se registra solo si la máquina aprueba. Ver [docs/guia_maquinas_de_pago.docx](./docs/guia_maquinas_de_pago.docx).
 * **Control de caja y balance Z**: apertura con fondo inicial, egresos e ingresos de efectivo, arqueo ciego por denominación y reporte Z.
 * **Vencimientos y mermas**: lotes con fecha de vencimiento, semáforo preventivo y consumo FEFO (*First-Expired, First-Out*, D.S. 977/96 MINSAL).
 * **Reabastecimiento predictivo (ROP)**: velocidad diaria de venta, punto de reorden con stock de seguridad, órdenes de compra y envío por correo al proveedor.
@@ -36,7 +37,7 @@ Cumple con las normativas del **Servicio de Impuestos Internos (SII)**, la **Ley
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 337 pruebas unitarias en 27 suites y 100 pruebas de integración en 15 suites (medidas el 15-11-2026, sobre `pg-mem` y sobre PostgreSQL real), 198 pruebas de interfaz en 26 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
+- **Pruebas:** 349 pruebas unitarias en 28 suites y 102 pruebas de integración en 16 suites (medidas el 15-11-2026 sobre PostgreSQL real; en `pg-mem` corren 101, porque la de migraciones concurrentes necesita la base real), 199 pruebas de interfaz en 26 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
 
 ---
 
@@ -100,8 +101,8 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 337 pruebas unitarias del servidor y de contrato (27 suites)
-npm test                     # 100 pruebas de integración (15 suites) sobre pg-mem
+npm run test:unit            # 349 pruebas unitarias del servidor y de contrato (28 suites)
+npm test                     # 102 pruebas de integración (16 suites); 101 sobre pg-mem
 npm --prefix front-end run test   # 198 pruebas de interfaz (Vitest)
 npm run test:e2e:frontend    # 118 comprobaciones de extremo a extremo, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
