@@ -16,7 +16,7 @@ Cumple con las normativas del **Servicio de Impuestos Internos (SII)**, la **Ley
 * **Cumplimiento legal chileno**:
   * **Ley N° 20.956**: redondeo a la decena más próxima en pagos en efectivo; no aplica a pagos electrónicos.
   * **Ley N° 21.100**: venta de bolsas reutilizables estandarizadas a $1.000.
-  * **Resolución Exenta N° 176**: con tarjeta se entrega el comprobante de la pasarela en vez de boleta, para no duplicar el IVA débito.
+  * **Resolución Exenta N° 176**: por defecto se emite boleta también con tarjeta; un comercio con terminal de un operador autorizado puede elegir que el voucher la reemplace.
 * **Control de caja y balance Z**: apertura con fondo inicial, egresos e ingresos de efectivo, arqueo ciego por denominación y reporte Z.
 * **Vencimientos y mermas**: lotes con fecha de vencimiento, semáforo preventivo y consumo FEFO (*First-Expired, First-Out*, D.S. 977/96 MINSAL).
 * **Reabastecimiento predictivo (ROP)**: velocidad diaria de venta, punto de reorden con stock de seguridad, órdenes de compra y envío por correo al proveedor.
@@ -36,7 +36,7 @@ Cumple con las normativas del **Servicio de Impuestos Internos (SII)**, la **Ley
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 337 pruebas unitarias en 27 suites y 100 pruebas de integración en 15 suites (medidas el 15-11-2026 sobre `pg-mem`; la última corrida sobre PostgreSQL real fue la del 13-11-2026, con 98), 198 pruebas de interfaz en 26 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
+- **Pruebas:** 337 pruebas unitarias en 27 suites y 100 pruebas de integración en 15 suites (medidas el 15-11-2026, sobre `pg-mem` y sobre PostgreSQL real), 198 pruebas de interfaz en 26 archivos, 118 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
 
 ---
 
