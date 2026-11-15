@@ -1,0 +1,141 @@
+15-11-2026
+Las maquinas de pago de verdad, y dos cajas aplicando la misma migracion
+
+
+David, esto viene despues del informe de la boleta, el mismo dia. Lo saque
+porque me preguntaron si podiamos mandarle una venta a una maquina POS de
+verdad, y la respuesta honesta era que no: las cinco pasarelas eran simuladas.
+No habia SDK, ni credenciales, ni una sola llamada de red. Aprobaban siempre, con
+el mismo codigo de autorizacion y la misma tarjeta 4321. Y lo mas delicado: si la
+pasarela fallaba, el simulador de respaldo aprobaba el cobro igual.
+
+Ahora el cobro con tarjeta esta conectado de verdad.
+
+
+LOS TRES MODOS
+
+    simulado     cada pasarela aprueba sin salir del equipo. Es el modo por
+                 defecto, asi que si no se configura nada todo sigue como lo
+                 conoces
+    sandbox      llama al ambiente de pruebas del proveedor, sin dinero real
+    produccion   la maquina del comercio cobra de verdad
+
+Fuera del modo simulado, una falla ya no termina en un cobro aprobado: es un
+rechazo con su motivo.
+
+
+LOS PROVEEDORES
+
+Lo saque de la documentacion oficial de cada uno, no de memoria:
+
+    Transbank     POS Integrado con el SDK oficial, transbank-pos-sdk, por USB
+                  o serie. Ojo: lo que habia antes armaba un enlace de Webpay
+                  Plus, que es para pagar en una tienda online, no para una
+                  caja con maquina
+    Mercado Pago  Point con la Orders API. La caja consulta la orden hasta que
+                  queda en un estado final, y si el cliente no paga a tiempo la
+                  cancela en la maquina para que no cobre despues
+    SumUp         Cloud API. SumUp avisa el resultado por webhook, y la caja no
+                  tiene direccion publica, asi que consulta la transaccion
+    RutPay        queda solo simulado: BancoEstado no publica una API de cobro
+                  para cajas
+
+Lo que pone cada comercio va en datos/pagos.json, en la carpeta del usuario,
+junto a la base: el token, el terminal, el puerto. No viaja en el instalador ni
+se sincroniza con la nube. Sin el archivo, la caja cobra en modo simulado.
+
+Comprobe que el SDK de Transbank carga dentro de la aplicacion instalada y llega
+a los puertos serie, que es lo que necesita para hablar con el terminal.
+
+
+EL CAMBIO QUE MAS IMPORTA: SE COBRA ANTES DE REGISTRAR LA VENTA
+
+Antes, el checkout guardaba la venta y descontaba el stock, y despues cobraba.
+Ahora cobra primero:
+
+    aprobado    se registra la venta, se descuenta el stock, se guarda el pago
+                y sale la boleta
+    rechazado   el servidor responde 402 con el motivo, sin venta y sin tocar
+                el stock
+
+Con una maquina real, el cobro puede tardar lo que tarde el cliente en pasar la
+tarjeta. El servidor espera hasta dos minutos.
+
+
+TOQUE UN ARCHIVO TUYO, UNA LINEA
+
+En pos.api.ts, registrarVenta ahora pasa { timeout: 150000 }. El cliente HTTP
+corta a los 15 segundos, y con una maquina de verdad la caja habria abandonado
+cada cobro mientras el cliente todavia estaba pagando.
+
+El mensaje del rechazo ya lo muestra tu PanelCobro, con obtenerMensajeError. Lo
+que no hay es un aviso de "esperando la maquina" mientras tanto: hoy se ve el
+boton cargando. Si quieres, ese aviso es tuyo.
+
+
+PARA LA PRESENTACION
+
+Mercado Pago es el unico proveedor que permite completar un cobro de punta a
+punta sin maquina fisica. Tiene un terminal virtual de pruebas, y una llamada
+que le pide el resultado. Con esto en datos/pagos.json:
+
+    {
+      "PAGOS_MODO": "sandbox",
+      "MP_ACCESS_TOKEN": "(token de prueba de la aplicacion de Mercado Pago)",
+      "MP_SANDBOX_RESULTADO": "processed"
+    }
+
+la caja manda la orden de verdad al sandbox de Mercado Pago y vuelve aprobada.
+Con "failed" se muestra el rechazo. Para eso hay que crear una aplicacion en el
+panel de desarrolladores de Mercado Pago y sacar su token de prueba. Ninguno de
+los dos lo ha hecho todavia, y es lo que falta para mostrarlo.
+
+Transbank no tiene ambiente de pruebas para el POS Integrado. En sandbox
+responde un terminal simulado con la misma forma que el SDK.
+
+Todo esto esta en docs/guia_maquinas_de_pago.docx, con las fuentes de cada
+proveedor.
+
+
+LO QUE NO SE PUEDE AFIRMAR TODAVIA
+
+Ninguna de las tres conexiones se ha probado contra una maquina fisica ni contra
+la cuenta de un comercio. Las pruebas reemplazan al proveedor por respuestas
+armadas segun su documentacion. Lo deje escrito como limite en el manual y en la
+guia, para que nadie lo diga distinto delante de la comision.
+
+Tampoco la devolucion: emite la nota de credito, pero no reversa el pago en la
+maquina. Eso se hace en el terminal o en el portal del proveedor.
+
+
+LAS MIGRACIONES DE DOS CAJAS
+
+Sospechaba que dos cajas que arrancan a la vez despues de una actualizacion
+chocarian al aplicar la misma migracion en la nube. Lo probe sobre PostgreSQL
+real y chocaba: una de las dos fallaba con llave duplicada, y esa caja se
+quedaba sin la siembra de la nube.
+
+Ahora la marca de la migracion se inserta primero, en la misma transaccion. La
+segunda caja espera a que la primera termine y la salta. Esa prueba corre solo
+sobre PostgreSQL real, porque pg-mem no tiene transacciones concurrentes de
+verdad.
+
+
+LAS CIFRAS
+
+    unitarias del servidor     349 en 28 suites
+    integracion                102 en 16 suites sobre PostgreSQL real, y
+                               101 sobre pg-mem
+    interfaz                   199 en 26 archivos
+
+Todas pasan. Reinstale la aplicacion y los datos siguen intactos.
+
+
+LO QUE QUEDA
+
+De tu lado: si quieres, el aviso de "esperando la maquina" mientras se cobra.
+Sigue pendiente lo del informe anterior: el carrito sin ILA y el selector del
+modelo de emision.
+
+De los dos: crear la aplicacion de pruebas en Mercado Pago, sacar el token y
+ensayar el cobro en sandbox antes del 26.
