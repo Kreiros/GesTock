@@ -1,0 +1,58 @@
+15-11-2026
+Mercado Pago probado contra su sandbox real
+
+
+David, este es corto y cierra lo de las maquinas de pago de hoy. Ya tenemos una
+cuenta de prueba de Mercado Pago, y la caja cobro contra su sandbox de verdad.
+
+
+COMO SE SACO EL TOKEN
+
+Activar las credenciales de prueba en la cuenta real de Mercado Pago daba "Algo
+salio mal" una y otra vez. Lo que funciono fue crear una cuenta de prueba de
+vendedor (Chile), entrar con ella en una ventana de incognito y crear ahi la
+aplicacion Mercado Pago Point. Su Access Token no mueve dinero real.
+
+Para entrar con la cuenta de prueba se usa el usuario, no el ID numerico. Si
+pide un codigo por correo, son los ultimos seis digitos del ID de usuario. Los
+pasos quedaron en la guia de maquinas de pago.
+
+El token esta en datos/pagos.json del equipo de Marcelo, con el modo en sandbox.
+No esta en el repositorio ni en ningun informe.
+
+
+LO QUE SE PROBO
+
+Con el mismo codigo de la caja, contra la API real de Mercado Pago y su terminal
+virtual:
+
+    venta de $1.890, resultado pedido "processed"   APPROVED
+    su devolucion completa                          refunded
+    venta de $2.500, resultado pedido "failed"      REJECTED
+
+El sandbox tardo entre 5 y 47 segundos en mover cada orden: en la demo hay que
+esperar, sin cancelar.
+
+
+LO QUE CAMBIO POR LA PRUEBA
+
+La devolucion fallo la primera vez. Mercado Pago no deja reembolsar un pago
+simulado: responde 412 con refund_not_possible_simulation_payment. En sandbox,
+el reembolso tambien se pide como evento, igual que el pago, y siempre es por la
+orden completa. En produccion se usa el reembolso de verdad, que si acepta montos
+parciales.
+
+Ninguna prueba con respuestas armadas lo habria encontrado: la respuesta del 412
+no esta en la documentacion que lei. Es la misma leccion de tu semana, ahora
+con el sandbox.
+
+
+LO QUE SIGUE
+
+SumUp, cuando tengamos su cuenta de prueba y el Virtual Solo.
+
+Para la demo del 26: un pagos.json con el modo en sandbox y el token de prueba en
+el equipo que se presente, y ensayar una venta con tarjeta antes.
+
+Pruebas: 353 unitarias, 104 de integracion sobre PostgreSQL real (103 sobre
+pg-mem) y tus 199 de interfaz, todas pasando.
