@@ -1,0 +1,119 @@
+15-11-2026
+La devolucion con tarjeta, la venta por el SDK de Transbank y el QR de RutPay
+
+
+David, este es el tercero de hoy, despues del de las maquinas de pago. Son
+tres cosas: una correccion, una prueba y una respuesta.
+
+
+LA DEVOLUCION AHORA DEVUELVE LA PLATA A LA TARJETA
+
+En el informe anterior quedo escrito como limite que la devolucion emitia la
+nota de credito pero no devolvia el cobro en la maquina. Eso ya no es asi.
+
+Cuando la venta se pago con tarjeta, la devolucion primero le pide al proveedor
+que devuelva el dinero, y solo si acepta repone el stock y emite la nota de
+credito. Si el proveedor no acepta, responde 402 con el motivo y no se registra
+nada.
+
+    Transbank     anulacion en el terminal con el numero de operacion de la
+                  venta. Solo anula la venta completa, y el terminal puede
+                  negarse a anular una venta con debito. En esos dos casos la
+                  caja lo dice y la devolucion se hace en el portal de Transbank
+    Mercado Pago  reembolso de la orden, completo o parcial
+    SumUp         reembolso del pago, completo o parcial
+
+El reverso se guarda junto a la devolucion, con el monto en negativo.
+
+
+TOQUE OTRO ARCHIVO TUYO, OTRA LINEA
+
+En ventas.api.ts, la devolucion ahora tambien pasa { timeout: 180000 }, porque
+con Transbank espera a que el terminal anule. Subi el del checkout de 150 a 180
+segundos: el SDK de Transbank espera hasta 150, y la caja no puede cortar antes.
+
+El mensaje del 402 lo muestra tu pantalla de devolucion igual que cualquier
+error. Si quieres un texto propio para el caso "Transbank no anula una
+devolucion parcial", es tuyo.
+
+
+UNA VENTA DE VERDAD POR EL SDK DE TRANSBANK
+
+Transbank no tiene ambiente de pruebas para el POS Integrado. Lo que Transbank
+llama ambiente de integracion, con sus tarjetas de prueba, es de Webpay: se
+digitan en un formulario web de Transbank, no en una maquina. Asi que hice lo
+que si se puede: una venta por el SDK oficial, sin cambiarle nada.
+
+Lo unico simulado es el puerto. Use el puerto serie simulado de la propia
+libreria serialport, y del otro lado puse un terminal que habla el protocolo
+del POS Integrado: tramas con STX, el mensaje, ETX y LRC, un ACK al recibir y la
+respuesta con los campos separados por "|". El resto corre igual que con una
+maquina real: el checkout, la pasarela, el SDK, la boleta y la devolucion.
+
+La prueba hace esto:
+
+    1. el SDK abre el puerto con un sondeo (0100)
+    2. manda la venta con el monto en nueve digitos (0200|000001890|ticket)
+    3. lee la respuesta aprobada: la venta queda pagada, con boleta, y se
+       guardan los ultimos digitos y el numero de operacion
+    4. la devolucion manda la anulacion con ese numero (1200|operacion|), y
+       despues repone el stock
+    5. una venta rechazada por el terminal responde 402, sin venta y sin
+       descontar stock
+
+La prueba sirvio de inmediato: la primera version del terminal tenia los campos
+de la respuesta corridos. El POS Integrado manda las cuotas antes de los ultimos
+digitos de la tarjeta, y lo vi porque el SDK leyo "NaN" donde iban los digitos.
+
+Esta en backend/tests/integration/venta_transbank_sdk.test.ts.
+
+
+SUMUP Y MERCADO PAGO NECESITAN CUENTAS DE PRUEBA
+
+Las dos tienen sandbox de verdad, pero para entrar hay que crear una cuenta, y
+eso lo tiene que hacer una persona. Los pasos estan en la guia de maquinas de
+pago:
+
+    Mercado Pago  crear la aplicacion en el panel de desarrolladores, con
+                  pagos presenciales y Point, y copiar el Access Token de
+                  prueba
+    SumUp         crear la cuenta de desarrollador, que trae una cuenta de
+                  comercio de pruebas, sacar la clave de API y la de afiliado,
+                  y emparejar el Virtual Solo, que simula el lector en el
+                  navegador
+
+Con los datos en datos/pagos.json se puede hacer la venta de punta a punta
+contra cada sandbox.
+
+
+EL QR DE RUTPAY
+
+La pregunta era si basta con que la caja genere el QR que el cliente escanea con
+RutPay. No basta. Ese QR lo entrega BancoEstado al comercio adherido, o lo
+muestra su maquina Compraquí, y lo que lleva adentro esta registrado en
+BancoEstado. No hay una API publica para generarlo con el monto de cada venta.
+Un QR que armemos nosotros se veria bien, pero no se podria pagar.
+
+RutPay sigue solo simulado. Lo que si se podria hacer, si un local lo pide, es
+un cobro "con QR del comercio" en que el cajero confirma a mano que llego el
+pago. Hoy no esta.
+
+
+LAS CIFRAS
+
+    unitarias del servidor     352 en 28 suites
+    integracion                104 en 17 suites sobre PostgreSQL real, y
+                               103 sobre pg-mem
+    interfaz                   199 en 26 archivos
+
+Todas pasan. Reinstale la aplicacion y los datos siguen intactos.
+
+
+LO QUE QUEDA
+
+De tu lado, si quieres: el aviso de "esperando la maquina" en el cobro y en la
+devolucion. Y lo que sigue pendiente de antes: el carrito sin ILA y el selector
+del modelo de emision.
+
+De los dos: crear las cuentas de prueba de Mercado Pago y SumUp, y ensayar la
+venta en sandbox antes del 26.
