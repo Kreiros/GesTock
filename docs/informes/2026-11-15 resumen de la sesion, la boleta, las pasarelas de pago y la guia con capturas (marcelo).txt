@@ -1,0 +1,216 @@
+15-11-2026
+Resumen de la sesion: la boleta, las pasarelas de pago y la guia con capturas
+
+
+David, este informe junta todo lo que hicimos con Marcelo desde que llego tu
+informe del 14 ("el impuesto adicional no viaja y la duda de la boleta") hasta
+ahora. Durante el dia te mande informes sueltos; este los reemplaza como lectura
+unica, en el orden en que paso.
+
+Antes de empezar traje tus commits de cada vez, y al final integre los dos que
+subiste hoy (el carrito sin ILA en la boleta, el selector con MODELO_A primero y
+la ficha rehecha). No tocaban ningun archivo mio, asi que mis commits quedaron
+encima de los tuyos sin conflictos, y tus 205 pruebas de interfaz pasan.
+
+
+1. LA BOLETA YA NO LLEVA IMPUESTO ADICIONAL
+
+Tu duda era la correcta. Lo confirme en el texto vigente del DL 825 que publica el
+SII, articulo 43, inciso final: "No se encuentran afectas a este impuesto
+adicional las ventas del comerciante minorista al consumidor". El Oficio SII
+N 359 de 2007 lo confirma. Para el almacen el ILA es costo, ya viene en el precio.
+
+    boleta (39 y 41)     solo neto e IVA: neto = precio / 1,19, sin CodImpAdic
+                         ni ImptoReten
+    nota de credito      igual que la boleta que anula
+    factura              conserva el ILA: la venta a otro comercio si esta afecta
+
+En una cerveza de $10.000 el neto pasa de 7.168 a 8.403 y el IVA de 1.362 a
+1.597. El total no cambia. Tu arreglo del carrito calza con esto.
+
+
+2. LA VENTA CON TARJETA AHORA EMITE BOLETA
+
+No era un descuido: el modelo por defecto era MODELO_B, donde el voucher de la
+tarjeta reemplaza a la boleta. Eso es legal (Res. Ex. SII 176/2020), pero solo
+si el voucher lo emite un operador autorizado. Con una pasarela simulada el
+cliente se iba sin documento, como dijiste el 09-11.
+
+Ahora el defecto es MODELO_A, que emite boleta tambien con tarjeta. MODELO_B
+sigue en Configuracion, y tu selector ya lo muestra en segundo lugar.
+
+
+3. EL IMPUESTO ADICIONAL Y EL FOLIO AHORA VIAJAN
+
+Como dijiste, el respaldo y la bajada del catalogo nombraban las columnas una por
+una y no incluian el impuesto ni el folio de la factura. Ahora viajan en los dos
+sentidos, y un valor vacio en un lado no borra el del otro. Tu nube, con todo en
+0, se completa en el proximo respaldo.
+
+
+4. LA MIGRACION 023
+
+Tu linea: las filas que la 022 dejo en 271 con tasa 10 vuelven al 27. La misma
+migracion cambia el MODELO_B sembrado por MODELO_A.
+
+
+5. DOS CAJAS APLICANDO LA MISMA MIGRACION
+
+Lo probe sobre PostgreSQL real y chocaban: una de las dos fallaba con llave
+duplicada y se quedaba sin la siembra de la nube. Ahora la marca de la migracion
+se inserta primero, en la misma transaccion, y la segunda caja la salta. Esa
+prueba corre solo sobre PostgreSQL real, porque pg-mem no tiene transacciones
+concurrentes.
+
+
+6. EL COBRO CON TARJETA, CONECTADO DE VERDAD
+
+Marcelo pregunto si podiamos mandarle una venta a una maquina POS. No se podia:
+las cinco pasarelas eran simuladas, aprobaban siempre, y si fallaban el simulador
+aprobaba igual. Ahora:
+
+    tres modos      simulado (por defecto), sandbox del proveedor y produccion
+    Transbank       POS Integrado con su SDK oficial por USB o serie. Lo que
+                    habia antes era un enlace de Webpay Plus, que es para
+                    tiendas online
+    Mercado Pago    Point con la Orders API
+    SumUp           Cloud API, consultando la transaccion
+    RutPay          solo simulado: BancoEstado no publica una API para cajas
+
+Lo que pone cada local (tokens, terminal, puerto) va en datos/pagos.json, en la
+carpeta del usuario, fuera del instalador y de la nube.
+
+El cambio de fondo: el checkout cobra antes de guardar la venta. Si la maquina
+rechaza, responde 402 con el motivo y no hay venta ni descuento de stock.
+
+
+7. LA DEVOLUCION DEVUELVE LA PLATA A LA TARJETA
+
+Si la venta se pago con tarjeta, la devolucion primero le pide al proveedor que
+devuelva el dinero, y solo si acepta repone el stock y emite la nota de credito.
+
+    Transbank     anulacion por numero de operacion; solo la venta completa,
+                  y el terminal puede negarse a anular debito
+    Mercado Pago  reembolso total o parcial
+    SumUp         reembolso total o parcial
+
+
+8. TOQUE DOS ARCHIVOS TUYOS, UNA LINEA EN CADA UNO
+
+    pos.api.ts      el checkout espera hasta 180 s
+    ventas.api.ts   la devolucion espera hasta 180 s
+
+El cliente HTTP corta a los 15 s, y una maquina de verdad espera al cliente. El
+SDK de Transbank espera hasta 150 s, asi que la caja no puede cortar antes.
+
+
+9. COMO SE PROBO CADA PROVEEDOR
+
+    Transbank      con su SDK oficial, sin cambiarle nada, contra un terminal
+                   emulado que habla el protocolo serie del POS Integrado.
+                   Transbank no tiene sandbox para su maquina: su ambiente de
+                   integracion es de Webpay. La prueba encontro un error mio:
+                   el POS manda las cuotas antes de los ultimos digitos de la
+                   tarjeta
+    Mercado Pago   contra su sandbox real, con una cuenta de prueba y el
+                   terminal virtual: venta aprobada, devolucion reembolsada y
+                   venta rechazada
+    SumUp          contra su sandbox real, con una cuenta de prueba chilena y
+                   el Virtual Solo: venta aprobada, cancelada, sin respuesta,
+                   y aprobada con devolucion
+
+Ninguno contra una maquina fisica. El manual y la guia lo dicen asi.
+
+
+10. LO QUE ENCONTRARON LOS SANDBOX
+
+Ninguna prueba con respuestas armadas lo habria encontrado:
+
+    Mercado Pago   no deja reembolsar un pago simulado (412,
+                   refund_not_possible_simulation_payment). En sandbox el
+                   reembolso se pide como evento
+    SumUp          si la caja se cansaba de esperar, el lector seguia pidiendo
+                   la tarjeta: un cliente podia pagar despues sin que hubiera
+                   venta. Ahora la caja retira el cobro del lector, y en el
+                   Virtual Solo se ve pasar solo a "Transaction cancelled"
+    SumUp          el Virtual Solo muestra el monto con dos ceros de mas
+                   ($1.890 aparece como CL$ 189000). SumUp registra el monto
+                   correcto: es solo la pantalla
+
+
+11. LA GUIA DE MAQUINAS DE PAGO, CON 18 CAPTURAS
+
+Hay un documento nuevo: docs/guia_maquinas_de_pago.docx. Explica los tres modos,
+donde van los datos del comercio, como cobra y devuelve la caja, cada proveedor
+con sus pasos para crear la cuenta de prueba, que usar en la presentacion y que
+limites declarar.
+
+Marcelo hizo las capturas de cada paso y de cada flujo, y van en la guia con su
+pie de foto:
+
+    Mercado Pago    crear la aplicacion, elegir Point, nombre y terminos,
+                    cuenta de prueba de vendedor y datos de integracion
+    SumUp, cuenta   claves de afiliado, el Virtual Solo, Cloud API y el
+                    lector listo
+    SumUp, flujos   aceptada, cancelada, sin respuesta (con el cobro retirado
+                    por la caja) y aceptada y devuelta, con el detalle del
+                    reembolso en el panel de SumUp
+
+Las imagenes estan en docs/capturas/pagos/. Para que el .docx las lleve, el
+generador de espejos ahora inserta imagenes.
+
+Deje fuera tres capturas a proposito: el cuadro de guardar, que mostraba los
+archivos personales de Marcelo; el Explorador; y la clave publica de SumUp.
+
+
+12. EL QR DE RUTPAY
+
+Marcelo pregunto si bastaba con que la caja generara el QR. No basta: ese QR lo
+entrega BancoEstado o su maquina Compraqui, y no hay API publica para crearlo con
+el monto. Un QR nuestro no seria pagable. Mercado Pago si tiene QR dinamico con
+API; quedo como idea, no esta hecho.
+
+
+13. ALGO QUE TE PUEDE PASAR: APPDATA VIRTUALIZADA
+
+La aplicacion de escritorio de Claude es un paquete de Windows, y Windows le
+muestra su propia copia de AppData\Roaming. Lo que ella escribe ahi no lo ve la
+caja, y lo que guardas tu no lo ve ella. Me paso con pagos.json: el token que
+movi nunca llego a la carpeta real, y no veia las claves que guardo Marcelo.
+
+Se ve el archivo real por \\localhost\C$\Users\<usuario>\AppData\Roaming\. La
+aplicacion instalada si es la real. Esta en la boveda, en el solucionario.
+
+Tambien tengo que corregirme: cuando escribi "los datos siguen intactos" despues
+de reinstalar, revise esa copia. La carpeta real tiene la base del 06-11 y nada
+de esta sesion la toco.
+
+
+14. LAS CIFRAS
+
+    unitarias del servidor     354 en 28 suites
+    integracion                104 en 17 suites sobre PostgreSQL real, 103 sobre
+                               pg-mem
+    interfaz                   205 en 27 archivos, con tus dos commits de hoy
+
+La aplicacion quedo reinstalada con todo, incluidos tus cambios. El instalador
+nuevo esta en release/GesTock-instalador.rar, para el Drive.
+
+Todo esta subido: GesTock y el repositorio de titulo, con la evidencia
+sincronizada. La boveda tiene notas nuevas sobre la boleta del minorista, las
+maquinas de pago y AppData.
+
+
+15. LO QUE QUEDA
+
+Para la demo del 26:
+
+    - copiar datos/pagos.json de Marcelo al equipo de la presentacion
+    - abrir el Virtual Solo en el navegador antes de empezar
+    - ensayar una venta con Mercado Pago y otra con SumUp; el sandbox de
+      Mercado Pago tardo hasta 47 segundos, hay que esperar sin cancelar
+
+De tu lado, si quieres: un aviso de "esperando la maquina" mientras la caja
+espera el pago o la devolucion, porque hoy solo se ve el boton cargando.
+
+Y de los dos: la demo entera en una instalacion limpia, con tarjeta incluida.
