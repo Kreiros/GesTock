@@ -1,0 +1,112 @@
+16-11-2026
+Cambio de plan para la presentacion, la configuracion local y las maquinas configuradas
+
+
+David, traje tus dos commits de hoy antes de tocar nada: los medios de pago que
+el local tiene conectados, y los avisos de la devolucion que deja plata por
+entregar y de la venta sin boleta. Los dos calzan con lo que hay en el servidor.
+
+Cambio de plan respecto del informe de la manana: la presentacion es manana, asi
+que el plan de once pasos queda para despues. Hoy solo se hizo lo necesario para
+presentar.
+
+
+1. TE ENTREGO LO QUE ESPERABA TU SELECTOR
+
+Tu metodosVisibles lee pasarelas_configuradas del estado de la caja, y el
+servidor no lo mandaba. Ahora /pos/status trae dos campos:
+
+    modo_pagos               simulado, sandbox o produccion
+    pasarelas_configuradas   solo fuera del modo simulado. Transbank siempre
+                             (en sandbox responde el terminal de prueba),
+                             Mercado Pago si hay token y terminal, SumUp si
+                             estan sus cinco datos
+
+En modo simulado el campo no viene, y tu codigo muestra todas menos RutPay, como
+lo dejaste. Lo probe en modo sandbox con solo Mercado Pago configurado y
+respondio ["TRANSBANK","MERCADOPAGO"].
+
+Con el pagos.json de la presentacion van a aparecer las tres: Transbank, Mercado
+Pago y SumUp.
+
+modo_pagos te sirve para el aviso del modo de cobro, si quieres mostrarlo. No es
+urgente para manana.
+
+
+2. LA CAJA INSTALADA YA LEE EL CORREO Y GEMINI
+
+Era el critico 2 de la manana. La aplicacion instalada solo leia pagos.json, asi
+que en una instalacion real no enviaba el correo de reposicion ni leia facturas
+con IA. Ahora lee tambien configuracion.json, en la misma carpeta de datos:
+
+    la nube       PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE, PGSSL o
+                  DATABASE_URL
+    el correo     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+    las facturas  GEMINI_API_KEY, GEMINI_MODELS
+
+Con eso tambien queda lista la puerta para Neon o Supabase, que se hace despues
+de la presentacion.
+
+
+3. LA LECTURA DE FACTURAS, PROBADA EN MODO PRODUCCION, Y UN ERROR QUE APARECIO
+
+Levante el servidor compilado en modo produccion con la clave de Gemini y le
+mande la imagen de una factura de tres productos. La leyo en 14 segundos:
+proveedor, RUT, folio, fecha y los tres productos con sus codigos, cantidades y
+precios.
+
+Pero la primera vez el total salio 49 en vez de 48.766. El modelo a veces lee
+"48.766" como un numero con decimales. La segunda vez lo leyo bien, o sea que
+depende de la corrida, que es peor que fallar siempre.
+
+Lo corregi donde nace: la factura leida por Gemini queda siempre en pesos
+enteros. Un monto con decimales es un punto de miles mal leido, porque el peso
+no tiene decimales. Aplica al total y al precio y subtotal de cada producto, con
+su prueba.
+
+Esto afecta tu pantalla de revision de factura solo para bien: ya no deberia
+aparecer un total absurdo.
+
+Una cosa que vi y NO toque: cuando la factura no trae giro, direccion, telefono
+o dia de visita del proveedor, el servidor los rellena con valores inventados
+("Direccion Comercial", "+56 2 2345 6789", "Lunes"). Quedan guardados en el
+proveedor nuevo como si fueran reales. Hay que cambiarlo por vacio, despues de
+la presentacion.
+
+
+4. EL CORREO
+
+El codigo esta listo, pero no esta probado: no tenemos una cuenta de correo
+configurada en ninguna parte. Marcelo tiene que poner los datos SMTP en
+configuracion.json. Cuando esten, pruebo el envio de verdad.
+
+
+5. EL PAQUETE PARA EL EQUIPO DE LA PRESENTACION
+
+Marcelo tiene una carpeta con el instalador nuevo, el docker-compose.yml, su
+pagos.json en sandbox, configuracion.json con la clave de Gemini y un
+INSTRUCCIONES.txt con los pasos. No esta en el repositorio porque lleva
+credenciales.
+
+En el equipo nuevo la nube parte vacia, y en el primer arranque hay que marcar
+la casilla del catalogo de demostracion para tener los 25 productos.
+
+
+LAS CIFRAS
+
+    unitarias del servidor     356 en 29 suites
+    integracion                105 sobre pg-mem; la ultima corrida sobre
+                               PostgreSQL real es la de ayer, con 106
+    interfaz                   226 en 30 archivos, con tus dos commits
+
+Todas pasan. Reinstale la aplicacion y revise el paquete instalado.
+
+
+LO QUE QUEDA
+
+Para manana: el ensayo completo en el equipo de la presentacion, con tarjeta, la
+factura y el correo si Marcelo alcanza a configurarlo.
+
+Despues de la presentacion: el resto del plan de la manana (la cuenta demo en la
+nube, el cobro sin venta, el registro de errores, la red local, la venta sin
+turno) y los datos inventados del proveedor.
