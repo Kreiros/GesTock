@@ -1,0 +1,34 @@
+16-11-2026
+La bateria de extremo a extremo con las reglas nuevas
+
+
+David, nota corta. Las reglas de hoy dejaron tu bateria de extremo a extremo
+desfasada en dos lugares, y la ajuste. Son archivos de tests_e2e_frontend, que
+son tuyos, asi que te dejo exacto lo que cambie.
+
+    05-ventas.mjs           esperaba ventas sembradas, que ya no existen desde
+                            el 13. Ahora hace su propia venta: abre la caja,
+                            comprueba que no se vende sobre el stock, vende una
+                            unidad, revisa la boleta con su folio_provisional y
+                            la devuelve. Despues sigue con lo que ya revisaba
+    10-permisos-cajero.mjs  entraba con cajero@gestock.cl y cajero123, que en
+                            produccion ya no abre ninguna cuenta. Ahora crea su
+                            propio cajero con /auth/register. Tambien vuelve a
+                            entrar como admin al empezar, porque el bloque 09
+                            deja la sesion cerrada: si este bloque se saltaba,
+                            el 11 corria sin token y fallaba con 401
+    tests_rendimiento       abre la caja una vez antes de medir las ventas
+
+Las variables GESTOCK_CAJERO_EMAIL y GESTOCK_CAJERO_PASSWORD siguen sirviendo
+si quieres usar un cajero que ya exista.
+
+La corri contra el servidor compilado en modo produccion, con una base nueva:
+
+    125 de 125 comprobaciones, 3 saltadas
+
+Antes eran 118. Las saltadas son las tuyas de siempre: no hay productos bajo el
+punto de reorden, la ingesta de factura se prueba a mano, y el set de
+certificacion consume folios.
+
+No actualice INFORME_BATERIA_PRUEBAS_FRONTEND, que describe tu corrida de 118
+con su detalle. Si quieres lo regeneras con esta corrida; el README ya dice 125.

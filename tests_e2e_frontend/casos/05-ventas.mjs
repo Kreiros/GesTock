@@ -1,9 +1,53 @@
 // casos/05-ventas.mjs
-import { obtener } from '../lib/cliente.mjs'
+import { CONFIG, enviar, obtener } from '../lib/cliente.mjs'
+
+// usuario de la siembra de desarrollo; con sesion iniciada el servidor usa el de la sesion
+const USUARIO = process.env.GESTOCK_USUARIO || '00000000-0000-0000-0000-000000000002'
 
 export const nombre = 'Ventas: historial, devoluciones y documentos'
 
 export async function ejecutar(b) {
+  // la bateria hace su propia venta: una instalacion limpia no trae historial
+  const catalogo = await obtener('/api/v1/pos/products')
+  const producto = (catalogo.datos?.data ?? []).find((p) => Number(p.stock_actual) >= 3)
+
+  if (!producto) {
+    b.omitir('vender y devolver', 'no hay un producto con stock para vender')
+  } else {
+    const venta = (cantidad) =>
+      enviar('/api/v1/pos/checkout', {
+        tenant_id: CONFIG.tenant,
+        usuario_id: USUARIO,
+        metodo_pago: 'EFECTIVO',
+        items: [{ producto_id: producto.id, cantidad }],
+      })
+
+    // si el turno ya estaba abierto esta llamada responde 400 y no cambia nada
+    const abrir = await enviar('/api/v1/caja/abrir', { tenant_id: CONFIG.tenant, usuario_id: USUARIO, monto_apertura: 20000 })
+    b.comprobar('la caja queda abierta para vender', [200, 201, 400].includes(abrir.estado), `estado ${abrir.estado}`)
+
+    const sobreStock = await venta(Number(producto.stock_actual) + 1)
+    b.comprobar(
+      'no se vende mas que el stock',
+      sobreStock.estado === 409 && sobreStock.datos?.error === 'STOCK_INSUFICIENTE',
+      `estado ${sobreStock.estado}`,
+    )
+
+    const hecha = await venta(1)
+    b.estado('POST /pos/checkout vende una unidad', hecha, 201)
+    const dte = hecha.datos?.data?.dte
+    b.comprobar('la venta sale con su boleta y folio', Boolean(dte?.folio), `folio ${dte?.folio}`)
+    b.comprobar('la boleta dice si su folio es provisional', typeof dte?.folio_provisional === 'boolean')
+
+    const devuelta = await enviar('/api/v1/pos/devolucion', {
+      tenant_id: CONFIG.tenant,
+      usuario_id: USUARIO,
+      venta_id: hecha.datos?.data?.saleId,
+    })
+    b.estado('POST /pos/devolucion devuelve la venta', devuelta, 200)
+    b.comprobar('la devolucion emite su nota de credito', Boolean(devuelta.datos?.data?.folio_nc))
+  }
+
   const ventas = await obtener('/api/v1/pos/transactions?limit=100')
   b.estado('GET /pos/transactions responde', ventas, 200)
 

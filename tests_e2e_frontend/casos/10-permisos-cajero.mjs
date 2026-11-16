@@ -3,8 +3,9 @@ import { autenticarSiEsNecesario, enviar, guardarToken, obtener } from '../lib/c
 
 export const nombre = 'Permisos: lo que puede y no puede el cajero'
 
-const CORREO = process.env.GESTOCK_CAJERO_EMAIL || 'cajero@gestock.cl'
-const CLAVE = process.env.GESTOCK_CAJERO_PASSWORD || 'cajero123'
+// La bateria crea su propio cajero: en produccion la clave de demostracion no abre ninguna cuenta
+const CORREO = process.env.GESTOCK_CAJERO_EMAIL || `cajero.permisos.${Date.now()}@gestock.cl`
+const CLAVE = process.env.GESTOCK_CAJERO_PASSWORD || 'ClaveDePermisos2026'
 
 // las que necesita para atender
 const DEL_CAJERO = [
@@ -23,6 +24,14 @@ const DEL_ADMIN = [
 ]
 
 export async function ejecutar(b) {
+  // el bloque anterior cierra su sesion: se vuelve a entrar como admin para crear al cajero, y pase
+  // lo que pase el resto de la bateria sigue como admin
+  guardarToken(null)
+  await autenticarSiEsNecesario()
+  if (!process.env.GESTOCK_CAJERO_EMAIL) {
+    await enviar('/api/v1/auth/register', { nombre: 'Cajero de la bateria', email: CORREO, password: CLAVE, rol: 'cajero' })
+  }
+
   const login = await enviar('/api/v1/auth/login', { email: CORREO, password: CLAVE })
 
   if (login.estado === 404) {
