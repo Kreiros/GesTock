@@ -1,0 +1,61 @@
+15-11-2026
+SumUp probado contra su sandbox, y por que un archivo no se veia
+
+
+David, ultimo de hoy. Con esto quedan probados los tres proveedores de tarjeta.
+
+
+SUMUP CONTRA SU SANDBOX
+
+Creamos una cuenta de prueba de SumUp (Chile, en pesos), sacamos la clave de API
+y la de afiliado, y emparejamos el Virtual Solo, que es el lector simulado de
+SumUp en el navegador: Get started, Cloud API, y el lector muestra un codigo de
+emparejamiento que dura cinco minutos.
+
+Con el mismo codigo de la caja:
+
+    venta de $1.890, se presiono Pay en el lector   SUCCESSFUL, APPROVED
+    su devolucion completa                          REFUNDED por $1.890
+    venta de $2.500, se cancelo en el lector        FAILED, REJECTED
+
+Cada venta tardo unos 40 segundos, casi todo esperando que alguien presione el
+boton.
+
+Una rareza que conviene saber para la demo: el Virtual Solo muestra el monto con
+dos ceros de mas. La venta de $1.890 aparecio en su pantalla como CL$ 189000.
+Antes de creerle a la pantalla consulte la transaccion en SumUp, y registro
+1890 CLP. El error es solo de visualizacion del lector virtual, no nuestro.
+
+
+LOS TRES PROVEEDORES, COMO QUEDAN
+
+    Mercado Pago   probado contra su sandbox real: venta, devolucion, rechazo
+    SumUp          probado contra su sandbox real: venta, devolucion, rechazo
+    Transbank      probado con su SDK oficial contra un terminal emulado,
+                   porque no tiene sandbox para el POS Integrado
+
+Ninguno se ha probado contra una maquina fisica. El manual y la guia lo dicen
+asi.
+
+
+POR QUE UN ARCHIVO NO SE VEIA
+
+Esto te puede pasar a ti tambien si trabajas con la aplicacion de escritorio de
+Claude. Esa aplicacion es un paquete de Windows, y Windows le muestra su propia
+copia de la carpeta AppData\Roaming. Lo que ella escribe ahi queda en una copia
+privada que la caja no ve, y lo que guarda el usuario no lo ve ella.
+
+Me paso con datos/pagos.json: Marcelo guardo las claves y yo seguia viendo el
+archivo viejo. El token de Mercado Pago que yo habia movido, a su vez, nunca
+llego a la carpeta real. Lo corregi escribiendo por \\localhost\C$, que no pasa
+por la copia, y borre la copia privada. Esta en la boveda, en el solucionario.
+
+La aplicacion instalada si es la real: Programs\GesTock no se virtualiza, asi
+que todas las reinstalaciones de hoy llegaron.
+
+
+LO QUE QUEDA
+
+Para la demo del 26: el pagos.json de Marcelo ya tiene Mercado Pago y SumUp en
+sandbox. En el equipo de la presentacion hay que copiar ese archivo, abrir el
+Virtual Solo en el navegador y ensayar una venta con cada uno.
