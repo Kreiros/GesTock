@@ -1,0 +1,193 @@
+16-11-2026
+Revision previa a produccion: hallazgos y plan
+
+
+David, hoy se instala la caja en un equipo real para la presentacion, con la
+nube en Docker, y ademas queremos dejarla lista para subirla a una nube gratuita
+(Neon o Supabase). Antes de eso revise el proyecto completo. Te mando lo que
+encontre y el plan, porque dos pasos tocan la interfaz y tienes que decidir si
+los haces tu o los hago yo.
+
+Todavia no cambie nada del codigo. Esto es el plan, no el resultado.
+
+
+EL BACKUP
+
+Antes de revisar deje un respaldo en
+backups/backup_pre_produccion_2026-11-15_235148 (454 MB): los dos historiales de
+git, la carpeta de trabajo, el instalador vigente y los datos de mi instalacion,
+con su manifiesto. Esta fuera de git porque lleva credenciales.
+
+
+LO QUE REVISE Y COMO ESTA
+
+    compilacion        servidor e interfaz sin errores, lint limpio
+    dependencias       npm audit --omit=dev da cero en los dos
+    unitarias          354 pasando
+    integracion        106 pasando sobre PostgreSQL real
+    interfaz           tus 213 pasando
+    extremo a extremo  97 de 98, contra el servidor compilado en modo
+                       produccion y una base nueva. La que falla es de la
+                       prueba: espera ventas sembradas que ya no existen
+
+Tambien recorri un turno entero por la API en modo produccion: login, venta en
+efectivo, venta con tarjeta con su boleta, boleta de la cerveza sin ILA,
+devolucion con reverso, sincronizacion y reportes. Todo eso funciona. El cierre
+de caja no quedo probado en esa corrida, por un parametro mal puesto en mi
+script, no por el sistema.
+
+O sea: las pruebas pasan y el flujo funciona, y aun asi hay tres cosas que no
+pueden salir asi. Es tu leccion de la semana otra vez: aparecieron al levantar
+el sistema como se va a usar, no en las pruebas.
+
+
+LOS TRES CRITICOS
+
+1. SE PUEDE ENTRAR CON LA CUENTA DE DEMOSTRACION
+
+En modo produccion, con una base local nueva y un administrador propio, entre
+con admin@gestock.cl y admin123. La caja no tenia esa cuenta: el login, cuando
+no encuentra al usuario en la base local, lo busca en la nube. Y nuestra nube
+(gestock_cloud_db) conserva la cuenta demo con su clave publica, y mas de 200
+cuentas que dejaron las pruebas, varias de administrador, con claves que estan
+en el repositorio.
+
+Cualquiera que conozca el proyecto entra como administrador.
+
+2. LA CAJA INSTALADA NO SE PUEDE CONFIGURAR
+
+La aplicacion instalada solo lee pagos.json. No hay donde ponerle la direccion
+ni la clave de la nube, la clave de Gemini ni el correo. Las consecuencias:
+
+    la nube      usa PostgreSQL en localhost con la clave por defecto del
+                 repositorio. No se le puede apuntar a otra
+    el correo    el aviso de reposicion no sale: lo comprobe, responde que
+                 faltan SMTP_HOST, SMTP_USER y SMTP_PASSWORD
+    las facturas la lectura con IA queda sin clave y cae al extractor de PDF
+
+3. SIN PAGOS.JSON, LA TARJETA APRUEBA SOLA
+
+En produccion, si no existe pagos.json, el cobro con tarjeta queda en modo
+simulado: la caja dice "aprobado" sin cobrarle a nadie, y nada en pantalla
+avisa en que modo esta. Para la presentacion vamos a usar el sandbox, pero un
+equipo sin el archivo regalaria la mercaderia sin que nadie lo note.
+
+
+LOS ALTOS
+
+4. COBRO SIN VENTA. Desde ayer se cobra antes de guardar la venta. Si el cobro
+   se aprueba y despues falla el guardado, el cliente queda cobrado, sin venta
+   y sin devolucion automatica.
+
+5. VENTA SIN BOLETA. Si falla la emision de la boleta, la venta se registra
+   igual y responde 201 con el documento vacio. Nadie se entera.
+
+6. LA CAJA QUEDA ABIERTA A LA RED DEL LOCAL. El servidor escucha en todas las
+   interfaces, no solo en el propio equipo. Y el limite de intentos de login se
+   evita cambiando la cabecera X-Device-ID, porque el limite se cuenta por esa
+   cabecera.
+
+7. NO QUEDA REGISTRO DE ERRORES. En la aplicacion instalada los errores van a la
+   consola, que nadie ve. Si algo falla en la presentacion no hay como saber que
+   fue.
+
+8. EL DOCKERFILE NO SIRVE PARA SUBIR EL SERVIDOR. No construye tu interfaz y
+   copia la carpeta publica antigua.
+
+9. STOCK NEGATIVO Y VENTA SIN TURNO. Vendi 99.999 unidades de un producto y la
+   caja lo acepto. Tambien vendi sin abrir la caja. Lo segundo le quita sentido a
+   tu caso 2 de la ficha: si se puede vender sin abrir el turno, la diferencia
+   del cierre no significa nada.
+
+
+LOS MENORES
+
+    - las rutas /payments/initiate y /payments/confirm siguen expuestas y tu
+      interfaz no las usa
+    - no hay respaldo automatico de la base local
+    - la bateria de extremo a extremo tiene que crear su propia venta
+    - el README dice 198 pruebas de interfaz en una linea; son 213
+    - los folios son provisionales, generados por la caja. Ya esta declarado
+      como ambiente de certificacion, pero en pantalla no se ve
+
+
+EL PLAN
+
+    1   un archivo configuracion.json en la carpeta de datos, para la nube
+        (con SSL), Gemini y el correo, igual que pagos.json             critico 2
+    2   una base de nube nueva y limpia en Docker, con clave propia, y
+        bloquear en produccion el login con las claves de demostracion  critico 1
+    3   la misma configuracion apuntando a Neon o Supabase, probada con
+        una base gratuita                                               critico 2
+    4   aviso visible del modo de cobro (simulado, sandbox, produccion)
+        en la caja y en el comprobante                                  critico 3
+    5   devolver el cobro si la venta no se guarda, y avisar cuando la
+        venta queda sin boleta                                          altos 4 y 5
+    6   el servidor escuchando solo en el propio equipo, y el limite de
+        login contado por direccion IP                                  alto 6
+    7   registro de errores en un archivo de la carpeta de datos        alto 7
+    8   aviso de folios provisionales en pantalla y en el comprobante   SII
+    9   no vender sin turno abierto, y avisar (sin bloquear) cuando se
+        vende sobre el stock                                            alto 9
+    10  corregir el Dockerfile                                          alto 8
+    11  todas las pruebas, reinstalar, recorrer el turno en la
+        aplicacion instalada, documentos e informe
+
+Del 1 al 8 es lo necesario para la presentacion. El 9 cambia como trabaja el
+cajero. El 10 puede esperar.
+
+
+LO QUE TE TOCA A TI, O ME DICES QUE LO HAGA YO
+
+Tres pasos tienen una parte de interfaz:
+
+    paso 4   mostrar el modo de cobro. Yo expongo el modo en la respuesta del
+             servidor (por ejemplo en /pos/status); falta donde se ve en la
+             caja y en VoucherImpreso. Tu aviso de "esperando la maquina" es
+             buen lugar para decir "modo sandbox"
+    paso 5   cuando la venta queda sin boleta, la respuesta va a traer un aviso
+             y la pantalla tiene que mostrarlo en el comprobante
+    paso 8   el texto de folios provisionales en el comprobante
+    paso 9   si se bloquea la venta sin turno, el servidor responde con un
+             error claro; tu pantalla ya muestra los mensajes del servidor,
+             pero conviene que lleve al cajero a abrir la caja
+
+Si prefieres que yo toque esos textos para llegar a tiempo, dimelo y te dejo
+exacto lo que cambie, como con ila.ts.
+
+
+DOS COSAS QUE QUIERO TU OPINION
+
+EL PASO 9. Tu dijiste que abrir la caja debe seguir siendo explicito. Estoy de
+acuerdo, y por eso propongo que el servidor no deje vender sin turno. El stock,
+en cambio, propongo solo avisar: en un almacen el stock del sistema se atrasa
+respecto de la gondola, y bloquear la venta de algo que el cliente tiene en la
+mano es peor que un numero negativo.
+
+LA CUENTA DEMO. El paso 2 bloquea en produccion cualquier cuenta que conserve la
+clave de demostracion. Tus pruebas de interfaz y la demo en desarrollo no
+cambian. Pero si alguna vez entraste a la aplicacion instalada con
+admin@gestock.cl, eso deja de funcionar: se entra con la cuenta que se crea en
+el primer arranque.
+
+
+LO QUE NO ENTRA EN ESTE PLAN
+
+    - la arquitectura de la nube: la caja habla directo con PostgreSQL, no con
+      un servicio intermedio. Con Neon o Supabase eso significa que la clave de
+      la base vive en cada caja. Para un local es aceptable; para varios
+      comercios no, y queda declarado
+    - la firma del instalador, que ya esta declarada
+    - las maquinas de pago fisicas, que siguen sin probarse
+
+
+LO QUE QUEDA
+
+De tu lado: decirme si haces tu la parte de interfaz de los pasos 4, 5, 8 y 9,
+y tu opinion sobre el paso 9.
+
+De mi lado: ejecutar el plan cuando Marcelo lo apruebe, y mandarte el informe
+con lo que cambio.
+
+De los dos: el recorrido del turno completo en la aplicacion instalada, con la
+nube nueva, antes de la presentacion.
