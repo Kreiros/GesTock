@@ -38,3 +38,21 @@ ya instalaste el paquete anterior, reinstala encima con el nuevo: no se pierde
 ningun dato.
 
 Marcelo
+
+Posdata, 15:20. Al traer tu commit fbc263e la interfaz no compilaba:
+
+    VoucherImpreso.tsx(26)  error TS2304: Cannot find name 'modo'
+
+Agregaste modo a Props y lo usas en leyendaVoucher(modo), pero falto sacarlo de
+los parametros del componente. Lo corregi en esa linea y nada mas:
+
+    export function VoucherImpreso({ venta, emisor, modo }: Props)
+
+Con eso compila y pasan tus 244 pruebas en 33 archivos. El instalador y el
+paquete llevan ya tu commit con esta correccion.
+
+Otra cosa: subiste los archivos de la caja a "Evidencias de sistema/Frontend",
+que es la ruta antigua. Desde hoy la estructura es "Evidencias de
+sistema/Aplicacion/Frontend" (lo pidio la profesora en la retroalimentacion).
+Los deje en la ruta nueva y quite la copia de la antigua; eran identicos. Antes
+de sincronizar de nuevo, trae los cambios de Proyecto_titulo.
