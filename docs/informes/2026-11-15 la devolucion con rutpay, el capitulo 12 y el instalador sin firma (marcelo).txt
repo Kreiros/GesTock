@@ -1,0 +1,110 @@
+15-11-2026
+La devolucion con RutPay, el capitulo 12 y el instalador sin firma
+
+
+David, traje tu commit del aviso antes de tocar nada. El aviso con el nombre de
+cada maquina esta muy bien pensado, y que aparezca recien a los veinte segundos
+evita apurar al cajero cuando el cobro sale rapido. Lo del 402 que no se veia es
+un muy buen hallazgo: mi mensaje sobre la anulacion parcial de Transbank no le
+llegaba nunca al cajero, y sin tu revision lo habriamos descubierto en la demo.
+
+Hice las tres cosas que me pediste.
+
+
+1. LA DEVOLUCION CON RUTPAY: TENIAS RAZON, Y NO ERA SOLO RUTPAY
+
+El problema era como dijiste: el reverso no se puede hacer, pero tampoco se
+emitia la nota de credito, y el cliente tiene derecho a ella igual.
+
+Al mirarlo vi que pasaba lo mismo en otros dos casos de Transbank: la devolucion
+parcial y la venta con debito que el terminal se niega a anular (codigo 8). En
+los tres el reverso no falla: no se puede hacer desde la caja, por como funciona
+el proveedor.
+
+Asi que separe dos tipos de "no se pudo devolver":
+
+    una falla          red caida o rechazo del proveedor. Sigue cortando con
+                       402 y no registra nada, porque corresponde reintentar
+    una imposibilidad  RutPay, Transbank parcial, debito en Transbank. La
+                       devolucion sigue: nota de credito, stock repuesto, y el
+                       reverso queda PENDING con su motivo
+
+En el segundo caso la respuesta es 200 y el mensaje termina asi:
+
+    El pago con RutPay no se devolvio automaticamente: RutPay no permite
+    devolver el pago desde la caja: devuelve el dinero en efectivo o por
+    transferencia.
+
+Y en la respuesta, reverso_tarjeta trae manual: true, por si quieres mostrarlo
+distinto en el dialogo. Hoy tu dialogo muestra el mensaje completo, y con eso el
+cajero ya sabe que tiene que hacer.
+
+OJO, esto cambia lo que te dije antes del caso de Transbank parcial: ya no da
+402, ahora emite la nota de credito y avisa que la diferencia se devuelve desde
+el portal o en efectivo. Tu texto del dialogo para ese 402 ya no se va a ver en
+ese caso, pero sigue sirviendo para las fallas de verdad.
+
+Lo probe de punta a punta por la ruta de devolucion: una venta de dos unidades
+con Transbank devuelta en parte, y una venta con RutPay devuelta completa. Las dos
+emiten nota de credito, reponen el stock y dejan el reverso como PENDING, y en el
+caso parcial el terminal no recibe ninguna anulacion.
+
+
+2. EL CAPITULO 12 CON TUS ONCE CASOS
+
+Quedo en el orden de tu ficha nueva: primera impresion, abrir la caja con 20.000,
+efectivo con bolsa, precio y stock, producto con foto, tarjeta, reposicion, sin
+internet guiado, cierre, devolucion si alcanza, y exploracion.
+
+Lo que cambio ademas de la tabla:
+
+    la preparacion     el turno queda sin abrir, porque abrirlo es el caso 2,
+                       y los dos comandos de docker para el caso 8
+    el caso 6          ahora cobra de verdad en el sandbox de Mercado Pago, con
+                       boleta y folio. Lo que se observa es si espera sin
+                       cancelar mientras tu aviso dice que la maquina esta
+                       esperando
+    por que cambio     un parrafo con tus razones: por que salio entrar al
+                       sistema, por que la bolsa va con la venta, por que abrir
+                       la caja sigue siendo explicito
+    el registro        las columnas de la ficha: que le costo, y que dijo y
+                       que opina con sus palabras
+    los limites        el caso 6 no usa maquina fisica, y el instalador sin
+                       firma
+
+Tambien quite la frase vieja del caso 6, la que decia que con tarjeta no se
+emitia boleta: con MODELO_A ya no es cierta.
+
+
+3. EL INSTALADOR SIN FIRMA, DECLARADO
+
+Quedo en los limites del manual, junto al del SII, y en los del ensayo: el
+aviso de SmartScreen, como continuar, y que en una venta real el certificado
+seria parte del costo de distribucion. Para el ensayo, la aplicacion se instala
+antes de que llegue la persona, asi que el aviso no entra en la sesion.
+
+Una cosa: no puse tu rango de precios ni que el certificado solo se le vende a
+empresas, porque no lo verifique y existen certificados para personas. Deje que
+lo emite una autoridad certificadora, que valida la identidad de quien firma y
+que se paga cada ano. Si tienes la fuente de los precios, lo agregamos.
+
+
+LAS CIFRAS
+
+    unitarias del servidor     354 en 28 suites
+    integracion                106 en 17 suites sobre PostgreSQL real, 105 sobre
+                               pg-mem
+    interfaz                   213 en 28 archivos, con tu aviso
+
+Todas pasan. Reinstale la aplicacion con tu aviso y el reverso manual, y revise
+el paquete en la carpeta real, no en la copia de AppData.
+
+
+LO QUE QUEDA
+
+De tu lado: los dos backlogs con la iteracion 5 y sus dos riesgos nuevos, como
+dijiste. Y si quieres, mostrar distinto la devolucion con reverso manual, usando
+el manual: true de la respuesta.
+
+De los dos: la demo entera sobre una instalacion limpia, con tarjeta. Ahora se
+puede probar tambien la devolucion parcial con tarjeta, que ya no se corta.
