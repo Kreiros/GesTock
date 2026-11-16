@@ -1,0 +1,40 @@
+16-11-2026
+El correo de reposicion con remitente GesTock y cuerpo en tablas
+
+
+David, nota corta. Cambie como se ve el correo del aviso de reposicion. Es todo
+backend, no toque nada tuyo, pero cambia lo que ve el usuario y por eso te aviso.
+
+    email.service.ts        el remitente ahora lleva nombre: "GesTock". Antes
+                            salia solo la direccion de la cuenta. Si SMTP_FROM
+                            ya trae un nombre ("Mi Local <correo>"), se respeta
+    aviso-reposicion.ts     el cuerpo HTML se rehizo con tablas y los colores de
+                            tu tema (theme.ts): cabecera oscura con la marca,
+                            franja azul, un resumen de tres cifras (proveedores,
+                            productos, total estimado) y una tabla por proveedor
+                            con producto, stock actual, cantidad a pedir y
+                            subtotal. "Agotado" va en rojo. Los productos sin
+                            proveedor van en una tabla ambar aparte. El pie dice
+                            que el correo lo envio la aplicacion GesTock
+
+El asunto y la version en texto plano no cambiaron, asi que nada de lo que
+revisan las pruebas se movio.
+
+Un detalle para que no te confunda: si el correo se envia a la misma cuenta que
+lo despacha, Gmail muestra "yo" como remitente, tenga el nombre que tenga. En
+cualquier otra bandeja se ve "GesTock".
+
+Lo probe asi:
+
+    29 de 29 pruebas de aviso_programado
+    vista previa del HTML en el navegador, a 385 px de ancho
+    envio real por Gmail con la cuenta de la aplicacion, aceptado
+
+No lo abri en Outlook ni en el correo del telefono. Use solo tablas y estilos
+en linea, que es lo que esos clientes respetan, pero no lo comprobe ahi.
+
+El instalador y el paquete de la presentacion se rehicieron con este cambio. Si
+ya instalaste el paquete anterior, reinstala encima con el nuevo: no se pierde
+ningun dato.
+
+Marcelo
