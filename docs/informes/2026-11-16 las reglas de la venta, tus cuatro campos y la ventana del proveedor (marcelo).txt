@@ -1,0 +1,157 @@
+16-11-2026
+Las reglas de la venta, tus cuatro campos y la ventana del proveedor
+
+
+David, lei tu informe. La presentacion es manana y Marcelo necesita entregar la
+aplicacion funcionando, asi que hoy hice del plan lo que deja la caja sin
+agujeros. Tus cuatro campos ya estan. Y toque la interfaz en un lugar, que te
+cuento exacto mas abajo.
+
+
+1. TUS CUATRO CAMPOS
+
+    modo                     en GET /pos/status: "simulado", "sandbox" o
+                             "produccion". Tambien viene como modo_pagos, que
+                             es el nombre que puse en la manana; usa modo
+    pasarelas_configuradas   en GET /pos/status, fuera del modo simulado
+    folio_provisional        boolean dentro del dte que devuelve el checkout,
+                             cuando la venta tiene folio
+    TURNO_CERRADO            el 400 de la venta sin turno trae error:
+                             "TURNO_CERRADO", ademas del texto
+
+Tenias razon con el aviso del modo: en el aviso de espera no sirve, porque en
+modo simulado dura menos de un segundo. El chip fijo y la linea del voucher son
+el lugar correcto.
+
+
+2. LA VENTA SIN TURNO Y SOBRE EL STOCK
+
+EL TURNO queda bloqueado en el servidor, como acordamos. Con la caja cerrada el
+checkout responde 400 TURNO_CERRADO y no toca nada. Tu boton para ir a abrir la
+caja ya tiene de donde colgarse.
+
+EL STOCK: aqui cambie lo que habiamos acordado tu y yo, y te explico por que.
+Dijimos solo avisar. Marcelo pidio que la caja no venda mas de lo que hay, y es
+su decision. Ahora responde 409:
+
+    error      "STOCK_INSUFICIENTE"
+    message    "No hay stock suficiente: AMBROSOLI Loop 90 g (quedan 25, se
+               piden 99999). Ajusta la cantidad o corrige el stock en
+               Inventario."
+    productos  [{ producto_id, nombre, disponible, pedida }]
+
+El mensaje le dice al cajero la salida para tu caso de la gondola: si el
+producto esta en la mano del cliente, se corrige el stock en Inventario y se
+vende. Dos lineas del mismo producto se suman antes de comparar.
+
+Tu PanelCobro ya muestra ese mensaje. Con el arreglo productos podrias marcar la
+linea del carrito que se pasa, si quieres.
+
+
+3. EL COBRO SIN VENTA, QUE PUSISTE PRIMERO
+
+Tenias razon en subirlo: con tu boton habilitado, el reintento cobraba dos
+veces. Ahora, si la tarjeta se aprobo y el guardado falla, el servidor devuelve
+el cobro antes de responder. La respuesta es un 500 con uno de dos codigos:
+
+    COBRO_DEVUELTO    cobro_devuelto: true. El dinero volvio: se puede cobrar
+                      de nuevo, y el texto lo dice
+    COBRO_SIN_VENTA   cobro_devuelto: false. La tarjeta quedo cobrada y no se
+                      pudo devolver. El texto dice "NO cobres de nuevo", con la
+                      pasarela y el monto
+
+Con eso puedes distinguirlo: deshabilita el reintento solo cuando llegue
+COBRO_SIN_VENTA.
+
+
+4. LA CUENTA DEMO
+
+En produccion, las claves admin123 y cajero123 ya no abren ninguna cuenta,
+tampoco una que este en la nube. Lo comprobe en modo produccion contra una nube
+que si tiene la cuenta demo: responde 401.
+
+Las 200 cuentas de prueba de nuestra nube de desarrollo no las toque. En el
+equipo de la presentacion la nube parte vacia, asi que no existen ahi. Queda
+pendiente limpiarlas en la nuestra.
+
+
+5. LO DEMAS DEL PLAN QUE QUEDO HECHO
+
+    red local     la caja de escritorio escucha solo en el propio equipo
+    login         20 intentos fallidos por direccion cada 15 minutos; los
+                  correctos no cuentan
+    registro      avisos y errores quedan en datos/gestock.log
+    Dockerfile    construye tu interfaz actual. No lo pude probar: en este
+                  equipo no tengo docker en la terminal
+
+
+6. TOQUE LA INTERFAZ EN FACTURAS, Y TE DEJO EXACTO QUE
+
+Aparecio un defecto mio: cuando la factura no trae giro, direccion, telefono o
+dia de visita del proveedor, el servidor los rellenaba con valores inventados, y
+al proveedor nuevo le ponia el correo contacto@proveedor.cl. Ese correo es el
+que recibe las ordenes de compra. Ahora lo que falta queda vacio.
+
+Marcelo pidio que, despues de escanear, se abra una ventana para completar esos
+datos. La hice yo porque es para manana. Lo que agregue:
+
+    DialogoDatosProveedor.tsx   nuevo, en invoices/components/compartidos.
+                                Copie la estructura de tu DialogoProveedor:
+                                mismos campos, mismos textos, mismo pie
+    datosProveedor.ts           nuevo, en invoices/utils, con tres funciones y
+                                sus tres pruebas
+    IngresoFacturasPage.tsx     el estado del proveedor, la ventana, un aviso
+                                con el boton "Datos del proveedor" para
+                                reabrirla, y los campos en el confirmar
+    types.ts                    email_proveedor en la previsualizacion
+
+Como funciona: si el proveedor es nuevo y le falta algo, la ventana se abre sola
+al terminar el escaneo. "Completar despues" la cierra sin exigir nada. No toque
+RevisionFacturaVisual, RevisionFacturaTecnica ni EncabezadoFactura.
+
+Lo mire andando: escanee una factura de prueba, la ventana se abrio con los
+campos vacios, el correo mal escrito marca error y bloquea guardar. Revisalo y
+cambia lo que no calce con tu criterio; es tu pantalla.
+
+Tambien corregi un error de la lectura: Gemini a veces devuelve 48.766 como
+numero con decimales y el total salia 49. Ahora los montos quedan en pesos
+enteros.
+
+
+7. LO QUE COMPROBE
+
+Recorri un turno entero contra el servidor compilado, en modo produccion y con
+una base nueva, 21 comprobaciones, todas bien: la clave demo no entra, sin turno
+no se vende, se abre la caja, venta en efectivo con boleta sin ILA y folio
+provisional, venta con tarjeta con boleta, no se vende sobre el stock,
+devolucion, sincronizacion, cierre de caja, y con la caja cerrada otra vez no se
+vende.
+
+    unitarias del servidor     356 en 29 suites
+    integracion                111 en 18 suites sobre PostgreSQL real, 110 sobre
+                               pg-mem
+    interfaz                   229 en 31 archivos, con tus commits y mis tres
+                               pruebas
+
+La aplicacion quedo reinstalada y el paquete para el equipo de la presentacion
+esta actualizado.
+
+
+8. EL CORREO SIGUE SIN PROBAR
+
+El codigo lee los datos desde configuracion.json, pero Google no le deja a
+Marcelo crear una contrasena de aplicacion en su cuenta. Mientras no haya una
+cuenta de correo que funcione, el aviso de reposicion no sale.
+
+
+LO QUE QUEDA
+
+De tu lado: el chip del modo, la linea del voucher, el aviso de folio
+provisional, el boton para abrir la caja, y deshabilitar el reintento con
+COBRO_SIN_VENTA. Y revisar mi ventana del proveedor.
+
+De mi lado: el correo, cuando haya cuenta; limpiar las cuentas de prueba de la
+nube de desarrollo; y la bateria de extremo a extremo, que ahora tiene que abrir
+la caja antes de vender.
+
+De los dos: el ensayo completo en el equipo de la presentacion.
