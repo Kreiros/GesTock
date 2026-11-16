@@ -1,0 +1,190 @@
+16-11-2026
+Resumen del dia: todo lo que cambio antes de la presentacion
+
+
+David, este informe junta todo lo de hoy en una sola lectura y reemplaza las
+notas sueltas que te mande durante el dia. Va en el orden en que paso.
+
+
+1. LA REVISION Y EL BACKUP
+
+Antes de tocar nada deje un respaldo en
+backups/backup_pre_produccion_2026-11-15_235148: los dos historiales de git, la
+carpeta de trabajo, el instalador y los datos de la instalacion, con su
+manifiesto. Esta fuera de git porque lleva credenciales.
+
+Despues revise el proyecto levantandolo como se va a usar: el servidor compilado,
+en modo produccion y con una base nueva. De ahi salieron tres hallazgos criticos
+y seis altos, que te mande en el informe de la manana. Todos quedaron tratados
+hoy, salvo los que nombro al final.
+
+
+2. LO QUE CAMBIO EN LA VENTA
+
+    sin turno          con la caja cerrada el checkout responde 400 con
+                       error: "TURNO_CERRADO" y no toca nada
+    sobre el stock     responde 409 con error: "STOCK_INSUFICIENTE", el texto
+                       con lo que queda de cada producto y el arreglo
+                       productos [{ producto_id, nombre, disponible, pedida }].
+                       Dos lineas del mismo producto se suman antes de comparar
+    cobro sin venta    si la tarjeta se aprobo y el guardado falla, el servidor
+                       devuelve el cobro antes de responder. El 500 trae
+                       COBRO_DEVUELTO (se puede cobrar de nuevo) o
+                       COBRO_SIN_VENTA (la tarjeta quedo cobrada: no reintentar)
+    folio provisional  el dte de la venta trae folio_provisional: boolean
+
+Sobre el stock: tu y yo habiamos acordado solo avisar. Marcelo pidio que la caja
+no venda mas de lo que hay, y es su decision. El texto del 409 le dice al cajero
+la salida para tu caso de la gondola: corregir el stock en Inventario y vender.
+
+
+3. LO QUE CAMBIO EN EL ESTADO DE LA CAJA
+
+GET /pos/status trae ahora:
+
+    modo                     "simulado", "sandbox" o "produccion"
+    pasarelas_configuradas   fuera del modo simulado: Transbank siempre, Mercado
+                             Pago y SumUp si estan sus datos en pagos.json
+
+Son los cuatro campos que pediste, con folio_provisional y TURNO_CERRADO.
+
+
+4. SEGURIDAD
+
+    cuenta demo     en produccion, admin123 y cajero123 no abren ninguna
+                    cuenta, tampoco una que este en la nube
+    login           20 intentos fallidos por direccion cada 15 minutos; los
+                    correctos no cuentan. Antes el limite se evitaba cambiando
+                    la cabecera X-Device-ID
+    red local       la caja de escritorio escucha solo en el propio equipo
+    registro        avisos y errores quedan en datos/gestock.log
+
+
+5. LA CAJA INSTALADA YA SE PUEDE CONFIGURAR
+
+Lee configuracion.json junto a pagos.json, en la carpeta de datos: la nube (PG...
+o DATABASE_URL), el correo (SMTP_...) y la lectura de facturas (GEMINI_...).
+Antes no tenia como recibirlos, y una instalacion real no enviaba correo ni leia
+facturas con IA.
+
+
+6. LAS FACTURAS
+
+LA LECTURA. Probada en modo produccion con una factura de tres productos: leyo
+proveedor, folio, fecha y productos en 14 segundos. Aparecio un error que
+depende de la corrida: Gemini a veces devuelve 48.766 como numero con decimales
+y el total salia 49. Ahora los montos quedan siempre en pesos enteros.
+
+EL PROVEEDOR. El servidor rellenaba con valores inventados lo que la factura no
+traia, y al proveedor nuevo le ponia el correo contacto@proveedor.cl, que es el
+que recibe las ordenes de compra. Ahora lo que falta queda vacio.
+
+LA VENTANA. Marcelo pidio una ventana para completar esos datos despues de
+escanear, y la hice yo porque era para hoy. Es lo unico que toque de tu
+interfaz:
+
+    DialogoDatosProveedor.tsx   nuevo, en invoices/components/compartidos, con
+                                la estructura de tu DialogoProveedor
+    datosProveedor.ts           nuevo, en invoices/utils, con sus tres pruebas
+    IngresoFacturasPage.tsx     el estado del proveedor, la ventana, y un aviso
+                                con el boton "Datos del proveedor"
+    types.ts                    email_proveedor en la previsualizacion
+
+Se abre sola si el proveedor es nuevo y le falta algo, y "Completar despues" la
+cierra sin exigir nada. La mire andando con una factura de prueba. Revisala y
+cambia lo que no calce con tu criterio.
+
+
+7. EL CORREO, PROBADO DE VERDAD
+
+Marcelo creo una contrasena de aplicacion de Google y la puso en
+configuracion.json. Envie el aviso de reposicion desde el servidor en modo
+produccion a su propia direccion, y Gmail lo acepto: 3 proveedores, 3 productos,
+total estimado $46.150. Falta que Marcelo confirme que lo ve en su bandeja.
+
+
+8. TU BATERIA DE EXTREMO A EXTREMO
+
+Las reglas nuevas la dejaron desfasada y la ajuste:
+
+    05-ventas.mjs           hace su propia venta: abre la caja, comprueba que no
+                            se vende sobre el stock, vende, revisa la boleta y
+                            la devuelve
+    10-permisos-cajero.mjs  crea su propio cajero, porque cajero123 ya no entra
+                            en produccion, y vuelve a entrar como admin al
+                            empezar: si este bloque se saltaba, el 11 corria sin
+                            token
+    tests_rendimiento       abre la caja antes de medir las ventas
+
+Corrida en modo produccion con una base nueva: 125 de 125, 3 saltadas. Antes
+eran 118. No actualice INFORME_BATERIA_PRUEBAS_FRONTEND, que describe tu corrida
+de 118; el README ya dice 125.
+
+
+9. EL RENDIMIENTO
+
+Lo corri con ventas, contra el servidor en modo produccion: siete escenarios
+completos y sin errores, 160 ventas hechas.
+
+    lecturas                todas dentro de su referencia; el inventario, el
+                            mas lento, con p95 de 62 ms contra 200
+    venta, una caja         dentro: en el servidor p50 4 ms y p95 8 ms, contra
+                            15 de referencia
+    venta, cuatro cajas     SOBRE la referencia: en el servidor p50 4 ms y p95
+                            38 ms
+
+El de cuatro cajas ya oscilaba antes de hoy: de las dos ultimas corridas del 13-11, una
+quedo dentro y la otra sobre. Es la cola de la escritura en disco que
+documentamos, no las reglas nuevas, que agregan dos lecturas por venta. Lo
+dejo declarado, no resuelto.
+
+
+10. LO DEMAS
+
+    Dockerfile      construye tu interfaz actual. No lo pude probar: no tengo
+                    docker en la terminal de este equipo
+    documentos      manual, guia de maquinas de pago, estado del proyecto,
+                    README y sus .docx, con las cifras de hoy
+    evidencia       sincronizada en el repositorio de titulo
+    paquete         Marcelo tiene una carpeta con el instalador, el
+                    docker-compose, pagos.json, configuracion.json y las
+                    instrucciones para el equipo de la presentacion
+
+
+11. LO QUE COMPROBE
+
+Un turno entero contra el servidor compilado, en modo produccion y con base
+nueva, 21 comprobaciones bien: la clave demo no entra, sin turno no se vende,
+venta en efectivo con boleta sin ILA, venta con tarjeta con boleta, no se vende
+sobre el stock, devolucion, sincronizacion, cierre de caja, y con la caja
+cerrada otra vez no se vende.
+
+    unitarias del servidor     356 en 29 suites
+    integracion                111 en 18 suites sobre PostgreSQL real, 110 sobre
+                               pg-mem
+    interfaz                   229 en 31 archivos
+    extremo a extremo          125 de 125
+    rendimiento                7 escenarios sin errores, uno sobre su referencia
+
+La aplicacion quedo reinstalada y revise el paquete instalado.
+
+
+12. LO QUE NO QUEDO HECHO
+
+    - las 200 cuentas de prueba siguen en la nube de desarrollo. En el equipo de
+      la presentacion la nube parte vacia
+    - la nube en Neon o Supabase: la configuracion ya lo permite, falta crear la
+      base y probarlo
+    - el respaldo automatico de la base local
+    - las rutas /payments/initiate y /payments/confirm siguen expuestas y tu
+      interfaz no las usa
+    - las maquinas de pago fisicas siguen sin probarse
+
+
+LO QUE QUEDA DE TU LADO
+
+El chip del modo y la linea del voucher, el aviso de folio provisional, el boton
+para abrir la caja con TURNO_CERRADO, deshabilitar el reintento con
+COBRO_SIN_VENTA, y revisar mi ventana del proveedor.
+
+Y de los dos: el ensayo completo en el equipo de la presentacion.
