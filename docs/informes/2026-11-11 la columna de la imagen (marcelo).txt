@@ -18,7 +18,7 @@ para la defensa.
 
 ANTES DE SEGUIR: REESCRIBI LA HISTORIA DE LOS DOS REPOSITORIOS
 
-Quite de mis commits la linea Co-Authored-By de Claude, y para eso hubo que
+Quite de mis commits la linea de coautoria automatica, y para eso hubo que
 reescribir la historia desde el 07-11 y subirla forzada. El codigo es
 exactamente el mismo, pero los commits desde esa fecha tienen otro
 identificador, tambien los tuyos. Tus mensajes no los toque.

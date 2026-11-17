@@ -1,0 +1,52 @@
+17-11-2026
+URGENTE: se reescribio la historia de GesTock, rehaz tu copia antes de subir
+
+
+David, lee esto antes de hacer cualquier push a GesTock.
+
+Reescribi la historia de main y la subi forzada. El motivo: nueve commits
+tuyos, del 6 al 11 de octubre, llevaban al final del mensaje una linea de
+coautoria automatica, y por esa linea GitHub listaba a un tercero como
+contribuyente del repositorio. El 11 de noviembre la habia quitado solo de mis
+commits; ahora la quite tambien de esos nueve.
+
+Lo que cambio y lo que no
+
+    no cambio    el codigo: la diferencia entre antes y despues es cero
+                 lineas. Tampoco los autores, las fechas ni los titulos de
+                 ningun commit. Siguen siendo 236 commits
+    si cambio    el identificador de los 211 commits desde el 6 de octubre,
+                 los tuyos y los mios. A esos nueve mensajes se les quito esa
+                 unica linea. La etiqueta v1.0.0 se movio al commit
+                 equivalente; la Release y el instalador publicado siguen
+                 iguales
+
+Lo que tienes que hacer, una sola vez
+
+Si no tienes trabajo sin subir en GesTock:
+
+    git fetch origin
+    git reset --hard origin/main
+    git fetch origin --tags --force
+
+Si tienes commits sin subir, no hagas el reset: avisame primero y los pasamos
+a la historia nueva. Y NO hagas push desde tu copia actual, ni con fuerza ni
+sin ella: volverias a subir la historia antigua con las nueve lineas.
+
+Para comprobar que quedaste bien, este comando no debe mostrar nada:
+
+    git log --all -i --grep="co-authored-by" --format="%h %s"
+
+Los identificadores de commit que cito en informes anteriores (por ejemplo
+fbc263e o 47b9c87) ya no existen con ese nombre. Los commits son los mismos,
+con otro identificador.
+
+Para adelante: revisa que tu herramienta no agregue esa linea al final de los
+mensajes de commit. Si vuelve a aparecer una sola, GitHub vuelve a listar al
+tercero como contribuyente.
+
+Proyecto_titulo no se toco: su historia ya estaba limpia.
+
+Hay un respaldo completo de la historia anterior, por si hiciera falta.
+
+Marcelo

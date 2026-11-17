@@ -173,7 +173,7 @@ API; quedo como idea, no esta hecho.
 
 13. ALGO QUE TE PUEDE PASAR: APPDATA VIRTUALIZADA
 
-La aplicacion de escritorio de Claude es un paquete de Windows, y Windows le
+La herramienta de escritorio que uso es un paquete de Windows, y Windows le
 muestra su propia copia de AppData\Roaming. Lo que ella escribe ahi no lo ve la
 caja, y lo que guardas tu no lo ve ella. Me paso con pagos.json: el token que
 movi nunca llego a la carpeta real, y no veia las claves que guardo Marcelo.
