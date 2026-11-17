@@ -1,0 +1,82 @@
+16-11-2026
+Respuesta a tus cuatro puntos sobre la recuperacion de clave
+
+
+David, lei tu revision. Tres de los cuatro puntos eran mios y quedaron
+corregidos. Va en el mismo orden.
+
+    1. pruebas del dialogo     tuyo, como dijiste. No las escribo. El boton
+                               "Pedir otro codigo" tambien te lo dejo
+    2. el 502 delataba al      corregido, y de paso lo del tiempo
+       administrador
+    3. la palabra suelta       corregida
+    4. el segundo pedido       corregido en el mensaje, sin delatar la cuenta
+       antes de un minuto
+
+
+El punto 2, que era el importante
+
+Tenias razon: el 502 solo podia salir si el correo era de un administrador.
+Cambie el orden de la ruta para que ninguna respuesta dependa de la cuenta:
+
+    primero   se comprueba el servidor de correo (verify de SMTP), antes de
+              mirar de quien es el correo. Si no responde, 502 para cualquiera
+    despues   se busca la cuenta. Si es de un administrador, el correo se
+              despacha sin esperarlo
+    siempre   200 con el mismo cuerpo
+
+Con eso el 502 dice "este equipo no tiene salida de correo", que no revela nada
+de ninguna cuenta. Y como el envio ya no se espera, lo del tiempo que anotaste
+tambien se cae: la respuesta tarda lo mismo exista o no la cuenta.
+
+El costo: si el servidor de correo responde al verify y despues rechaza justo
+ese envio, el administrador ve el 200 y el correo no llega. Es raro, queda en
+gestock.log, y el codigo fallido se anula para que pueda pedir otro de
+inmediato sin esperar el minuto.
+
+El contrato cambia en una sola cosa:
+
+    502   antes: "no se pudo enviar el correo" (solo administradores)
+          ahora: "no se pudo conectar con el servidor de correo" (cualquiera)
+
+
+El punto 4
+
+Aqui no hice lo que proponias, y te explico por que. Un mensaje distinto que
+diga "ya se envio uno hace poco" solo puede salir para un administrador, porque
+solo ellos tienen un codigo pendiente: seria abrir por el punto 4 lo mismo que
+cerramos en el punto 2.
+
+Lo resolvi en el texto, que es el mismo para todos:
+
+    Si ese correo es de un administrador del local, le enviamos un codigo que
+    vence en 15 minutos. Si pediste uno hace menos de un minuto, ese sigue
+    vigente: revisa tu correo antes de pedir otro.
+
+Quien aprieta dos veces ya no queda esperando sin saber: el mensaje le dice que
+el primero sigue sirviendo. Si cuando ajustes el boton "Pedir otro codigo"
+quieres deshabilitarlo un minuto en pantalla, calza con esto y no revela nada.
+
+
+El punto 3
+
+No se colo al escribir: es una marca de una herramienta que uso para anotar
+atajos conocidos, y no debia quedar en el codigo. La quite y el comentario dice
+lo mismo sin ella. Busque en backend, front-end, electron, scripts y pruebas y
+no hay otra.
+
+
+Pruebas
+
+    7 en recuperar_clave.test.ts (eran 6). Las nuevas fijan que el 503 y el 502
+    son identicos para un administrador y para un correo que no existe, y que un
+    envio fallido responde 200 igual que un correo desconocido
+
+La version sube a 0.2.1. El instalador y el paquete se rehicieron.
+
+Sobre el correo del administrador para la presentacion: de acuerdo. Si vamos a
+mostrar la recuperacion, propongo crear la cuenta con el Gmail de la
+aplicacion, que es el que podemos abrir en la sala. Lo cerramos antes del
+ensayo.
+
+Marcelo
