@@ -75,17 +75,19 @@ El portafolio
 
 El guion
 
-Te mando aparte un Word con el guion de la presentacion. Son 12 minutos:
-6:10 yo y 5:50 tu. Cada lamina la presenta una sola persona, repartidas por lo
-que hizo cada uno.
+Te mando aparte un Word con el guion de la presentacion. Son 12 minutos y cada
+lamina la presenta una sola persona. Tu presentas la primera mitad y yo la
+segunda, con un solo cambio de voz:
 
-    tu    3 un dia en el local, 4 la caja, 6 metodologia, 8 del papel al
-          pedido, 11 ensayo de aceptacion y 14 conclusiones, con el cierre
-    yo    1 portada, 2 el problema, 5 objetivos, 7 arquitectura, 9 cobro y
-          boleta, 10 calidad, 12 anexo de tecnologias y 13 limites
+    tu    laminas 1 a 7: portada, el problema, un dia en el local, la caja,
+          objetivos, metodologia y arquitectura sin conexion. 6:05
+    yo    laminas 8 a 14: del papel al pedido, cobro y boleta, calidad, ensayo
+          de aceptacion, anexo de tecnologias, limites y conclusiones. 5:55
 
-La metodologia quedo contigo porque llevaste los artefactos del plan, y cierras
-tu porque la demostracion parte con la caja, que operas tu.
+Ojo que eso te deja a ti los objetivos y la arquitectura, y a mi el ensayo de
+aceptacion, que hiciste tu. Los textos estan escritos para que cualquiera de
+los dos los pueda decir, pero conviene que leas la lamina 7 con calma, y yo te
+voy a preguntar por el ensayo para contarlo bien.
 
 Trae tambien el reparto de la demostracion (tu operas la caja, yo la nube, los
 pagos y el correo) y una lista de preguntas probables con quien responde.
@@ -114,8 +116,6 @@ Lo que queda pendiente
                          No esta hecho
     2.3 Formativa        falta en FASE 2 / Evidencias Grupales. Hay que saber
                          si tenemos una copia con la retroalimentacion
-    lamina 8             la captura todavia muestra los botones verdes de
-                         WhatsApp
     cajero               el servidor no le impide editar productos ni devolver
                          ventas de otro turno. La lamina 3 ya no lo afirma,
                          pero es un pendiente real del producto
