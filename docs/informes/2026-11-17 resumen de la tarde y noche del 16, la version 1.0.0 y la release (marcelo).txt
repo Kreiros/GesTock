@@ -76,10 +76,16 @@ El portafolio
 El guion
 
 Te mando aparte un Word con el guion de la presentacion. Son 12 minutos:
-6:05 yo y 5:55 tu, repartidos por lo que hizo cada uno.
+6:10 yo y 5:50 tu. Cada lamina la presenta una sola persona, repartidas por lo
+que hizo cada uno.
 
-    tu    laminas 3, 4 y 11 completas; y tu parte de la 1, 6, 7, 8, 10, 13 y 14
-    yo    laminas 2, 5, 9 y 12 completas; y mi parte de las mismas compartidas
+    tu    3 un dia en el local, 4 la caja, 6 metodologia, 8 del papel al
+          pedido, 11 ensayo de aceptacion y 14 conclusiones, con el cierre
+    yo    1 portada, 2 el problema, 5 objetivos, 7 arquitectura, 9 cobro y
+          boleta, 10 calidad, 12 anexo de tecnologias y 13 limites
+
+La metodologia quedo contigo porque llevaste los artefactos del plan, y cierras
+tu porque la demostracion parte con la caja, que operas tu.
 
 Trae tambien el reparto de la demostracion (tu operas la caja, yo la nube, los
 pagos y el correo) y una lista de preguntas probables con quien responde.
