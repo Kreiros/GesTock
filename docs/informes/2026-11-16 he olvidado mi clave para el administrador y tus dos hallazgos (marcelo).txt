@@ -1,0 +1,86 @@
+16-11-2026
+"He olvidado mi contrasena" para el administrador, y tus dos hallazgos
+
+
+David, dos cosas: respondo tu informe de la instalacion limpia, y te aviso de un
+modulo nuevo que toca el login, que es tuyo.
+
+
+Tus dos hallazgos
+
+    los tres errores del log   corregido en init-db.ts. Ahora pregunta con
+                               PRAGMA table_info si la columna existe antes de
+                               agregarla, y ya no envuelve el ALTER en un
+                               try/catch mudo. Una instalacion nueva no deja
+                               ninguna linea en gestock.log
+    18 productos               corregido en electron/primer-arranque.html: dice
+                               25. Tambien en la guia de arranque limpio y en el
+                               documento de arquitectura
+
+Sobre el token de Mercado Pago: es de la cuenta de prueba. Le pregunte a la
+propia API (/users/me) con ese token y responde con la etiqueta test_user y un
+nombre que empieza con TESTUSER. El prefijo APP_USR lo llevan tambien las
+credenciales de los usuarios de prueba. No cobra de verdad.
+
+Sobre tu ultimo parrafo: mi instalacion si tiene los dos json en la carpeta de
+datos, los revise hoy.
+
+
+El modulo nuevo: recuperar la clave
+
+Agregue que el administrador pueda recuperar su clave desde el login. Solo el
+administrador: a un cajero se la cambia el administrador desde Configuracion,
+como hasta ahora.
+
+Backend, dos rutas publicas:
+
+    POST /api/v1/auth/password/olvide        { email }
+        envia un codigo de 6 digitos al correo del administrador
+        200  siempre el mismo mensaje, sea admin, cajero o un correo que no
+             existe, para no revelar que correos son de un administrador
+        503  el equipo no tiene el correo configurado (configuracion.json)
+        502  el correo no pudo salir (sin internet)
+
+    POST /api/v1/auth/password/restablecer   { email, codigo, password_nueva }
+        200  clave cambiada
+        400  codigo errado o vencido, o clave de menos de 8 caracteres
+        429  cinco intentos errados: hay que pedir otro codigo
+
+El codigo vence a los 15 minutos, sirve una vez, y no se puede pedir otro antes
+de un minuto. Vive en memoria, no en la base: si la aplicacion se reinicia, se
+pide otro. No hubo migracion.
+
+Interfaz. Aqui toque archivos tuyos, te dejo exacto cuales:
+
+    DialogoRecuperarClave.tsx   nuevo, en features/auth/components. Dos pasos en
+                                la misma ventana: correo, y despues codigo mas
+                                clave nueva. Segui la forma de
+                                DialogoEditarUsuario
+    FormularioLogin.tsx         el boton "He olvidado mi contrasena" bajo "Entrar", y
+                                el aviso verde cuando la clave se cambio
+    auth.api.ts, useAuth.ts,    las dos llamadas, sus hooks, el tipo y los dos
+    types.ts, endpoints.ts      endpoints
+
+Si prefieres otra forma o otro texto, cambialo con confianza: el contrato del
+backend es el de arriba.
+
+Lo probe asi:
+
+    6 pruebas nuevas en backend/tests/integration/recuperar_clave.test.ts
+    el flujo completo en el navegador contra el servidor compilado en modo
+    produccion: pedir el codigo, un codigo errado, el correcto, y entrar con la
+    clave nueva (la anterior ya no entra)
+    Gmail acepto el envio real del correo con el codigo
+
+No escribi pruebas de interfaz para el dialogo; esas son tuyas si las quieres.
+
+Un cuidado para la presentacion: la recuperacion depende de que el correo del
+administrador sea uno que se pueda abrir. Si la cuenta se crea con un correo
+inventado, el codigo no llega a ninguna parte.
+
+El instalador y el paquete se rehicieron con todo esto, y con tu foto de la
+bolsa reutilizable (47b9c87). La version sube a 0.2.0, asi que el archivo ahora
+se llama GesTock-0.2.0-instalador.exe. Se instala encima del anterior sin perder
+datos.
+
+Marcelo
