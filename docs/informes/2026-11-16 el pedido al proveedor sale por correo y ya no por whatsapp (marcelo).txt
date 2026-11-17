@@ -1,0 +1,81 @@
+16-11-2026
+El pedido al proveedor sale por correo y ya no por WhatsApp
+
+
+David, este cambio toca bastantes archivos tuyos, asi que te lo dejo completo.
+Decidimos usar un solo canal, el correo, y saque WhatsApp de la aplicacion. El
+boton "Pedir por WhatsApp" paso a ser "Pedir por correo".
+
+Que hace ahora
+
+El dialogo sigue igual en la forma: abre el pedido ya redactado y el usuario lo
+revisa. Lo que cambia es el final. Antes abria wa.me con el texto; ahora lo
+envia de verdad, desde el Gmail de la aplicacion, al correo guardado del
+proveedor. La respuesta del proveedor llega al correo del local (Reply-To), no
+a la cuenta que despacha.
+
+Backend, una ruta nueva (solo administrador, como todo /suppliers):
+
+    POST /api/v1/suppliers/:id/pedido-correo   { mensaje }
+        200  pedido enviado
+        400  el proveedor no tiene correo guardado, o el mensaje esta vacio
+        404  el proveedor no existe
+        503  el equipo no tiene el correo configurado
+        502  el servidor de correo rechazo el envio
+
+Interfaz, lo que toque:
+
+    DialogoPedidoWhatsApp.tsx   renombrado a DialogoPedidoCorreo.tsx. Envia con
+                                la mutacion nueva, muestra el resultado y, si
+                                el proveedor no tiene correo, avisa y no deja
+                                enviar
+    pedidoWhatsApp.ts           renombrado a pedidoCorreo.ts. textoPedido quedo
+                                igual; esCelularChileno, telefonoParaWhatsApp y
+                                enlaceWhatsApp se fueron, y entro tieneCorreo
+    TarjetaProveedor,           el boton y el icono. Se habilita si el proveedor
+    TablaProveedoresTecnica     tiene correo, ya no si el telefono es un celular
+    TarjetaOrdenProveedor,      el boton y el icono
+    TablaPropuestasOrdenes
+    NotificacionesPage,         solo el nombre del dialogo que importan
+    LogisticaRop,
+    DirectorioProveedores,
+    ReabastecimientoVisual,
+    ReabastecimientoTecnico
+    DialogoProveedor,           la etiqueta "Telefono / WhatsApp" quedo en
+    DialogoDatosProveedor       "Telefono"
+    proveedores.api.ts,         la llamada, su hook y el endpoint
+    useProveedores.ts,
+    endpoints.ts
+
+De paso corregi un texto que ya no era cierto en PanelEnvioOrdenes: decia que
+el envio por correo "esta simulado" y que el backend "no despacha el mensaje".
+Hoy se envia de verdad.
+
+Los botones pasaron de verde a tu color primario, porque el verde era el de
+WhatsApp. Si prefieres otro, cambialo.
+
+Lo probe asi:
+
+    3 pruebas nuevas en backend/tests/integration/pedido_proveedor_correo.test.ts
+    tus 244 pruebas de interfaz pasan, tsc y oxlint limpios
+    en el navegador, contra el servidor compilado: abrir el dialogo desde
+    Proveedores, enviar, y el aviso verde de enviado. Gmail acepto el envio
+
+No tenias pruebas sobre pedidoWhatsApp, asi que no se rompio ninguna; tampoco
+escribi pruebas de interfaz para el dialogo nuevo.
+
+UN CUIDADO PARA LA DEMO. Los cinco proveedores del catalogo de demostracion
+tienen el correo contacto@proveedor.cl. Ese dominio no es nuestro: si en la
+presentacion apretamos "Enviar por correo" sobre uno de ellos, el pedido sale
+de verdad hacia esa direccion. Antes de mostrarlo hay que editar el proveedor y
+ponerle un correo que podamos abrir. No cambie la semilla porque es tuya;
+dime si prefieres que quede con un correo nuestro.
+
+El informe final tambien cambio en una linea: el resultado del objetivo 5 dice
+ahora que el pedido a cada proveedor sale por correo y que el canal de WhatsApp
+se descarto. La presentacion ya no lo menciona en los textos, pero la captura de
+la lamina 8 todavia muestra los botones verdes.
+
+La version sube a 0.2.2. El instalador y el paquete se rehicieron.
+
+Marcelo
