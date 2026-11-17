@@ -1,0 +1,117 @@
+17-11-2026
+Resumen de la tarde y la noche del 16: la version 1.0.0 y la Release
+
+
+David, este es el resumen de todo lo que cambio desde el informe del mediodia
+del 16. Varios puntos ya te los mande por separado; aqui quedan juntos para que
+tengas una sola hoja antes de la presentacion.
+
+
+Lo que cambio en la aplicacion
+
+    correo de reposicion      remitente "GesTock" y cuerpo en tablas con los
+                              colores de tu tema
+    recuperar la contrasena   "He olvidado mi contrasena" en el login, solo para
+                              el administrador: codigo de 6 digitos al correo,
+                              15 minutos, cinco intentos. Tus cuatro puntos de
+                              la revision quedaron respondidos; las pruebas del
+                              dialogo y el boton "Pedir otro codigo" son tuyos
+    pedido al proveedor       ya no abre WhatsApp: se envia por correo desde la
+                              aplicacion, con respuesta al correo del local
+    instalacion limpia        tus dos hallazgos: sin errores en gestock.log y
+                              25 productos en el primer arranque
+    tu commit fbc263e         no compilaba (faltaba modo en VoucherImpreso); lo
+                              corregi en esa linea
+
+Archivos tuyos que toque, por si quieres revisarlos: FormularioLogin y el
+dialogo nuevo de recuperacion; todo lo que usaba el dialogo de WhatsApp en
+proveedores, reposicion y notificaciones; y VoucherImpreso. El detalle esta en
+los informes de cada cambio.
+
+
+La version y como se descarga
+
+La version paso de 0.1.0 a 1.0.0. El instalador se llama ahora
+GesTock-1.0.0-instalador.exe y esta publicado como Release del repositorio:
+
+    https://github.com/Kreiros/GesTock/releases/latest
+
+Se descarga sin cuenta. Comprobe sin sesion que baja completo y que es identico
+al que construi (misma huella SHA-256). Los dos README, el de GesTock y el del
+portafolio, tienen una seccion "Descarga del instalador" al inicio.
+
+Instala la 1.0.0 encima de lo que tengas: no se pierde ningun dato. El paquete
+de la presentacion tambien se rehizo con ese instalador y con el
+docker-compose que trae solo PostgreSQL, que fue lo que te fallaba por el
+JWT_SECRET.
+
+
+Las cifras de hoy
+
+    356  unitarias del servidor
+    120  de integracion (eran 111: se sumaron las de recuperar la contrasena y
+         las del pedido por correo). Esta corrida fue sobre pg-mem, no sobre
+         PostgreSQL real
+    244  de la interfaz, las tuyas, sin cambios
+
+El informe y la presentacion siguen diciendo 111 y 836, que es lo medido el 16
+sobre PostgreSQL real. No lo cambie para no desalinear los documentos ya
+entregados: si preguntan, las cifras son "al 16 de noviembre".
+
+
+El portafolio
+
+    informe final        actualizado y subido: nombra la recuperacion de la
+                         contrasena y el pedido por correo. Saque dos frases de
+                         mis conclusiones en ingles. Tus secciones no las toque
+    presentacion         la version final de 14 laminas esta en FASE 2 /
+                         Evidencias Grupales
+    evidencias           tus archivos de la caja quedaron en Evidencias de
+                         sistema / Aplicacion / Frontend. La ruta antigua,
+                         Evidencias de sistema / Frontend, ya no existe: trae
+                         los cambios antes de sincronizar
+    diarios de Fase 3    estan los dos
+
+
+El guion
+
+Te mando aparte un Word con el guion de la presentacion. Son 12 minutos:
+6:05 yo y 5:55 tu, repartidos por lo que hizo cada uno.
+
+    tu    laminas 3, 4 y 11 completas; y tu parte de la 1, 6, 7, 8, 10, 13 y 14
+    yo    laminas 2, 5, 9 y 12 completas; y mi parte de las mismas compartidas
+
+Trae tambien el reparto de la demostracion (tu operas la caja, yo la nube, los
+pagos y el correo) y una lista de preguntas probables con quien responde.
+Revisa tus textos y cambialos a tu manera de hablar.
+
+
+Cuidados para la demostracion
+
+    correo del administrador   si mostramos la recuperacion, la cuenta se crea
+                               con un correo que podamos abrir en la sala
+    correo de los proveedores  los cinco del catalogo tienen
+                               contacto@proveedor.cl, que no es nuestro. Antes
+                               de mostrar "Pedir por correo" hay que editar uno
+                               y ponerle un correo propio, o el pedido sale de
+                               verdad hacia esa direccion
+    un solo servidor           nada de npm run dev abierto: solo la aplicacion
+                               instalada. Ayer tenias dos en el puerto 3000
+    SumUp                      el lector virtual abierto con la cuenta de prueba
+
+
+Lo que queda pendiente
+
+    las claves           pagos.json y configuracion.json no estan en el
+                         repositorio. La idea es subirlas en un archivo cifrado
+                         con contrasena y darle la contrasena a la profesora.
+                         No esta hecho
+    2.3 Formativa        falta en FASE 2 / Evidencias Grupales. Hay que saber
+                         si tenemos una copia con la retroalimentacion
+    lamina 8             la captura todavia muestra los botones verdes de
+                         WhatsApp
+    cajero               el servidor no le impide editar productos ni devolver
+                         ventas de otro turno. La lamina 3 ya no lo afirma,
+                         pero es un pendiente real del producto
+
+Marcelo
