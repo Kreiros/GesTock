@@ -7,7 +7,14 @@ import { initializeDatabase } from '../../src/database/init-db';
 import { defaultSqliteClient } from '../../src/database/sqlite/client';
 import { defaultPgClient } from '../../src/database/postgres/client';
 import { InvoiceFileStore } from '../../src/invoices/invoice-file.store';
-import { InvoiceIngestionService } from '../../src/invoices/invoice-ingestion.service';
+import {
+  InvoiceIngestionService,
+  VencimientoRequeridoError,
+  defaultInvoiceIngestionService
+} from '../../src/invoices/invoice-ingestion.service';
+import { ESTADO_PENDIENTE, ticketsEnConfirmacion } from '../../src/invoices/estados-cola';
+import { defaultF29ReportService } from '../../src/dte/f29-report.service';
+import { mesLocal } from '../../src/utils/fecha-local';
 import {
   ESTADO_FALLIDA,
   ESTADO_POR_REVISAR,
@@ -293,6 +300,173 @@ describe('Vencimiento obligatorio al ingresar una factura (D.S. 977/96)', () => 
         fetch(`${base}/api/v1/invoices/pending/${ticket.id}?tenant_id=${TENANT}`, { method: 'DELETE' });
       expect((await borrar()).status).toBe(200);
       expect((await borrar()).status).toBe(404);
+    });
+
+    /** Ticket de la cola por defecto, la que usan las rutas, ya leido y esperando revision. */
+    const ticketPorRevisar = (tenant = TENANT) => {
+      const ticket = defaultInvoiceQueue.encolar(tenant, Buffer.from('foto').toString('base64'), 'ruta.jpg', 'image/jpeg');
+      defaultSqliteClient.execute(
+        'UPDATE factura_ingresos SET estado = ?, json_ocr_raw = ? WHERE id = ?',
+        [ESTADO_POR_REVISAR, JSON.stringify(leida), ticket.id]
+      );
+      return ticket;
+    };
+    const estadoDe = (id: string) =>
+      defaultSqliteClient.queryOne<{ estado: string }>('SELECT estado FROM factura_ingresos WHERE id = ?', [id])?.estado;
+
+    test('la ruta confirma con el documento del ticket, no con el que mande el cliente, y lo retira', async () => {
+      const ticket = ticketPorRevisar();
+      const documento = defaultInvoiceQueue.documentoDelTicket(TENANT, ticket.id);
+      const datos = factura([{ descripcion: 'Helado revisado', fecha_vencimiento: fecha(90) }]);
+
+      const r = await confirmar(datos, {
+        cola_id: ticket.id,
+        documento: { ruta: 'otro/que-no-es.jpg', nombre: 'ajeno.jpg', mime: 'image/jpeg' }
+      });
+
+      expect(r.status).toBe(200);
+      expect(estadoDe(ticket.id)).toBeUndefined();
+      const ingresada = defaultSqliteClient.queryOne<{ archivo_ruta: string }>(
+        'SELECT archivo_ruta FROM factura_ingresos WHERE id = ?',
+        [r.data.data.invoice_id]
+      );
+      expect(ingresada?.archivo_ruta).toBe(documento!.ruta);
+    });
+
+    test('un ticket de otro local no se abre, no se confirma y no se descarta', async () => {
+      const ticket = ticketPorRevisar();
+      const otroLocal = '00000000-0000-0000-0000-000000000002';
+
+      expect(await defaultInvoiceQueue.abrirParaRevision(otroLocal, ticket.id)).toBeNull();
+      expect(defaultInvoiceQueue.documentoDelTicket(otroLocal, ticket.id)).toBeFalsy();
+      expect(defaultInvoiceQueue.descartar(otroLocal, ticket.id)).toBe(false);
+      await expect(
+        defaultInvoiceIngestionService.confirmIngest(otroLocal, factura([{ descripcion: 'x', no_vence: true }]), undefined, ticket.id)
+      ).rejects.toThrow(/ya no esta esperando revision/);
+      expect(estadoDe(ticket.id)).toBe(ESTADO_POR_REVISAR);
+    });
+
+    test('un ticket que todavia no se leyo no sirve para confirmar', async () => {
+      const ticket = defaultInvoiceQueue.encolar(TENANT, Buffer.from('foto').toString('base64'), 'sin-leer.jpg', 'image/jpeg');
+
+      const r = await confirmar(factura([{ descripcion: 'x', no_vence: true }]), { cola_id: ticket.id });
+
+      expect(r.status).toBe(404);
+      expect(estadoDe(ticket.id)).toBe(ESTADO_PENDIENTE);
+    });
+
+    test('si la factura resulta duplicada el ticket se conserva', async () => {
+      const datos = factura([{ descripcion: 'Helado repetido', no_vence: true }]);
+      expect((await confirmar(datos)).status).toBe(200);
+      const ticket = ticketPorRevisar();
+
+      const r = await confirmar(datos, { cola_id: ticket.id });
+
+      expect(r.status).toBe(409);
+      expect(estadoDe(ticket.id)).toBe(ESTADO_POR_REVISAR);
+    });
+
+    test('dos confirmaciones a la vez del mismo ticket ingresan una sola vez', async () => {
+      const ticket = ticketPorRevisar();
+      const datos = factura([{ descripcion: 'Helado disputado', no_vence: true }]);
+
+      const respuestas = await Promise.all([
+        confirmar(datos, { cola_id: ticket.id }),
+        confirmar(datos, { cola_id: ticket.id })
+      ]);
+
+      expect(respuestas.map((r) => r.status).sort()).toEqual([200, 404]);
+      const producto = defaultSqliteClient.queryOne<{ stock_actual: number }>(
+        'SELECT stock_actual FROM productos WHERE tenant_id = ? AND sku = ?',
+        [TENANT, datos.items[0].sku]
+      );
+      expect(Number(producto?.stock_actual)).toBe(6);
+    });
+
+    test('un ticket que se esta confirmando no se puede confirmar otra vez ni descartar', async () => {
+      const ticket = ticketPorRevisar();
+      ticketsEnConfirmacion.add(ticket.id);
+      try {
+        const r = await confirmar(factura([{ descripcion: 'x', no_vence: true }]), { cola_id: ticket.id });
+        expect(r.status).toBe(404);
+        expect(defaultInvoiceQueue.descartar(TENANT, ticket.id)).toBe(false);
+        expect(estadoDe(ticket.id)).toBe(ESTADO_POR_REVISAR);
+      } finally {
+        ticketsEnConfirmacion.delete(ticket.id);
+      }
+      expect(defaultInvoiceQueue.descartar(TENANT, ticket.id)).toBe(true);
+    });
+
+    test('una pasada atrasada de la cola no saca de revision un ticket ya leido', () => {
+      const ticket = ticketPorRevisar();
+
+      (defaultInvoiceQueue as any).marcarFallida(ticket.id, 'lectura atrasada que fallo');
+
+      expect(estadoDe(ticket.id)).toBe(ESTADO_POR_REVISAR);
+    });
+
+    test('una factura por revisar no cuenta como compra en el F29', () => {
+      const compras = () => {
+        const texto = JSON.stringify(defaultF29ReportService.generateMonthlyF29(TENANT, mesLocal()));
+        return Number(/"tipoDocumento":"Facturas de Compra[^}]*?"cantidad":(\d+)/.exec(texto)?.[1]);
+      };
+      const antes = compras();
+
+      ticketPorRevisar();
+
+      expect(compras()).toBe(antes);
+    });
+  });
+
+  describe('bordes de la declaracion', () => {
+    test('la marca de que no vence con la fecha vacia no borra la fecha que el producto ya tenia', async () => {
+      const primera = factura([{ descripcion: 'Leche con fecha', fecha_vencimiento: fecha(90) }]);
+      expect((await confirmar(primera)).status).toBe(200);
+      const sku = primera.items[0].sku;
+
+      const segunda = factura([{ descripcion: 'Leche con fecha', sku, no_vence: true, fecha_vencimiento: '' }]);
+      expect((await confirmar(segunda)).status).toBe(200);
+
+      const producto = defaultSqliteClient.queryOne<{ fecha_vencimiento: string }>(
+        'SELECT fecha_vencimiento FROM productos WHERE tenant_id = ? AND sku = ?',
+        [TENANT, sku]
+      );
+      expect(producto?.fecha_vencimiento).toBe(fecha(90));
+    });
+
+    test('la ingesta directa responde 400 y explica el camino con /scan y /confirm', async () => {
+      const espia = jest
+        .spyOn(defaultInvoiceIngestionService, 'ingestInvoice')
+        .mockRejectedValueOnce(new VencimientoRequeridoError(['Yogur sin fecha']));
+
+      const respuesta = await fetch(`${base}/api/v1/invoices/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: TENANT, invoice_data: 'documento' })
+      });
+      const cuerpo = (await respuesta.json()) as any;
+      espia.mockRestore();
+
+      expect(respuesta.status).toBe(400);
+      expect(cuerpo.code).toBe('VENCIMIENTO_REQUERIDO');
+      expect(cuerpo.productos).toEqual(['Yogur sin fecha']);
+      expect(cuerpo.message).toMatch(/\/scan/);
+    });
+
+    test('la ingesta directa de una lectura sin fechas no ingresa nada', async () => {
+      const leidaSinFecha = factura([{ descripcion: 'Queso leido sin fecha' }]);
+      const motor: IOcrProvider = {
+        name: 'MotorSinFechas',
+        async extractInvoiceData(): Promise<ExtractedInvoiceData> {
+          return leidaSinFecha;
+        }
+      };
+      const servicio = new InvoiceIngestionService(undefined, new OcrDispatcherService(motor, motor));
+
+      await expect(servicio.ingestInvoice(TENANT, { invoiceData: leidaSinFecha } as any)).rejects.toBeInstanceOf(
+        VencimientoRequeridoError
+      );
+      expect(existeProducto(String(leidaSinFecha.items[0].sku))).toBe(false);
     });
   });
 });

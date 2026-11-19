@@ -397,7 +397,7 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (8
         rut_proveedor: '76.123.456-0',
         razon_social: 'Distribuidora del Sur',
         fecha_emision: '2026-09-16',
-        items: [{ sku: 'PROD-01', descripcion: 'Aceite 1L', cantidad: 12, precio_unitario: 1200, subtotal: 14400 }]
+        items: [{ sku: 'PROD-01', descripcion: 'Aceite 1L', cantidad: 12, precio_unitario: 1200, subtotal: 14400, fecha_vencimiento: '2099-12-31' }]
       };
       const res = await requestApi('POST', '/api/v1/invoices/confirm', {
         tenant_id: DEMO_TENANT,
@@ -408,6 +408,7 @@ describe('Batería Completa de Verificación: Cobertura del 100% de Endpoints (8
     });
 
     test('32. POST /api/v1/invoices/ingest ingresa factura confirmada al stock', async () => {
+      // esta ruta no tiene donde declarar vencimientos: ingresa porque el motor de prueba los trae
       const res = await requestApi('POST', '/api/v1/invoices/ingest', {
         tenant_id: DEMO_TENANT,
         file_name: 'factura_ingesta.pdf',

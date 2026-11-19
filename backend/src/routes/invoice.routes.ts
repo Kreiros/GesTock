@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { defaultInvoiceIngestionService, VencimientoRequeridoError } from '../invoices/invoice-ingestion.service';
+import { defaultInvoiceIngestionService, VencimientoRequeridoError, TicketNoDisponibleError } from '../invoices/invoice-ingestion.service';
 import { defaultInvoiceQueue } from '../invoices/invoice-queue.service';
 import { defaultInvoiceFileStore } from '../invoices/invoice-file.store';
 import { esDocumentoIlegible } from '../ocr/extraccion';
@@ -246,18 +246,23 @@ router.post('/confirm', async (req: Request, res: Response): Promise<void> => {
       data: result
     });
   } catch (error) {
-    // Una factura ya ingresada no es un error del sistema: es una compra ya contada. Se responde
-    // 409 para que la interfaz lo distinga de un fallo y lo explique al usuario.
     if (error instanceof VencimientoRequeridoError) {
       res.status(400).json({
         success: false,
         code: 'VENCIMIENTO_REQUERIDO',
         productos: error.productos,
-        message: error.message + ' Lea la factura con /scan, declare los vencimientos y confirmela con /confirm.'
+        message: error.message
       });
       return;
     }
 
+    if (error instanceof TicketNoDisponibleError) {
+      res.status(404).json({ success: false, message: error.message });
+      return;
+    }
+
+    // Una factura ya ingresada no es un error del sistema: es una compra ya contada. Se responde
+    // 409 para que la interfaz lo distinga de un fallo y lo explique al usuario.
     if (esFacturaDuplicada(error)) {
       res.status(409).json({
         success: false,
@@ -311,8 +316,6 @@ router.post('/ingest', async (req: Request, res: Response): Promise<void> => {
       res.status(422).json({ success: false, ilegible: true, message: errorMsg });
       return;
     }
-    // Una factura ya ingresada no es un error del sistema: es una compra ya contada. Se responde
-    // 409 para que la interfaz lo distinga de un fallo y lo explique al usuario.
     if (error instanceof VencimientoRequeridoError) {
       res.status(400).json({
         success: false,
@@ -323,6 +326,8 @@ router.post('/ingest', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Una factura ya ingresada no es un error del sistema: es una compra ya contada. Se responde
+    // 409 para que la interfaz lo distinga de un fallo y lo explique al usuario.
     if (esFacturaDuplicada(error)) {
       res.status(409).json({
         success: false,

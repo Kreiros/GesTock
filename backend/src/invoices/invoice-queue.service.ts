@@ -5,7 +5,7 @@ import { esDocumentoIlegible } from '../ocr/extraccion';
 import { DocumentoFactura, InvoiceFileStore, defaultInvoiceFileStore } from './invoice-file.store';
 import { InvoiceIngestionService, defaultInvoiceIngestionService } from './invoice-ingestion.service';
 
-import { ESTADO_PENDIENTE, ESTADO_FALLIDA, ESTADO_POR_REVISAR } from './estados-cola';
+import { ESTADO_PENDIENTE, ESTADO_FALLIDA, ESTADO_POR_REVISAR, ticketsEnConfirmacion } from './estados-cola';
 import { ScannedInvoicePreview } from './invoice-ingestion.service';
 import { ExtractedInvoiceData } from '../ocr/types';
 
@@ -229,8 +229,8 @@ export class InvoiceQueueService {
           `UPDATE factura_ingresos
               SET estado = ?, sync_status = ?, json_ocr_raw = ?, metodo_ingreso = ?, ultimo_error = NULL,
                   sync_attempts = ?, procesado_at = datetime('now')
-            WHERE id = ?`,
-          [ESTADO_POR_REVISAR, ESTADO_POR_REVISAR, JSON.stringify(leida.raw_data), leida.ocr_provider, intentos, factura.id]
+            WHERE id = ? AND estado = ?`,
+          [ESTADO_POR_REVISAR, ESTADO_POR_REVISAR, JSON.stringify(leida.raw_data), leida.ocr_provider, intentos, factura.id, ESTADO_PENDIENTE]
         );
         resultado.por_revisar += 1;
         resultado.detalle.push({ id: factura.id, estado: ESTADO_POR_REVISAR, folio: leida.folio_factura });
@@ -260,8 +260,8 @@ export class InvoiceQueueService {
         } else {
           const intentosRegistrados = fueElServicio ? Number(factura.sync_attempts ?? 0) : intentos;
           this.sqlite.execute(
-            'UPDATE factura_ingresos SET sync_attempts = ?, ultimo_error = ? WHERE id = ?',
-            [intentosRegistrados, mensaje, factura.id]
+            'UPDATE factura_ingresos SET sync_attempts = ?, ultimo_error = ? WHERE id = ? AND estado = ?',
+            [intentosRegistrados, mensaje, factura.id, ESTADO_PENDIENTE]
           );
           resultado.pendientes += 1;
           resultado.detalle.push({ id: factura.id, estado: ESTADO_PENDIENTE, error: mensaje });
@@ -320,6 +320,7 @@ export class InvoiceQueueService {
    * documento queda sin referencia y lo elimina la limpieza de huerfanos.
    */
   public descartar(tenantId: string, id: string): boolean {
+    if (ticketsEnConfirmacion.has(id)) return false;
     const resultado = this.sqlite.execute(
       'DELETE FROM factura_ingresos WHERE id = ? AND tenant_id = ? AND estado = ?',
       [id, tenantId, ESTADO_POR_REVISAR]
@@ -356,12 +357,13 @@ export class InvoiceQueueService {
     return eliminados;
   }
 
+  // Solo un ticket que sigue pendiente: dos pasadas a la vez no deben sacar de revision uno ya leido
   private marcarFallida(id: string, motivo: string, intentos?: number): void {
     this.sqlite.execute(
       `UPDATE factura_ingresos
           SET estado = ?, sync_status = ?, is_dirty = 0, ultimo_error = ?, sync_attempts = ?, procesado_at = datetime('now')
-        WHERE id = ?`,
-      [ESTADO_FALLIDA, ESTADO_FALLIDA, motivo, intentos ?? this.maxIntentos, id]
+        WHERE id = ? AND estado = ?`,
+      [ESTADO_FALLIDA, ESTADO_FALLIDA, motivo, intentos ?? this.maxIntentos, id, ESTADO_PENDIENTE]
     );
   }
 }

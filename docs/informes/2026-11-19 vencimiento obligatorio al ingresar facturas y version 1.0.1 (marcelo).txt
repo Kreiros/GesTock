@@ -71,6 +71,7 @@ Archivos tuyos que modifique
 
 Archivos nuevos en tu parte
 
+    front-end/src/features/invoices/pages/IngresoFacturasPage.test.tsx
     front-end/src/features/invoices/components/compartidos/CampoVencimiento.tsx
     front-end/src/features/invoices/components/compartidos/DialogoAlertaVencimiento.tsx
     front-end/src/features/invoices/utils/vencimientoFactura.ts
@@ -96,14 +97,31 @@ Dos cosas que conviene que mires
 Pruebas
 
     servidor, unitarias     361 de 361
-    servidor, integracion   131 de 131, mas 1 omitida que ya lo estaba
-    front-end, vitest       249 de 249
+    servidor, integracion   142 de 142, mas 1 omitida que ya lo estaba
+    front-end, vitest       253 de 253
     tipos y lint            sin errores en los dos lados
 
 La bateria de rutas decia cubrir 76 de 76 y no era cierto: hay 81 rutas y tres
 anteriores a este cambio no tenian prueba ahi (las dos de recuperar la
 contrasena y la del pedido por correo). Quedo en 81 de 81 y corregi la cifra
 en la arquitectura, el README y el informe de pruebas.
+
+Despues de implementar, una revision independiente del diff encontro once
+puntos y se corrigieron todos. Los que te importan:
+
+    doble confirmacion   dos personas confirmando la misma factura de la cola
+                         a la vez sumaban el stock dos veces. Ahora la segunda
+                         recibe "esa factura ya no esta esperando revision"
+    fecha mal leida      si la lectura traia la fecha en otro formato, por
+                         ejemplo 15/12/2026, la pantalla la daba por declarada
+                         y el servidor la rechazaba sin decir cual fila. Ahora
+                         la interfaz usa la misma regla que el servidor
+                         (AAAA-MM-DD real) y marca la fila en error
+    F29                  las facturas en cola se contaban como compras en el
+                         F29 y en el respaldo tributario. Ya no
+    pagina               IngresoFacturasPage tiene ahora su prueba: bloqueo
+                         sin fechas, envio de no_vence y del ticket de la
+                         cola, y alerta de vencido
 
 Tambien recorri el flujo en el navegador con dos facturas de prueba en la
 cola: bloqueo sin fechas, casilla "No vence", alerta de vencido, aviso final y

@@ -22,7 +22,7 @@ import { useConfirmarFactura,
 import { recalcularFila } from '@/features/invoices/utils/calculosFactura'
 import { DialogoDatosProveedor } from '@/features/invoices/components/compartidos/DialogoDatosProveedor'
 import { DialogoAlertaVencimiento } from '@/features/invoices/components/compartidos/DialogoAlertaVencimiento'
-import { clasificarVencimientos, faltaVencimiento } from '@/features/invoices/utils/vencimientoFactura'
+import { productosVencidos, faltaVencimiento } from '@/features/invoices/utils/vencimientoFactura'
 import {
   camposParaConfirmar,
   datosDesdeFactura,
@@ -141,7 +141,7 @@ export function IngresoFacturasPage() {
   // d.s. 977/96: sin la fecha de cada producto, o la marca de que no vence, no se ingresa
   const avisoVencimientos = useRef<HTMLDivElement>(null)
   const sinVencimiento = items.filter(faltaVencimiento)
-  const vencidos = clasificarVencimientos(items, new Date()).vencidos
+  const vencidos = productosVencidos(items, new Date())
 
   function confirmarIngreso() {
     if (!preview) return

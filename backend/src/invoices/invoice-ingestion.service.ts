@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 import { normalizarFolio } from '../ocr/extraccion';
 import { defaultLotesService } from '../inventory/lotes.service';
 import { AlertaVencimiento, armarAlertaVencimiento, itemsSinVencimientoDeclarado } from '../inventory/vencimiento';
-import { ESTADO_PENDIENTE, ESTADO_FALLIDA, ESTADO_POR_REVISAR, ESTADOS_DE_COLA_SQL } from './estados-cola';
+import { ESTADO_PENDIENTE, ESTADO_FALLIDA, ESTADO_POR_REVISAR, ESTADOS_DE_COLA_SQL, ticketsEnConfirmacion } from './estados-cola';
 import { fechaLocal } from '../utils/fecha-local';
 
 export interface IngestionResult {
@@ -69,17 +69,11 @@ export interface ScannedInvoicePreview {
 }
 
 /**
- * La factura ya fue ingresada antes. No es un fallo del sistema ni del documento: es una compra
- * que ya esta contada, y volver a aceptarla sumaria el stock y el credito fiscal por segunda vez.
- */
-/**
  * El Reglamento Sanitario de los Alimentos (D.S. 977/96) exige controlar el vencimiento de lo que
  * se vende. Por eso ninguna factura entra al stock sin que cada producto declare su fecha o que
  * no vence.
  */
 export class VencimientoRequeridoError extends Error {
-  public readonly vencimientoRequerido = true;
-
   constructor(public readonly productos: string[]) {
     super(
       `Falta declarar el vencimiento de ${productos.length} producto${productos.length === 1 ? '' : 's'}: ` +
@@ -89,6 +83,18 @@ export class VencimientoRequeridoError extends Error {
   }
 }
 
+/** El ticket de la cola ya no espera revision: otro lo confirmo, lo esta confirmando o lo descarto. */
+export class TicketNoDisponibleError extends Error {
+  constructor() {
+    super('Esa factura ya no esta esperando revision');
+    this.name = 'TicketNoDisponibleError';
+  }
+}
+
+/**
+ * La factura ya fue ingresada antes. No es un fallo del sistema ni del documento: es una compra
+ * que ya esta contada, y volver a aceptarla sumaria el stock y el credito fiscal por segunda vez.
+ */
 export class FacturaDuplicadaError extends Error {
   public readonly duplicada = true;
 
@@ -474,9 +480,25 @@ export class InvoiceIngestionService {
     documento?: DocumentoFactura,
     ticketCola?: string
   ): Promise<IngestionResult> {
-    return this.executeIngestTransaction(
-      tenantId, invoiceData, invoiceData.metodo_ingreso || 'CONFIRMED_SCAN', false, documento, ticketCola
+    const metodo = invoiceData.metodo_ingreso || 'CONFIRMED_SCAN';
+    if (!ticketCola) {
+      return this.executeIngestTransaction(tenantId, invoiceData, metodo, false, documento);
+    }
+
+    // Se reserva el ticket antes de la primera espera, para que nadie mas lo confirme ni lo descarte
+    const enRevision = defaultSqliteClient.queryOne<{ id: string }>(
+      'SELECT id FROM factura_ingresos WHERE id = ? AND tenant_id = ? AND estado = ?',
+      [ticketCola, tenantId, ESTADO_POR_REVISAR]
     );
+    if (!enRevision || ticketsEnConfirmacion.has(ticketCola)) {
+      throw new TicketNoDisponibleError();
+    }
+    ticketsEnConfirmacion.add(ticketCola);
+    try {
+      return await this.executeIngestTransaction(tenantId, invoiceData, metodo, false, documento, ticketCola);
+    } finally {
+      ticketsEnConfirmacion.delete(ticketCola);
+    }
   }
 
   /**
@@ -507,6 +529,11 @@ export class InvoiceIngestionService {
     if (sinVencimiento.length > 0) {
       throw new VencimientoRequeridoError(sinVencimiento);
     }
+    // Con la marca de que no vence no hay fecha que guardar: una cadena vacia llegaria a la base
+    invoiceData = {
+      ...invoiceData,
+      items: invoiceData.items.map((item) => (item.no_vence ? { ...item, fecha_vencimiento: undefined } : item))
+    };
     const lotesParaLaNube: Array<{ productoId: string; cantidad: number; fechaVencimiento: string; codigoLote: string | null }> = [];
 
     // Una factura ya ingresada no se vuelve a aceptar: el stock y el credito fiscal de esa
