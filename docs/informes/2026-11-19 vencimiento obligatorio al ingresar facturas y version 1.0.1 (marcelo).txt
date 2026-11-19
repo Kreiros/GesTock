@@ -1,0 +1,126 @@
+19-11-2026
+Vencimiento obligatorio al ingresar facturas, alerta de vencidos y version 1.0.1
+
+
+David, este cambio toca varios archivos tuyos del front-end. Te dejo aqui que
+se hizo, por que, y la lista exacta de lo que modifique en tu parte para que lo
+revises antes de seguir trabajando encima. Todavia no esta subido: queda en mi
+copia local hasta revisar el diff.
+
+
+Que cambia para quien usa la aplicacion
+
+    fecha obligatoria     al ingresar una factura, cada producto debe llevar
+                          su fecha de vencimiento o la casilla "No vence".
+                          Mientras falte alguno, la factura no se ingresa
+    aviso del decreto     sobre la factura hay un aviso fijo que nombra el
+                          D.S. N 977/96 (Reglamento Sanitario de los
+                          Alimentos, MINSAL) y cuenta cuantos productos faltan
+    producto vencido      si una fecha ya paso, antes de ingresar sale una
+                          alerta que nombra cada producto vencido, con su
+                          fecha, los dias que lleva vencido y la cantidad. Se
+                          puede volver a revisar o ingresar de todos modos:
+                          el sistema avisa, no bloquea
+    al terminar           el mensaje de "Stock actualizado" vuelve a nombrar
+                          los vencidos y los que vencen en 15 dias o menos
+    cola de facturas      la cola ya no ingresa sola. Lee la factura y la deja
+                          "por revisar"; desde la lista se abre con "Revisar
+                          e ingresar" para declarar los vencimientos, o se
+                          retira con "Descartar"
+    configuracion         nueva seccion "Control de vencimientos (D.S. N
+                          977/96)", de solo lectura y visible para todos.
+                          Nunca hubo una seccion asi en Configuracion: lo del
+                          vencimiento estaba solo en Inventario
+
+
+Lo que cambia en el servidor
+
+    POST /invoices/confirm   y /invoices/ingest responden 400 con
+                             code VENCIMIENTO_REQUERIDO y la lista
+                             "productos" si falta la fecha o la marca. Cada
+                             item acepta "no_vence": true. La respuesta trae
+                             "alerta_vencimiento" con "vencidos" y
+                             "por_vencer". /confirm acepta "cola_id"
+    POST /invoices/process-pending
+                             devuelve "por_revisar" en lugar de "procesadas"
+    GET /invoices/pending/:id/preview
+                             nueva: abre una factura de la cola ya leida
+    DELETE /invoices/pending/:id
+                             nueva: la descarta
+    estado nuevo             POR_REVISAR en factura_ingresos. No cuenta como
+                             factura ingresada ni como duplicada
+
+No hay migracion de base de datos.
+
+
+Archivos tuyos que modifique
+
+    front-end/src/features/invoices/pages/IngresoFacturasPage.tsx
+    front-end/src/features/invoices/components/visual/FilaItemFactura.tsx
+    front-end/src/features/invoices/components/tecnico/FilaConciliacionTecnica.tsx
+    front-end/src/features/invoices/components/compartidos/DialogoIngresoExitoso.tsx
+    front-end/src/features/invoices/components/compartidos/PanelColaFacturas.tsx
+    front-end/src/features/invoices/api/invoices.api.ts
+    front-end/src/features/invoices/hooks/useInvoices.ts
+    front-end/src/features/invoices/types.ts
+    front-end/src/features/invoices/utils/calculosFactura.ts
+    front-end/src/features/configuracion/pages/ConfiguracionPage.tsx
+    front-end/src/features/pos/types.ts
+    front-end/src/lib/api/endpoints.ts
+    front-end/src/shared/utils/etiquetasEstado.ts
+
+Archivos nuevos en tu parte
+
+    front-end/src/features/invoices/components/compartidos/CampoVencimiento.tsx
+    front-end/src/features/invoices/components/compartidos/DialogoAlertaVencimiento.tsx
+    front-end/src/features/invoices/utils/vencimientoFactura.ts
+    front-end/src/features/invoices/utils/vencimientoFactura.test.ts
+    front-end/src/features/configuracion/components/SeccionVencimientos.tsx
+
+En las dos filas de la tabla (visual y tecnica) reemplace el campo de fecha por
+CampoVencimiento, que trae la fecha y la casilla "No vence" juntas. Use tus
+componentes y tu tema; no agregue dependencias.
+
+
+Dos cosas que conviene que mires
+
+    Descartar          retira la factura de la cola al primer clic, sin
+                       pedir confirmacion. Si prefieres un dialogo de
+                       confirmacion, es tu pantalla
+    fondo de la fila   en PanelColaFacturas la fila de una factura que se
+                       rindio usa bgcolor "error.lighter". Ese tono no existe
+                       en el tema, asi que hoy no pinta fondo. Ya estaba asi;
+                       no lo toque
+
+
+Pruebas
+
+    servidor, unitarias     361 de 361
+    servidor, integracion   131 de 131, mas 1 omitida que ya lo estaba
+    front-end, vitest       249 de 249
+    tipos y lint            sin errores en los dos lados
+
+La bateria de rutas decia cubrir 76 de 76 y no era cierto: hay 81 rutas y tres
+anteriores a este cambio no tenian prueba ahi (las dos de recuperar la
+contrasena y la del pedido por correo). Quedo en 81 de 81 y corregi la cifra
+en la arquitectura, el README y el informe de pruebas.
+
+Tambien recorri el flujo en el navegador con dos facturas de prueba en la
+cola: bloqueo sin fechas, casilla "No vence", alerta de vencido, aviso final y
+descarte.
+
+
+Version
+
+La version pasa a 1.0.1. El instalador GesTock-1.0.1-instalador.exe esta
+construido e instalado en mi equipo sobre la instalacion anterior, sin perder
+datos. Falta publicarlo como Release; hasta entonces el README sigue apuntando
+a la 1.0.0.
+
+
+Pendiente, no es parte de este cambio
+
+    caja     las reglas de la caja ante un producto vencido no se tocaron.
+             Revisarlas queda como cambio aparte
+
+Marcelo

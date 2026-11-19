@@ -43,7 +43,7 @@ La aplicación funciona sin configuración adicional: vende, emite boletas en el
 ## 2. Tecnologías Utilizadas
 
 - **Lenguajes:** TypeScript (modo estricto), JavaScript (Node.js 22.13 o superior, 24 recomendado: el módulo `node:sqlite` funciona sin opciones desde esa versión), SQL.
-- **Backend:** Express 4, con 76 endpoints REST.
+- **Backend:** Express 4, con 81 endpoints REST.
 - **Frontend:** React 19, TypeScript, Vite 8, Material UI 9, React Router 8, Zustand y TanStack Query.
 - **Bases de datos:** PostgreSQL 16 (nube) y SQLite (caja local, mediante el módulo nativo `node:sqlite` de Node).
 - **Escritorio:** Electron 44 y electron-builder con instalador NSIS.
@@ -166,7 +166,7 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
 ## 6. Documentación Oficial
 
 Los documentos formales se publican en Word en la carpeta [`docs/`](./docs):
-1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: arquitectura 4+1 de Kruchten, requisitos, resiliencia y catálogo de los 76 endpoints.
+1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: arquitectura 4+1 de Kruchten, requisitos, resiliencia y catálogo de los 81 endpoints.
 2. **[docs/base_de_datos.docx](./docs/base_de_datos.docx)**: modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y las banderas de sincronización.
 3. **[docs/guia_de_despliegue.docx](./docs/guia_de_despliegue.docx)**: instalación, variables de entorno, Docker Compose y aplicación de escritorio.
 4. **[docs/manual_de_funcionalidades.docx](./docs/manual_de_funcionalidades.docx)**: manual de uso por pantalla y por rol, lo que el sistema hace solo y los límites declarados.
