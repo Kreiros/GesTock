@@ -43,6 +43,8 @@ export function itemsSinVencimientoDeclarado(items: ItemConVencimiento[]): strin
   return items
     .filter((item) => {
       const tieneFecha = item.fecha_vencimiento !== undefined && item.fecha_vencimiento !== null && item.fecha_vencimiento !== '';
+      // la marca es un booleano: "false" o 1 se leerian como marcada mas adelante y borrarian la fecha
+      if (item.no_vence !== undefined && item.no_vence !== null && typeof item.no_vence !== 'boolean') return true;
       if (item.no_vence === true) return tieneFecha;
       return !esFechaDeVencimientoValida(item.fecha_vencimiento);
     })

@@ -217,7 +217,7 @@ export class InvoiceQueueService {
         );
 
         if (leida.items.length === 0) {
-          this.marcarFallida(factura.id, 'La lectura no encontro productos en el documento', intentos);
+          if (!this.marcarFallida(factura.id, 'La lectura no encontro productos en el documento', intentos)) continue;
           resultado.fallidas += 1;
           resultado.detalle.push({ id: factura.id, estado: ESTADO_FALLIDA, error: 'sin productos' });
           continue;
@@ -225,13 +225,15 @@ export class InvoiceQueueService {
 
         // Se guarda solo lo leido: el stock y los precios se recalculan al abrir la factura. El
         // numero provisional no se cambia, para que la factura real no choque con su propio ticket.
-        this.sqlite.execute(
+        const guardada = this.sqlite.execute(
           `UPDATE factura_ingresos
               SET estado = ?, sync_status = ?, json_ocr_raw = ?, metodo_ingreso = ?, ultimo_error = NULL,
                   sync_attempts = ?, procesado_at = datetime('now')
             WHERE id = ? AND estado = ?`,
           [ESTADO_POR_REVISAR, ESTADO_POR_REVISAR, JSON.stringify(leida.raw_data), leida.ocr_provider, intentos, factura.id, ESTADO_PENDIENTE]
         );
+        // otra pasada ya resolvio este ticket: no se cuenta dos veces
+        if (!Number(guardada.changes)) continue;
         resultado.por_revisar += 1;
         resultado.detalle.push({ id: factura.id, estado: ESTADO_POR_REVISAR, folio: leida.folio_factura });
         logger.info('InvoiceQueueService', `Factura de la cola leida en el intento ${intentos}: espera revision`, { id: factura.id });
@@ -240,7 +242,7 @@ export class InvoiceQueueService {
 
         // El motor leyó el documento y no sirve: insistir no lo mejora
         if (esDocumentoIlegible(error)) {
-          this.marcarFallida(factura.id, mensaje, intentos);
+          if (!this.marcarFallida(factura.id, mensaje, intentos)) continue;
           resultado.fallidas += 1;
           resultado.detalle.push({ id: factura.id, estado: ESTADO_FALLIDA, error: mensaje });
           logger.warn('InvoiceQueueService', 'Factura retirada de la cola por documento ilegible', { id: factura.id });
@@ -254,15 +256,16 @@ export class InvoiceQueueService {
         const fueElServicio = esFalloDelServicio(error);
 
         if (!fueElServicio && intentos >= this.maxIntentos) {
-          this.marcarFallida(factura.id, mensaje, intentos);
+          if (!this.marcarFallida(factura.id, mensaje, intentos)) continue;
           resultado.fallidas += 1;
           resultado.detalle.push({ id: factura.id, estado: ESTADO_FALLIDA, error: mensaje });
         } else {
           const intentosRegistrados = fueElServicio ? Number(factura.sync_attempts ?? 0) : intentos;
-          this.sqlite.execute(
+          const anotada = this.sqlite.execute(
             'UPDATE factura_ingresos SET sync_attempts = ?, ultimo_error = ? WHERE id = ? AND estado = ?',
             [intentosRegistrados, mensaje, factura.id, ESTADO_PENDIENTE]
           );
+          if (!Number(anotada.changes)) continue;
           resultado.pendientes += 1;
           resultado.detalle.push({ id: factura.id, estado: ESTADO_PENDIENTE, error: mensaje });
         }
@@ -358,13 +361,14 @@ export class InvoiceQueueService {
   }
 
   // Solo un ticket que sigue pendiente: dos pasadas a la vez no deben sacar de revision uno ya leido
-  private marcarFallida(id: string, motivo: string, intentos?: number): void {
-    this.sqlite.execute(
+  private marcarFallida(id: string, motivo: string, intentos?: number): boolean {
+    const resultado = this.sqlite.execute(
       `UPDATE factura_ingresos
           SET estado = ?, sync_status = ?, is_dirty = 0, ultimo_error = ?, sync_attempts = ?, procesado_at = datetime('now')
         WHERE id = ? AND estado = ?`,
       [ESTADO_FALLIDA, ESTADO_FALLIDA, motivo, intentos ?? this.maxIntentos, id, ESTADO_PENDIENTE]
     );
+    return Number(resultado.changes) > 0;
   }
 }
 

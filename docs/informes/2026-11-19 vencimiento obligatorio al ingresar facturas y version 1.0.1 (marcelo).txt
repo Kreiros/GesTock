@@ -86,7 +86,8 @@ componentes y tu tema; no agregue dependencias.
 Dos cosas que conviene que mires
 
     Descartar          retira la factura de la cola al primer clic, sin
-                       pedir confirmacion. Si prefieres un dialogo de
+                       pedir confirmacion. Si justo se esta confirmando, el
+                       servidor responde 409 y la factura sigue en la cola. Si prefieres un dialogo de
                        confirmacion, es tu pantalla
     fondo de la fila   en PanelColaFacturas la fila de una factura que se
                        rindio usa bgcolor "error.lighter". Ese tono no existe
@@ -97,7 +98,7 @@ Dos cosas que conviene que mires
 Pruebas
 
     servidor, unitarias     361 de 361
-    servidor, integracion   142 de 142, mas 1 omitida que ya lo estaba
+    servidor, integracion   147 de 147, mas 1 omitida que ya lo estaba
     front-end, vitest       253 de 253
     tipos y lint            sin errores en los dos lados
 
@@ -106,8 +107,8 @@ anteriores a este cambio no tenian prueba ahi (las dos de recuperar la
 contrasena y la del pedido por correo). Quedo en 81 de 81 y corregi la cifra
 en la arquitectura, el README y el informe de pruebas.
 
-Despues de implementar, una revision independiente del diff encontro once
-puntos y se corrigieron todos. Los que te importan:
+Despues de implementar, dos revisiones independientes del diff encontraron
+once y siete puntos, y se corrigieron todos. Los que te importan:
 
     doble confirmacion   dos personas confirmando la misma factura de la cola
                          a la vez sumaban el stock dos veces. Ahora la segunda

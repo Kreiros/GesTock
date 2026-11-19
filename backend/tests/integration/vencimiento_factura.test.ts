@@ -15,6 +15,7 @@ import {
 import { ESTADO_PENDIENTE, ticketsEnConfirmacion } from '../../src/invoices/estados-cola';
 import { defaultF29ReportService } from '../../src/dte/f29-report.service';
 import { mesLocal } from '../../src/utils/fecha-local';
+import { defaultTenantConfigService } from '../../src/config/tenant-config.service';
 import {
   ESTADO_FALLIDA,
   ESTADO_POR_REVISAR,
@@ -343,6 +344,16 @@ describe('Vencimiento obligatorio al ingresar una factura (D.S. 977/96)', () => 
       await expect(
         defaultInvoiceIngestionService.confirmIngest(otroLocal, factura([{ descripcion: 'x', no_vence: true }]), undefined, ticket.id)
       ).rejects.toThrow(/ya no esta esperando revision/);
+
+      const pedir = (ruta: string, init?: RequestInit) => fetch(`${base}/api/v1/invoices/${ruta}`, init);
+      expect((await pedir(`pending/${ticket.id}/preview?tenant_id=${otroLocal}`)).status).toBe(404);
+      expect((await pedir(`pending/${ticket.id}?tenant_id=${otroLocal}`, { method: 'DELETE' })).status).toBe(404);
+      const confirmacion = await pedir('confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: otroLocal, cola_id: ticket.id, invoice_data: factura([{ descripcion: 'x', no_vence: true }]) })
+      });
+      expect(confirmacion.status).toBe(404);
       expect(estadoDe(ticket.id)).toBe(ESTADO_POR_REVISAR);
     });
 
@@ -369,11 +380,18 @@ describe('Vencimiento obligatorio al ingresar una factura (D.S. 977/96)', () => 
     test('dos confirmaciones a la vez del mismo ticket ingresan una sola vez', async () => {
       const ticket = ticketPorRevisar();
       const datos = factura([{ descripcion: 'Helado disputado', no_vence: true }]);
+      // con la nube desconectada la confirmacion no cede el turno: se fuerza una espera real, como
+      // la que produce la transaccion en la nube, para que las dos peticiones se crucen de verdad
+      const espera = jest.spyOn(defaultTenantConfigService, 'getProfitMargin').mockImplementation(async () => {
+        await new Promise((listo) => setTimeout(listo, 80));
+        return 35;
+      });
 
       const respuestas = await Promise.all([
         confirmar(datos, { cola_id: ticket.id }),
         confirmar(datos, { cola_id: ticket.id })
       ]);
+      espera.mockRestore();
 
       expect(respuestas.map((r) => r.status).sort()).toEqual([200, 404]);
       const producto = defaultSqliteClient.queryOne<{ stock_actual: number }>(
@@ -381,6 +399,18 @@ describe('Vencimiento obligatorio al ingresar una factura (D.S. 977/96)', () => 
         [TENANT, datos.items[0].sku]
       );
       expect(Number(producto?.stock_actual)).toBe(6);
+      expect(ticketsEnConfirmacion.size).toBe(0);
+    });
+
+    test('una confirmacion rechazada libera el ticket para volver a intentarlo', async () => {
+      const ticket = ticketPorRevisar();
+
+      const sinFecha = await confirmar(factura([{ descripcion: 'Helado sin fecha' }]), { cola_id: ticket.id });
+      expect(sinFecha.status).toBe(400);
+      expect(ticketsEnConfirmacion.size).toBe(0);
+
+      const conFecha = await confirmar(factura([{ descripcion: 'Helado con fecha', fecha_vencimiento: fecha(60) }]), { cola_id: ticket.id });
+      expect(conFecha.status).toBe(200);
     });
 
     test('un ticket que se esta confirmando no se puede confirmar otra vez ni descartar', async () => {
@@ -390,6 +420,8 @@ describe('Vencimiento obligatorio al ingresar una factura (D.S. 977/96)', () => 
         const r = await confirmar(factura([{ descripcion: 'x', no_vence: true }]), { cola_id: ticket.id });
         expect(r.status).toBe(404);
         expect(defaultInvoiceQueue.descartar(TENANT, ticket.id)).toBe(false);
+        const porLaRuta = await fetch(`${base}/api/v1/invoices/pending/${ticket.id}?tenant_id=${TENANT}`, { method: 'DELETE' });
+        expect(porLaRuta.status).toBe(409);
         expect(estadoDe(ticket.id)).toBe(ESTADO_POR_REVISAR);
       } finally {
         ticketsEnConfirmacion.delete(ticket.id);
@@ -403,6 +435,63 @@ describe('Vencimiento obligatorio al ingresar una factura (D.S. 977/96)', () => 
       (defaultInvoiceQueue as any).marcarFallida(ticket.id, 'lectura atrasada que fallo');
 
       expect(estadoDe(ticket.id)).toBe(ESTADO_POR_REVISAR);
+    });
+
+    /** Cola cuyo motor ve que, mientras leia, otra pasada ya dejo el ticket por revisar. */
+    const colaAtrasada = (alTerminar: 'lee' | 'falla') => {
+      const motorAtrasado: IOcrProvider = {
+        name: 'MotorAtrasado',
+        async extractInvoiceData(): Promise<ExtractedInvoiceData> {
+          defaultSqliteClient.execute(
+            "UPDATE factura_ingresos SET estado = ?, json_ocr_raw = 'lectura de la otra pasada' WHERE tenant_id = ? AND estado = ?",
+            [ESTADO_POR_REVISAR, TENANT, ESTADO_PENDIENTE]
+          );
+          if (alTerminar === 'falla') throw new Error('getaddrinfo ENOTFOUND generativelanguage.googleapis.com');
+          return JSON.parse(JSON.stringify(leida));
+        }
+      };
+      return new InvoiceQueueService(
+        defaultSqliteClient,
+        store,
+        new InvoiceIngestionService(undefined, new OcrDispatcherService(motorAtrasado, motorAtrasado), store),
+        3
+      );
+    };
+    const filaDe = (id: string) =>
+      defaultSqliteClient.queryOne<{ estado: string; json_ocr_raw: string; ultimo_error: string | null }>(
+        'SELECT estado, json_ocr_raw, ultimo_error FROM factura_ingresos WHERE id = ?',
+        [id]
+      );
+
+    test('una lectura atrasada no pisa lo que otra pasada ya dejo por revisar, ni lo cuenta', async () => {
+      const atrasada = colaAtrasada('lee');
+      const ticket = atrasada.encolar(TENANT, Buffer.from('foto').toString('base64'), 'doble.jpg', 'image/jpeg');
+
+      const r = await atrasada.procesarPendientes(TENANT);
+
+      expect(filaDe(ticket.id)?.json_ocr_raw).toBe('lectura de la otra pasada');
+      expect(r.por_revisar).toBe(0);
+      expect(r.detalle).toHaveLength(0);
+    });
+
+    test('un reintento atrasado no anota su error en un ticket ya leido, ni lo cuenta como pendiente', async () => {
+      const atrasada = colaAtrasada('falla');
+      const ticket = atrasada.encolar(TENANT, Buffer.from('foto').toString('base64'), 'doble.jpg', 'image/jpeg');
+
+      const r = await atrasada.procesarPendientes(TENANT);
+
+      expect(filaDe(ticket.id)?.estado).toBe(ESTADO_POR_REVISAR);
+      expect(filaDe(ticket.id)?.ultimo_error).toBeNull();
+      expect(r.detalle).toHaveLength(0);
+    });
+
+    test('una factura en cola no viaja en el respaldo tributario', async () => {
+      const ticket = ticketPorRevisar();
+
+      const respaldo = await fetch(`${base}/api/v1/dte/backup/export?tenant_id=${TENANT}`);
+
+      expect(respaldo.status).toBe(200);
+      expect(await respaldo.text()).not.toContain(ticket.id);
     });
 
     test('una factura por revisar no cuenta como compra en el F29', () => {
@@ -432,6 +521,16 @@ describe('Vencimiento obligatorio al ingresar una factura (D.S. 977/96)', () => 
         [TENANT, sku]
       );
       expect(producto?.fecha_vencimiento).toBe(fecha(90));
+    });
+
+    test('una marca que no es un booleano se rechaza, aunque venga con una fecha valida', async () => {
+      const datos = factura([{ descripcion: 'Yogur con marca rara', fecha_vencimiento: fecha(30), no_vence: 'false' as any }]);
+
+      const r = await confirmar(datos);
+
+      expect(r.status).toBe(400);
+      expect(r.data.code).toBe('VENCIMIENTO_REQUERIDO');
+      expect(existeProducto(String(datos.items[0].sku))).toBe(false);
     });
 
     test('la ingesta directa responde 400 y explica el camino con /scan y /confirm', async () => {

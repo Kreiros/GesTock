@@ -8,6 +8,7 @@ import { defaultSqliteClient } from '../database/sqlite/client';
 import { InvoiceInput, ExtractedInvoiceData } from '../ocr/types';
 import { logger } from '../utils/logger';
 import { detalleError } from '../utils/detalle-error';
+import { ticketsEnConfirmacion } from '../invoices/estados-cola';
 
 const router = Router();
 
@@ -194,6 +195,11 @@ router.delete('/pending/:id', (req: Request, res: Response): void => {
   }
 
   try {
+    // el ticket sigue en la cola hasta que la confirmacion termine, y puede terminar rechazada
+    if (ticketsEnConfirmacion.has(String(req.params.id))) {
+      res.status(409).json({ success: false, message: 'Esa factura se esta confirmando en este momento. Intentelo de nuevo en unos segundos.' });
+      return;
+    }
     if (!defaultInvoiceQueue.descartar(tenantId, String(req.params.id))) {
       res.status(404).json({ success: false, message: 'Esa factura ya no esta esperando revision' });
       return;
