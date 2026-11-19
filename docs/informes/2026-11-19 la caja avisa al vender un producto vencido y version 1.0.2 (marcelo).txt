@@ -1,0 +1,110 @@
+19-11-2026
+La caja avisa al vender un producto vencido, y version 1.0.2
+
+
+David, este es el cambio de la caja que te anuncie en el informe anterior. Toca
+tu parte en la pantalla de venta, asi que te dejo que hace y la lista exacta de
+tus archivos. Todavia no esta subido: queda en mi copia local hasta que pase la
+revision del diff.
+
+
+Que cambia para quien usa la caja
+
+    aviso              al agregar a la venta un producto cuya fecha de
+                       vencimiento ya paso, la caja no lo agrega: muestra
+                       "Producto vencido" con el nombre, la fecha y los dias
+                       que lleva vencido, y nombra el D.S. N 977/96
+    la decision        "No vender" es la accion principal. "Vender de todos
+                       modos" lo agrega. La caja avisa, no bloquea
+    una vez            el aviso sale una vez por producto en cada venta.
+                       Sumar unidades con el "+" o editar la cantidad no
+                       vuelve a preguntar. Si se quita la linea y se agrega
+                       de nuevo, pregunta otra vez
+    lo que vence hoy   todavia se puede vender y no avisa
+    lector y atajos    ningun boton del aviso toma el foco, para que el Enter
+                       del lector no responda por el cajero. Con el aviso
+                       abierto, F4, Escape y las teclas 1 a 5 no actuan
+    semaforo           la alerta sanitaria de Inventario cuenta los dias con
+                       la fecha del equipo. Antes usaba la hora UTC y de noche
+                       mostraba como vencido lo que vencia ese dia
+
+
+Lo que cambia en el servidor
+
+    POST /pos/checkout     sigue respondiendo 201 y no bloquea. La respuesta
+                           trae data.productos_vencidos, una entrada por
+                           producto: producto_id, nombre, fecha_vencimiento
+                           y cantidad. Vacio si no hubo
+    GET /pos/vencimientos  los dias se calculan en fecha local. Una fecha
+                           guardada con hora vale por su dia; una que no se
+                           puede leer queda como urgente, nunca como vigente
+    registro               cada venta con vencidos deja una linea en el
+                           registro del servidor
+
+No hay migracion de base de datos ni rutas nuevas.
+
+
+Archivos tuyos que modifique
+
+    front-end/src/features/pos/stores/carritoStore.ts
+    front-end/src/features/pos/hooks/useAtajosTeclado.ts
+    front-end/src/features/pos/components/visual/CajaVisual.tsx
+    front-end/src/features/pos/components/tecnico/CajaTecnica.tsx
+    front-end/src/features/pos/types.ts
+    front-end/src/features/configuracion/components/SeccionVencimientos.tsx
+
+Archivos nuevos en tu parte
+
+    front-end/src/features/pos/components/compartidos/DialogoProductoVencido.tsx
+    front-end/src/features/pos/stores/carritoStore.test.ts
+    front-end/src/features/pos/hooks/useAtajosTeclado.test.ts
+
+Como quedo armado: el carrito tiene un campo nuevo, porConfirmarVencido. La
+accion agregar, cuando el producto esta vencido y todavia no esta en el ticket,
+lo deja ahi en vez de agregarlo; confirmarVencido lo agrega y descartarVencido
+lo suelta. limpiar tambien lo borra, para que no termine en el ticket del
+cliente siguiente. Por eso los cinco lugares que agregan productos no cambiaron:
+CatalogoProductos, CatalogoTecnico, BuscadorTecnico, el "+" de LineaTicket y
+BotonBolsa. El dialogo lee el carrito y esta montado una vez en cada caja.
+
+La regla de fecha la importe desde invoices/utils/vencimientoFactura.ts, sin
+moverla ni duplicarla.
+
+
+Lo que conviene que sepas
+
+    escaneo perdido    si el cajero escanea otro producto con el aviso
+                       abierto, ese escaneo se pierde: hay que responder el
+                       aviso y volver a pasarlo. Es a proposito, pero es tu
+                       pantalla si prefieres otra cosa
+    catalogo cargado   la caja usa el catalogo que tiene en memoria. Un
+                       producto que vence a medianoche con la caja abierta no
+                       avisa hasta que el catalogo se recargue
+    comprobante        no cambia. Lo vencido que se vendio viaja en la
+                       respuesta del cobro, pero la pantalla no lo muestra
+                       despues de cobrar
+    interfaz antigua   la de backend/public no tiene el aviso. Solo se sirve
+                       si no existe la interfaz nueva
+
+
+Pruebas
+
+    servidor, unitarias     367 de 367
+    servidor, integracion   154 de 154, mas 1 omitida que ya lo estaba
+    front-end, vitest       263 de 263
+    tipos y lint            sin errores en los dos lados
+
+Cada prueba nueva la comprobe quitando el cambio que cubre: fallan. Tambien
+recorri la caja en el navegador, en modo visual y en modo tecnico: aviso, Enter
+y F4 sin efecto, "No vender", "Vender de todos modos", cobro y la alerta de
+Inventario.
+
+
+Fuera de este cambio
+
+    bloqueo        la caja sigue vendiendo lo vencido si el cajero lo
+                   confirma. Bloquear queda para despues de la defensa
+    orden de lote  el descuento por lote sigue sacando primero lo que vence
+                   antes, incluido lo ya vencido
+
+Marcelo
