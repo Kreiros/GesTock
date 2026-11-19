@@ -79,11 +79,7 @@ export const useCarritoStore = create<CarritoState>((set) => ({
     set((estado) => {
       const producto = estado.porConfirmarVencido
       if (!producto) return {}
-      const yaEsta = estado.lineas.some((linea) => linea.producto.id === producto.id)
-      return {
-        porConfirmarVencido: null,
-        lineas: yaEsta ? estado.lineas : [...estado.lineas, { producto, cantidad: 1 }],
-      }
+      return { porConfirmarVencido: null, lineas: [...estado.lineas, { producto, cantidad: 1 }] }
     }),
 
   descartarVencido: () => set({ porConfirmarVencido: null }),

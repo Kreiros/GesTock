@@ -9,7 +9,13 @@ import { defaultPosSyncEngine, TOPE_REINTENTOS_VENTA } from '../sync/pos-sync-en
 import { aplicarRedondeoChileno } from '../utils/pricing';
 import { logger } from '../utils/logger';
 import { defaultLotesService } from '../inventory/lotes.service';
-import { clasificarSemaforo, diasHastaVencer, reloj, unidadesVencidasVendidas } from '../inventory/vencimiento';
+import {
+  clasificarSemaforo,
+  diasHastaVencer,
+  fechaDeVencimientoParaGuardar,
+  reloj,
+  unidadesVencidasVendidas
+} from '../inventory/vencimiento';
 import { codigoValido, consultarCodigo } from '../inventory/open-food-facts.service';
 import { motivoImagenInvalida } from '../inventory/imagen-producto';
 import { defaultDteEmitter } from '../dte/dte-emitter.service';
@@ -154,6 +160,12 @@ router.post('/products', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  const fechaVencimiento = fechaDeVencimientoParaGuardar(fecha_vencimiento);
+  if (fechaVencimiento === undefined) {
+    res.status(400).json({ success: false, message: 'La fecha de vencimiento debe tener el formato AAAA-MM-DD' });
+    return;
+  }
+
   const productId = uuidv4();
   const finalBarcode = codigo_barra || generateChileanBarcode();
 
@@ -177,7 +189,7 @@ router.post('/products', async (req: Request, res: Response): Promise<void> => {
           Number(precio_venta) || 0,
           categoria ?? null,
           lote ?? null,
-          fecha_vencimiento ?? null,
+          fechaVencimiento,
           impuesto_adicional_codigo || 0,
           impuesto_adicional_tasa || 0,
           imagen
@@ -224,7 +236,7 @@ router.post('/products', async (req: Request, res: Response): Promise<void> => {
             Number(precio_venta) || 0,
             categoria ?? null,
             lote ?? null,
-            fecha_vencimiento ?? null,
+            fechaVencimiento,
             impuesto_adicional_codigo || 0,
             impuesto_adicional_tasa || 0,
             imagen
@@ -279,6 +291,12 @@ router.put('/products/:id', async (req: Request, res: Response): Promise<void> =
     activo
   } = req.body;
 
+  const fechaVencimiento = fechaDeVencimientoParaGuardar(fecha_vencimiento);
+  if (fechaVencimiento === undefined) {
+    res.status(400).json({ success: false, message: 'La fecha de vencimiento debe tener el formato AAAA-MM-DD' });
+    return;
+  }
+
   // La imagen no sigue el COALESCE del resto: enviarla en null la quita, omitirla la deja como esta
   const cambiaImagen = req.body && Object.prototype.hasOwnProperty.call(req.body, 'imagen');
   const motivoImagen = cambiaImagen ? motivoImagenInvalida(req.body.imagen) : null;
@@ -321,7 +339,7 @@ router.put('/products/:id', async (req: Request, res: Response): Promise<void> =
         categoria ?? null,
         proveedor_id ?? null,
         lote ?? null,
-        fecha_vencimiento ?? null,
+        fechaVencimiento,
         impuesto_adicional_codigo !== undefined ? Number(impuesto_adicional_codigo) : null,
         impuesto_adicional_tasa !== undefined ? Number(impuesto_adicional_tasa) : null,
         activo !== undefined ? (activo ? 1 : 0) : null,
@@ -360,7 +378,7 @@ router.put('/products/:id', async (req: Request, res: Response): Promise<void> =
             categoria ?? null,
             proveedor_id ?? null,
             lote ?? null,
-            fecha_vencimiento ?? null,
+            fechaVencimiento,
             impuesto_adicional_codigo !== undefined ? Number(impuesto_adicional_codigo) : null,
             impuesto_adicional_tasa !== undefined ? Number(impuesto_adicional_tasa) : null,
             activo !== undefined ? (activo ? 1 : 0) : null,
@@ -834,6 +852,16 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
     const checkoutResult = sqlite.withTransaction(() => {
       const hoy = reloj.ahora();
       const vencidos = new Map<string, { producto_id: string; nombre: string; fecha_vencimiento: string; cantidad: number }>();
+      // El descuento por lote actualiza la fecha del producto: con el mismo producto en dos lineas,
+      // la segunda la leeria ya cambiada. Por eso se guardan todas antes de descontar nada.
+      const fechaAntesDeVender = new Map<string, string | null>();
+      for (const item of lineas) {
+        const fila = sqlite.queryOne<{ fecha_vencimiento: string | null }>(
+          'SELECT fecha_vencimiento FROM productos WHERE id = ?',
+          [item.producto_id]
+        );
+        fechaAntesDeVender.set(item.producto_id, fila?.fecha_vencimiento ?? null);
+      }
 
       // Buscar metodo_pago_id o usar un UUID determinista si no existe
       const metodoRow = sqlite.queryOne<{ id: string }>(
@@ -863,9 +891,9 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
           [detailId, saleId, item.producto_id, item.cantidad, item.precio_unitario, subtotal]
         );
 
-        // Obtener stock previo, y la fecha antes de que el descuento por lote la actualice
-        const prod = sqlite.queryOne<{ stock_actual: number; nombre: string; fecha_vencimiento: string | null }>(
-          'SELECT stock_actual, nombre, fecha_vencimiento FROM productos WHERE id = ?',
+        // Obtener stock previo
+        const prod = sqlite.queryOne<{ stock_actual: number; nombre: string }>(
+          'SELECT stock_actual, nombre FROM productos WHERE id = ?',
           [item.producto_id]
         );
         const prevStock = prod ? Number(prod.stock_actual) : 0;
@@ -882,7 +910,7 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
         const consumo = defaultLotesService.consumirFefo(tenant_id, item.producto_id, Number(item.cantidad));
 
         // D.S. 977/96: la caja no bloquea la venta de un vencido, pero la venta lo deja dicho
-        const vencido = unidadesVencidasVendidas(consumo, prod?.fecha_vencimiento, hoy);
+        const vencido = unidadesVencidasVendidas(consumo, fechaAntesDeVender.get(item.producto_id), hoy);
         if (vencido) {
           const previo = vencidos.get(item.producto_id);
           vencidos.set(item.producto_id, {

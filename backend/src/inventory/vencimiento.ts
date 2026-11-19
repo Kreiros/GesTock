@@ -82,6 +82,17 @@ export function diasHastaVencer(valor: unknown, hoy: Date): number | null {
   return esFechaDeVencimientoValida(fecha) ? diasParaVencer(fecha, hoy) : null;
 }
 
+/**
+ * Fecha de vencimiento tal como se guarda en un producto: AAAA-MM-DD, o null si no viene. Devuelve
+ * undefined cuando el valor no se puede leer como fecha, para que quien guarda lo rechace: una fecha
+ * ilegible guardada queda para siempre como «vence hoy» en el semaforo.
+ */
+export function fechaDeVencimientoParaGuardar(valor: unknown): string | null | undefined {
+  if (valor === undefined || valor === null || valor === '') return null;
+  const fecha = typeof valor === 'string' ? valor.slice(0, 10) : valor;
+  return esFechaDeVencimientoValida(fecha) ? fecha : undefined;
+}
+
 /** Semaforo sanitario del inventario. Vencido es anterior a hoy; lo que vence hoy es urgente. */
 export function clasificarSemaforo(dias: number): { estado: string; nivel_riesgo: string } {
   if (dias < 0) return { estado: 'VENCIDO', nivel_riesgo: 'ROJO_CRITICO' };

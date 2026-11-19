@@ -21,9 +21,17 @@ export function DialogoProductoVencido() {
   const fecha = producto.fecha_vencimiento.slice(0, 10)
   const dias = -diasParaVencer(fecha, new Date())
 
-  // ningun boton toma el foco: el Enter del lector de codigos no debe responder por el cajero
+  // ningun boton toma el foco: el Enter del lector de codigos no debe responder por el cajero.
+  // un toque fuera del aviso no lo cierra: en una caja tactil, el doble toque lo descartaria sin leerlo
   return (
-    <Dialog open onClose={descartar} maxWidth="xs" fullWidth>
+    <Dialog
+      open
+      onClose={(_evento, motivo) => {
+        if (motivo !== 'backdropClick') descartar()
+      }}
+      maxWidth="xs"
+      fullWidth
+    >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <WarningAmberOutlined color="error" />
         Producto vencido

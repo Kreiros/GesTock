@@ -40,6 +40,10 @@ Lo que cambia en el servidor
                            puede leer queda como urgente, nunca como vigente
     registro               cada venta con vencidos deja una linea en el
                            registro del servidor
+    POST y PUT /pos/products
+                           rechazan con 400 una fecha de vencimiento que no
+                           se pueda leer como AAAA-MM-DD. La que viene con
+                           hora se guarda por su dia, y la vacia como nula
 
 No hay migracion de base de datos ni rutas nuevas.
 
@@ -56,6 +60,7 @@ Archivos tuyos que modifique
 Archivos nuevos en tu parte
 
     front-end/src/features/pos/components/compartidos/DialogoProductoVencido.tsx
+    front-end/src/features/pos/components/compartidos/DialogoProductoVencido.test.tsx
     front-end/src/features/pos/stores/carritoStore.test.ts
     front-end/src/features/pos/hooks/useAtajosTeclado.test.ts
 
@@ -73,6 +78,15 @@ moverla ni duplicarla.
 
 Lo que conviene que sepas
 
+    fecha del producto  si tu formulario de producto manda la fecha en un
+                        formato que no empiece por AAAA-MM-DD, el servidor
+                        ahora responde 400 en vez de guardarla. El campo de
+                        fecha del navegador ya la manda asi; revisalo solo si
+                        en algun lugar la escribes a mano
+    toque fuera         un toque fuera del aviso no lo cierra: se responde
+                        con sus botones o con Escape. En una caja tactil, el
+                        doble toque sobre el producto lo descartaba sin leerlo
+
     escaneo perdido    si el cajero escanea otro producto con el aviso
                        abierto, ese escaneo se pierde: hay que responder el
                        aviso y volver a pasarlo. Es a proposito, pero es tu
@@ -89,12 +103,13 @@ Lo que conviene que sepas
 
 Pruebas
 
-    servidor, unitarias     367 de 367
-    servidor, integracion   154 de 154, mas 1 omitida que ya lo estaba
-    front-end, vitest       263 de 263
+    servidor, unitarias     368 de 368
+    servidor, integracion   158 de 158, mas 1 omitida que ya lo estaba
+    front-end, vitest       271 de 271
     tipos y lint            sin errores en los dos lados
 
-Cada prueba nueva la comprobe quitando el cambio que cubre: fallan. Tambien
+Una revision independiente del diff encontro nueve puntos y se corrigieron
+todos. Cada prueba nueva la comprobe quitando el cambio que cubre: fallan. Tambien
 recorri la caja en el navegador, en modo visual y en modo tecnico: aviso, Enter
 y F4 sin efecto, "No vender", "Vender de todos modos", cobro y la alerta de
 Inventario.

@@ -4,6 +4,7 @@ import { initializeDatabase } from '../../src/database/init-db';
 import { defaultSqliteClient } from '../../src/database/sqlite/client';
 import { defaultLotesService } from '../../src/inventory/lotes.service';
 import { reloj } from '../../src/inventory/vencimiento';
+import { logger } from '../../src/utils/logger';
 
 const TENANT = '00000000-0000-0000-0000-000000000001';
 const USUARIO = '00000000-0000-0000-0000-000000000002';
@@ -39,6 +40,19 @@ describe('La caja ante un producto vencido', () => {
     return id;
   };
 
+  /** Alta por la ruta, como la hace la pantalla de Inventario: guarda la fecha y no registra lote. */
+  const alta = async (cuerpo: Record<string, unknown>) => {
+    correlativo += 1;
+    const res = await fetch(`${base}/api/v1/pos/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id: TENANT, sku: `VENC-ALTA-${Date.now()}-${correlativo}`, precio_venta: 1000, ...cuerpo })
+    });
+    return { status: res.status, json: (await res.json()) as any };
+  };
+  const fechaGuardada = (id: string) =>
+    defaultSqliteClient.queryOne<{ f: string | null }>('SELECT fecha_vencimiento AS f FROM productos WHERE id = ?', [id])?.f;
+
   const vender = async (items: Array<{ producto_id: string; cantidad: number }>) => {
     const res = await fetch(`${base}/api/v1/pos/checkout`, {
       method: 'POST',
@@ -71,13 +85,20 @@ describe('La caja ante un producto vencido', () => {
 
   test('vende igual un lote vencido, y la respuesta nombra el producto y cuanto salio', async () => {
     const id = producto('Yogur vencido', 5, fecha(-3), [[5, fecha(-3)]]);
+    const aviso = jest.spyOn(logger, 'warn');
 
     const res = await vender([{ producto_id: id, cantidad: 2 }]);
 
+    const vencidos = [{ producto_id: id, nombre: 'Yogur vencido', fecha_vencimiento: fecha(-3), cantidad: 2 }];
     expect(res.status).toBe(201);
-    expect(res.json.data.productos_vencidos).toEqual([
-      { producto_id: id, nombre: 'Yogur vencido', fecha_vencimiento: fecha(-3), cantidad: 2 }
-    ]);
+    expect(res.json.data.productos_vencidos).toEqual(vencidos);
+    // es la unica constancia de que se vendio un vencido
+    expect(aviso).toHaveBeenCalledWith(
+      'PosRoutes',
+      expect.stringContaining(`La venta ${res.json.data.saleId} incluyo productos vencidos`),
+      { productos_vencidos: vencidos }
+    );
+    aviso.mockRestore();
   });
 
   test('si la venta toma de un lote vencido y de uno vigente, informa solo la parte vencida', async () => {
@@ -100,6 +121,33 @@ describe('La caja ante un producto vencido', () => {
     expect(res.json.data.productos_vencidos).toEqual([
       { producto_id: id, nombre: 'Queso sin lote', fecha_vencimiento: fecha(-10), cantidad: 2 }
     ]);
+  });
+
+  test('un producto dado de alta por la ruta, sin lotes, se juzga por la fecha con que se guardo', async () => {
+    const creado = await alta({ nombre: 'Mantequilla dada de alta', stock_actual: 3, fecha_vencimiento: fecha(-4) });
+    expect(creado.status).toBe(201);
+    const id = creado.json.data.id;
+
+    const res = await vender([{ producto_id: id, cantidad: 2 }]);
+
+    expect(res.status).toBe(201);
+    expect(res.json.data.productos_vencidos).toEqual([
+      { producto_id: id, nombre: 'Mantequilla dada de alta', fecha_vencimiento: fecha(-4), cantidad: 2 }
+    ]);
+  });
+
+  test('partir el mismo producto en dos lineas no cambia cuantas unidades vencidas se informan', async () => {
+    // cinco en stock, un lote vencido y uno vigente que respaldan una unidad cada uno
+    const lotes: Array<[number, string]> = [[1, fecha(-5)], [1, fecha(40)]];
+    const enUnaLinea = producto('Cecina en una linea', 5, fecha(-5), lotes);
+    const enDosLineas = producto('Cecina en dos lineas', 5, fecha(-5), lotes);
+
+    const una = await vender([{ producto_id: enUnaLinea, cantidad: 5 }]);
+    const dos = await vender([{ producto_id: enDosLineas, cantidad: 1 }, { producto_id: enDosLineas, cantidad: 4 }]);
+
+    // una del lote vencido y las tres que ningun lote respalda, por la fecha que tenia el producto
+    expect(una.json.data.productos_vencidos[0].cantidad).toBe(4);
+    expect(dos.json.data.productos_vencidos[0].cantidad).toBe(4);
   });
 
   test('lo que el lote no respalda se suma con la fecha que tenia el producto antes de vender', async () => {
@@ -153,5 +201,41 @@ describe('La caja ante un producto vencido', () => {
     expect(de(ayer)).toMatchObject({ dias_restantes: -1, estado: 'VENCIDO' });
     // lo que no se puede leer queda a la vista como urgente, nunca como vigente
     expect(de(ilegible)).toMatchObject({ dias_restantes: 0, estado: 'VENCE_ESTA_SEMANA' });
+  });
+
+  describe('una fecha de vencimiento ilegible no se guarda', () => {
+    test('el alta la rechaza, y guarda por su dia la que viene con hora', async () => {
+      const ilegible = await alta({ nombre: 'Fecha mal escrita', fecha_vencimiento: '18/11/2025' });
+      expect(ilegible.status).toBe(400);
+      expect(ilegible.json.message).toMatch(/AAAA-MM-DD/);
+
+      const conHora = await alta({ nombre: 'Fecha con hora', fecha_vencimiento: `${fecha(20)}T03:00:00.000Z` });
+      expect(conHora.status).toBe(201);
+      expect(fechaGuardada(conHora.json.data.id)).toBe(fecha(20));
+
+      const sinFecha = await alta({ nombre: 'Sin fecha', fecha_vencimiento: '' });
+      expect(sinFecha.status).toBe(201);
+      expect(fechaGuardada(sinFecha.json.data.id)).toBeNull();
+    });
+
+    test('la edicion la rechaza y deja la fecha que habia', async () => {
+      const id = producto('Producto que se edita', 2, fecha(30));
+      const editar = (cuerpo: Record<string, unknown>) =>
+        fetch(`${base}/api/v1/pos/products/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tenant_id: TENANT, ...cuerpo })
+        });
+
+      expect((await editar({ fecha_vencimiento: 'pronto' })).status).toBe(400);
+      expect(fechaGuardada(id)).toBe(fecha(30));
+
+      expect((await editar({ fecha_vencimiento: fecha(45) })).status).toBe(200);
+      expect(fechaGuardada(id)).toBe(fecha(45));
+
+      // editar otro dato sin mandar la fecha no la toca
+      expect((await editar({ stock_minimo: 3 })).status).toBe(200);
+      expect(fechaGuardada(id)).toBe(fecha(45));
+    });
   });
 });

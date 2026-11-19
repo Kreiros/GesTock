@@ -1,4 +1,9 @@
-import { clasificarSemaforo, diasHastaVencer, unidadesVencidasVendidas } from '../../backend/src/inventory/vencimiento';
+import {
+  clasificarSemaforo,
+  diasHastaVencer,
+  fechaDeVencimientoParaGuardar,
+  unidadesVencidasVendidas
+} from '../../backend/src/inventory/vencimiento';
 
 describe('Pruebas Unitarias: Semaforo de vencimientos y vencidos vendidos', () => {
   // Las 22:30 del 19 de noviembre en el reloj del equipo: en UTC ya es el dia siguiente
@@ -57,5 +62,16 @@ describe('Pruebas Unitarias: Semaforo de vencimientos y vencidos vendidos', () =
     expect(unidadesVencidasVendidas(sinLotes, '2026-12-01', noche)).toBeNull();
     expect(unidadesVencidasVendidas(sinLotes, null, noche)).toBeNull();
     expect(unidadesVencidasVendidas(sinLotes, 'pronto', noche)).toBeNull();
+  });
+
+  test('al guardar, la fecha queda en AAAA-MM-DD, vacia queda en null y la ilegible se rechaza', () => {
+    expect(fechaDeVencimientoParaGuardar('2026-12-01')).toBe('2026-12-01');
+    expect(fechaDeVencimientoParaGuardar('2026-12-01T03:00:00.000Z')).toBe('2026-12-01');
+    expect(fechaDeVencimientoParaGuardar('')).toBeNull();
+    expect(fechaDeVencimientoParaGuardar(null)).toBeNull();
+    expect(fechaDeVencimientoParaGuardar(undefined)).toBeNull();
+    expect(fechaDeVencimientoParaGuardar('18/11/2025')).toBeUndefined();
+    expect(fechaDeVencimientoParaGuardar('2026-02-30')).toBeUndefined();
+    expect(fechaDeVencimientoParaGuardar(20261201)).toBeUndefined();
   });
 });
