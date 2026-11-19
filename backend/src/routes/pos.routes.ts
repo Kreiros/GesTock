@@ -9,6 +9,7 @@ import { defaultPosSyncEngine, TOPE_REINTENTOS_VENTA } from '../sync/pos-sync-en
 import { aplicarRedondeoChileno } from '../utils/pricing';
 import { logger } from '../utils/logger';
 import { defaultLotesService } from '../inventory/lotes.service';
+import { clasificarSemaforo, diasHastaVencer, reloj, unidadesVencidasVendidas } from '../inventory/vencimiento';
 import { codigoValido, consultarCodigo } from '../inventory/open-food-facts.service';
 import { motivoImagenInvalida } from '../inventory/imagen-producto';
 import { defaultDteEmitter } from '../dte/dte-emitter.service';
@@ -831,6 +832,8 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
     // 2. Ejecutar venta transaccional en SQLite
     cobroAprobado = cobro;
     const checkoutResult = sqlite.withTransaction(() => {
+      const hoy = reloj.ahora();
+      const vencidos = new Map<string, { producto_id: string; nombre: string; fecha_vencimiento: string; cantidad: number }>();
 
       // Buscar metodo_pago_id o usar un UUID determinista si no existe
       const metodoRow = sqlite.queryOne<{ id: string }>(
@@ -860,9 +863,9 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
           [detailId, saleId, item.producto_id, item.cantidad, item.precio_unitario, subtotal]
         );
 
-        // Obtener stock previo
-        const prod = sqlite.queryOne<{ stock_actual: number }>(
-          'SELECT stock_actual FROM productos WHERE id = ?',
+        // Obtener stock previo, y la fecha antes de que el descuento por lote la actualice
+        const prod = sqlite.queryOne<{ stock_actual: number; nombre: string; fecha_vencimiento: string | null }>(
+          'SELECT stock_actual, nombre, fecha_vencimiento FROM productos WHERE id = ?',
           [item.producto_id]
         );
         const prevStock = prod ? Number(prod.stock_actual) : 0;
@@ -876,7 +879,20 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
 
         // Descuento por lote, lo que vence antes sale antes. No interrumpe la venta si los
         // lotes no cubren la cantidad: el stock del producto manda y la diferencia se registra.
-        defaultLotesService.consumirFefo(tenant_id, item.producto_id, Number(item.cantidad));
+        const consumo = defaultLotesService.consumirFefo(tenant_id, item.producto_id, Number(item.cantidad));
+
+        // D.S. 977/96: la caja no bloquea la venta de un vencido, pero la venta lo deja dicho
+        const vencido = unidadesVencidasVendidas(consumo, prod?.fecha_vencimiento, hoy);
+        if (vencido) {
+          const previo = vencidos.get(item.producto_id);
+          vencidos.set(item.producto_id, {
+            producto_id: item.producto_id,
+            nombre: prod?.nombre ?? '',
+            fecha_vencimiento:
+              previo && previo.fecha_vencimiento < vencido.fecha_vencimiento ? previo.fecha_vencimiento : vencido.fecha_vencimiento,
+            cantidad: (previo?.cantidad ?? 0) + vencido.cantidad
+          });
+        }
 
         // Registrar en historial_stock
         const historyId = uuidv4();
@@ -888,7 +904,12 @@ router.post('/checkout', async (req: Request, res: Response): Promise<void> => {
         );
       }
 
-      return { saleId, folio, total, unidades };
+      const productos_vencidos = [...vencidos.values()];
+      if (productos_vencidos.length > 0) {
+        logger.warn('PosRoutes', `La venta ${saleId} incluyo productos vencidos`, { productos_vencidos });
+      }
+
+      return { saleId, folio, total, unidades, productos_vencidos };
     });
 
     // La venta existe: desde aqui un error ya no deja un cobro sin venta
@@ -1239,8 +1260,7 @@ router.get('/vencimientos', (req: Request, res: Response): void => {
 
   try {
     const rows = sqlite.query<any>(
-      `SELECT id, sku, nombre, stock_actual, precio_compra, precio_venta, lote, fecha_vencimiento,
-              ROUND(julianday(fecha_vencimiento) - julianday('now')) as dias_restantes
+      `SELECT id, sku, nombre, stock_actual, precio_compra, precio_venta, lote, fecha_vencimiento
        FROM productos
        WHERE tenant_id = ? AND fecha_vencimiento IS NOT NULL AND activo = 1
        ORDER BY fecha_vencimiento ASC`,
@@ -1249,30 +1269,17 @@ router.get('/vencimientos', (req: Request, res: Response): void => {
 
     const unidadesPorLote = defaultLotesService.unidadesPorProducto(tenantId);
 
+    // Los dias se cuentan en la fecha local del equipo. Con la hora de la base, que es UTC, de
+    // noche en Chile lo que vence hoy aparecia como vencido.
+    const hoy = reloj.ahora();
     const clasificados = rows.map(r => {
-      const dias = Math.round(Number(r.dias_restantes));
-      let estado = 'VIGENTE';
-      let nivelRiesgo = 'VERDE';
-
-      if (dias < 0) {
-        estado = 'VENCIDO';
-        nivelRiesgo = 'ROJO_CRITICO';
-      } else if (dias <= 7) {
-        estado = 'VENCE_ESTA_SEMANA';
-        nivelRiesgo = 'NARANJA_URGENTE';
-      } else if (dias <= 15) {
-        estado = 'VENCE_EN_15_DIAS';
-        nivelRiesgo = 'AMARILLO_ALERTA';
-      } else if (dias <= 30) {
-        estado = 'VENCE_EN_30_DIAS';
-        nivelRiesgo = 'AMARILLO_PREVENTIVO';
-      }
+      // Una fecha que no se puede leer cuenta como cero dias: queda a la vista como urgente
+      const dias = diasHastaVencer(r.fecha_vencimiento, hoy) ?? 0;
 
       return {
         ...r,
         dias_restantes: dias,
-        estado,
-        nivel_riesgo: nivelRiesgo,
+        ...clasificarSemaforo(dias),
         // Unidades que vencen en esa fecha. Tres situaciones distintas, y conviene no
         // confundirlas: con lotes se informa la suma; sin lotes pero con el producto en cero
         // se informa cero, porque la cantidad SI se conoce; y solo queda en null el producto
