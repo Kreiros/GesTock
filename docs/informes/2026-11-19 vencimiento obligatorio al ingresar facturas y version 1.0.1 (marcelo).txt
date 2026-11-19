@@ -4,8 +4,9 @@ Vencimiento obligatorio al ingresar facturas, alerta de vencidos y version 1.0.1
 
 David, este cambio toca varios archivos tuyos del front-end. Te dejo aqui que
 se hizo, por que, y la lista exacta de lo que modifique en tu parte para que lo
-revises antes de seguir trabajando encima. Todavia no esta subido: queda en mi
-copia local hasta revisar el diff.
+revises antes de seguir trabajando encima. Ya esta subido a los dos
+repositorios y publicado como version 1.0.1: trae los cambios antes de tocar
+nada.
 
 
 Que cambia para quien usa la aplicacion
@@ -129,17 +130,88 @@ cola: bloqueo sin fechas, casilla "No vence", alerta de vencido, aviso final y
 descarte.
 
 
-Version
+Version y publicacion
 
-La version pasa a 1.0.1. El instalador GesTock-1.0.1-instalador.exe esta
-construido e instalado en mi equipo sobre la instalacion anterior, sin perder
-datos. Falta publicarlo como Release; hasta entonces el README sigue apuntando
-a la 1.0.0.
+La version pasa a 1.0.1 y esta publicada como Release del repositorio, marcada
+como la mas reciente:
+
+    https://github.com/Kreiros/GesTock/releases/latest
+
+El instalador se llama GesTock-1.0.1-instalador.exe. Instalalo encima de lo que
+tengas: no se pierde ningun dato. El README de los dos repositorios ya apunta a
+la 1.0.1.
+
+    Kreiros/GesTock            main en dffc256
+    SenkoGress/Proyecto_titulo main en 2625cbe, con el front, el backend, las
+                               pruebas y los documentos sincronizados
 
 
-Pendiente, no es parte de este cambio
+Documentos que cambiaron
 
-    caja     las reglas de la caja ante un producto vencido no se tocaron.
-             Revisarlas queda como cambio aparte
+    Manual de funcionalidades   ingreso de facturas, cola y la seccion nueva
+                                de Configuracion
+    Arquitectura                81 endpoints (decia 76), las dos rutas nuevas
+                                y los requisitos RF-43 y RF-44
+    Informe de pruebas backend  cifras medidas el 19-11
+    Product Backlog             RF-43 y RF-44 ampliados; no hay requisito
+                                nuevo, siguen siendo 62
+    Sprint Backlog              tarea nueva en la iteracion 5
+    Retrospectivas              seccion nueva, iteracion 5 en curso, registro
+                                parcial al 19-11
+
+En Retrospectivas deje tres "acuerdos propuestos, por confirmar al cierre de la
+iteracion". Los redacte yo y no los hemos conversado: leelos y dime si los
+cambias o los quitas.
+
+    1. Una prueba que cubre un arreglo se comprueba quitando el arreglo: si
+       sigue pasando, no lo prueba.
+    2. Una cifra que se repite en varios documentos se vuelve a medir antes de
+       copiarla.
+    3. Las reglas de la caja ante un producto vencido se revisan como cambio
+       aparte.
+
+
+Lo que viene: la caja ante un producto vencido
+
+Revise la caja y esta peor de lo que pensabamos. No cambie nada todavia.
+
+    el cobro           POST /pos/checkout valida turno y stock, no el
+                       vencimiento
+    lo vencido sale    el descuento por lote ordena por fecha y no excluye
+    primero            los lotes vencidos: lo vencido es lo primero que se
+                       vende
+    la pantalla        la caja recibe la fecha de vencimiento de cada producto
+                       y no la usa. El unico aviso esta en Inventario
+    el semaforo        GET /pos/vencimientos cuenta los dias en hora UTC. De
+                       noche en Chile cuenta un dia de mas: lo que vence hoy
+                       aparece como vencido
+
+Lo que voy a hacer, si no tienes objeciones, es lo mismo que en las facturas:
+avisar y dejar que la persona decida, sin bloquear. Toca tu parte:
+
+    carritoStore.ts            al agregar un producto vencido no lo agrega:
+                               lo deja "por confirmar". Los tres lugares que
+                               agregan productos no cambian
+    DialogoProductoVencido     nuevo, en pos/components/compartidos. "No
+                               vender" como accion principal y "Vender de
+                               todos modos"
+    CajaVisual y CajaTecnica   montan el dialogo
+    etiquetasProducto.ts       etiqueta "Vencido" en el catalogo de la caja
+    pos/types.ts               la respuesta del cobro trae productos_vencidos
+
+En el servidor el cobro va a devolver productos_vencidos con lo vencido que se
+vendio, y el semaforo pasa a fecha local. Seria la version 1.0.2.
+
+Bloquear la venta de lo vencido queda para despues de la defensa: obliga a
+recalcular el stock vendible y toca el corazon de la venta.
+
+Si prefieres hacer tu la parte de la pantalla, dimelo antes de que empiece y te
+dejo solo el contrato del servidor.
+
+
+Pendientes
+
+    Drive      subir los .rar nuevos con el instalador 1.0.1
+    acuerdos   conversar los tres acuerdos propuestos de la iteracion 5
 
 Marcelo
