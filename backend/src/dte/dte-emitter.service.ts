@@ -21,6 +21,11 @@ import {
 } from './types';
 import { fechaLocal, marcaLocal } from '../utils/fecha-local';
 
+/** Monto de una linea: la unica fuente del subtotal, para que el detalle y los totales coincidan. */
+export function montoLinea(item: { cantidad: number; precioUnitario: number }): number {
+  return Math.round(Number(item.cantidad) * Number(item.precioUnitario));
+}
+
 export class DteEmitterService {
   /**
    * Obtiene la configuración tributaria activa del tenant
@@ -60,16 +65,20 @@ export class DteEmitterService {
   }
 
   /**
-   * Calcula los totales respetando el IVA del 19%, ILA y la Ley de Redondeo N° 20.956.
-   * conIla en false para la venta del minorista al consumidor (DL 825, art. 43 inciso final):
+   * Totales del documento. Declaran el monto real de la venta: el redondeo de la Ley N° 20.956 es un
+   * ajuste del pago en efectivo, no del documento, y con tarjeta se cobra exacto.
+   *
+   * Los precios del catalogo son brutos. El neto de lo afecto sin impuesto adicional se saca una sola
+   * vez sobre el documento y el IVA es lo que falta, asi neto + IVA + adicional + exento da el total
+   * exacto. conIla en false para la venta del minorista al consumidor (DL 825, art. 43 inciso final):
    * el impuesto adicional ya viene en el costo y el precio solo se separa en neto e IVA.
    */
   public calculateTotals(items: ItemDTE[], conIla = true): TotalesDTE {
-    let netoTotal = 0;
-    let ivaTotal = 0;
     let exentoTotal = 0;
+    let afectoTotal = 0;
+    let afectoSinIla = 0;
+    let netoConIla = 0;
     let ilaTotal = 0;
-    let totalBruto = 0;
     const desgloseMap: Record<number, { codigo: number; nombre: string; tasa: number; monto: number }> = {};
 
     // Codigos de la tabla del formato DTE del SII: son los que viajan en CodImpAdic
@@ -82,58 +91,48 @@ export class DteEmitterService {
     };
 
     for (const it of items) {
-      const sub = Math.round(it.cantidad * it.precioUnitario);
+      const sub = montoLinea(it);
       if (it.exento) {
         exentoTotal += sub;
-        totalBruto += sub;
-      } else {
-        const tasaIla = conIla ? it.tasaIla || 0 : 0;
-        const codigoIla = conIla ? it.codigoIla || 0 : 0;
-        const factorImpuestos = 1.19 + (tasaIla / 100);
+        continue;
+      }
+      afectoTotal += sub;
 
-        // Precios en catálogo chileno minorista son brutos (IVA + ILA incluidos)
-        const neto = Math.round(sub / factorImpuestos);
-        const iva = Math.round(neto * 0.19);
-        const ila = Math.round(neto * (tasaIla / 100));
+      const tasaIla = conIla ? it.tasaIla || 0 : 0;
+      const codigoIla = conIla ? it.codigoIla || 0 : 0;
+      if (tasaIla <= 0) {
+        afectoSinIla += sub;
+        continue;
+      }
 
-        netoTotal += neto;
-        ivaTotal += iva;
-        ilaTotal += ila;
-        totalBruto += sub;
-
-        if (codigoIla > 0 && ila > 0) {
-          if (!desgloseMap[codigoIla]) {
-            desgloseMap[codigoIla] = {
-              codigo: codigoIla,
-              nombre: nombresIla[codigoIla] || `Impuesto Adicional Cód ${codigoIla}`,
-              tasa: tasaIla,
-              monto: 0
-            };
-          }
-          desgloseMap[codigoIla].monto += ila;
+      // Con impuesto adicional el neto es la base de los dos impuestos: se separa por linea
+      const neto = Math.round(sub / (1.19 + tasaIla / 100));
+      const ila = Math.round(neto * (tasaIla / 100));
+      netoConIla += neto;
+      ilaTotal += ila;
+      if (codigoIla > 0 && ila > 0) {
+        if (!desgloseMap[codigoIla]) {
+          desgloseMap[codigoIla] = {
+            codigo: codigoIla,
+            nombre: nombresIla[codigoIla] || `Impuesto Adicional Cód ${codigoIla}`,
+            tasa: tasaIla,
+            monto: 0
+          };
         }
+        desgloseMap[codigoIla].monto += ila;
       }
     }
 
-    // Regla de Redondeo Ley N° 20.956 del Banco Central de Chile
-    const ultimoDigito = totalBruto % 10;
-    let redondeo = 0;
-    if (ultimoDigito >= 1 && ultimoDigito <= 5) {
-      redondeo = -ultimoDigito; // hasta 5 baja, lo dice el articulo 13
-    } else if (ultimoDigito >= 6 && ultimoDigito <= 9) {
-      redondeo = 10 - ultimoDigito;
-    }
-    const totalRedondeado = totalBruto + redondeo;
+    const montoNeto = Math.round(afectoSinIla / 1.19) + netoConIla;
 
     return {
-      montoNeto: netoTotal,
+      montoNeto,
       tasaIva: 19.0,
-      montoIva: ivaTotal,
+      montoIva: afectoTotal - montoNeto - ilaTotal,
       montoExento: exentoTotal,
       montoIla: ilaTotal,
       desgloseIla: Object.values(desgloseMap),
-      montoTotal: totalRedondeado,
-      redondeoChileno: redondeo
+      montoTotal: exentoTotal + afectoTotal
     };
   }
 
@@ -219,16 +218,23 @@ export class DteEmitterService {
     const docId = `DTE_${tipoDte}_F${folio}`;
     const tmstFirma = marcaLocal();
 
+    // Orden del esquema del SII: IndExe va antes del nombre y CodImpAdic justo antes del monto
     let itemsXml = '';
     req.items.forEach((it, idx) => {
-      const ilaTag = conIla && it.codigoIla ? `<CodImpAdic>${it.codigoIla}</CodImpAdic>` : '';
-      itemsXml += `<Detalle><NroLinDet>${idx + 1}</NroLinDet>${ilaTag}<NmbItem>${it.nombre.replace(/[<>&'"]/g, '').substring(0, 50)}</NmbItem><QtyItem>${it.cantidad}</QtyItem><PrcItem>${Math.round(it.precioUnitario)}</PrcItem><MontoItem>${Math.round(it.subtotal)}</MontoItem></Detalle>`;
+      const exeTag = it.exento ? '<IndExe>1</IndExe>' : '';
+      const ilaTag = conIla && it.codigoIla && !it.exento ? `<CodImpAdic>${it.codigoIla}</CodImpAdic>` : '';
+      itemsXml += `<Detalle><NroLinDet>${idx + 1}</NroLinDet>${exeTag}<NmbItem>${it.nombre.replace(/[<>&'"]/g, '').substring(0, 50)}</NmbItem><QtyItem>${it.cantidad}</QtyItem><PrcItem>${Math.round(it.precioUnitario)}</PrcItem>${ilaTag}<MontoItem>${montoLinea(it)}</MontoItem></Detalle>`;
     });
 
     // Encabezado según tipo de documento
     let idDocExtra = '<IndServicio>3</IndServicio>';
     if (tipoDte === TipoDTE.GUIA_DESPACHO) {
       idDocExtra = `<IndTraslado>${req.transporte?.indTraslado || 5}</IndTraslado>`;
+    }
+    // La boleta es bruta por definicion. En los demas tipos el detalle lleva los precios del catalogo,
+    // que incluyen IVA, y el SII los leeria como netos si no se declara
+    if (!esBoleta(tipoDte)) {
+      idDocExtra += '<MntBruto>1</MntBruto>';
     }
 
     // Receptor corporativo para Facturas y Guías, o simple para boletas
@@ -247,6 +253,16 @@ export class DteEmitterService {
       }
     }
 
+    // Una boleta exenta no tiene parte afecta; lo exento se declara aparte para que el documento cuadre
+    const totalesAfectosXml =
+      (totales.montoNeto > 0 || totales.montoExento === 0
+        ? `<MntNeto>${totales.montoNeto}</MntNeto>`
+        : '') +
+      (totales.montoExento > 0 ? `<MntExe>${totales.montoExento}</MntExe>` : '') +
+      (totales.montoNeto > 0 || totales.montoExento === 0
+        ? `<TasaIVA>19</TasaIVA><IVA>${totales.montoIva}</IVA>`
+        : '');
+
     // Nodo Referencia para Notas de Crédito (Tipo 61) o documentos con referencia
     let referenciaXml = '';
     if (req.referencia) {
@@ -259,7 +275,7 @@ export class DteEmitterService {
       transporteXml = `<Transporte><Patente>${req.transporte.patente || 'ABCD12'}</Patente><RUTTrans>${req.transporte.choferRut || emisor.rut}</RUTTrans><Chofer><RUTChofer>${req.transporte.choferRut || emisor.rut}</RUTChofer><NombreChofer>${(req.transporte.choferNombre || 'Chofer Asignado').replace(/[<>&'"]/g, '')}</NombreChofer></Chofer><DirDest>${(req.transporte.direccionDestino || receptor.direccion || 'Local Destino').replace(/[<>&'"]/g, '')}</DirDest><CmnaDest>${req.transporte.comunaDestino || receptor.comuna || emisor.comuna}</CmnaDest></Transporte>`;
     }
 
-    const documentoXml = `<Documento ID="${docId}"><Encabezado><IdDoc><TipoDTE>${tipoDte}</TipoDTE><Folio>${folio}</Folio><FchEmis>${fecha}</FchEmis>${idDocExtra}</IdDoc><Emisor><RUTEmisor>${emisor.rut}</RUTEmisor><RznSoc>${emisor.razonSocial.replace(/[<>&'"]/g, '')}</RznSoc><GiroEmis>${emisor.giro.replace(/[<>&'"]/g, '')}</GiroEmis><Acteco>${emisor.acteco || '471100'}</Acteco><DirOrigen>${emisor.direccion.replace(/[<>&'"]/g, '')}</DirOrigen><CmnaOrigen>${emisor.comuna}</CmnaOrigen><CiudadOrigen>${emisor.ciudad}</CiudadOrigen></Emisor>${receptorXml}<Totales><MntNeto>${totales.montoNeto}</MntNeto><TasaIVA>19</TasaIVA><IVA>${totales.montoIva}</IVA>${ilaTotalesXml}<MntTotal>${totales.montoTotal}</MntTotal></Totales></Encabezado>${itemsXml}${transporteXml}${referenciaXml}${tedResult.tedXml}<TmstFirma>${tmstFirma}</TmstFirma></Documento>`;
+    const documentoXml = `<Documento ID="${docId}"><Encabezado><IdDoc><TipoDTE>${tipoDte}</TipoDTE><Folio>${folio}</Folio><FchEmis>${fecha}</FchEmis>${idDocExtra}</IdDoc><Emisor><RUTEmisor>${emisor.rut}</RUTEmisor><RznSoc>${emisor.razonSocial.replace(/[<>&'"]/g, '')}</RznSoc><GiroEmis>${emisor.giro.replace(/[<>&'"]/g, '')}</GiroEmis><Acteco>${emisor.acteco || '471100'}</Acteco><DirOrigen>${emisor.direccion.replace(/[<>&'"]/g, '')}</DirOrigen><CmnaOrigen>${emisor.comuna}</CmnaOrigen><CiudadOrigen>${emisor.ciudad}</CiudadOrigen></Emisor>${receptorXml}<Totales>${totalesAfectosXml}${ilaTotalesXml}<MntTotal>${totales.montoTotal}</MntTotal></Totales></Encabezado>${itemsXml}${transporteXml}${referenciaXml}${tedResult.tedXml}<TmstFirma>${tmstFirma}</TmstFirma></Documento>`;
 
     // 4. Firmar el XML con XMLDSig
     const signatureXml = defaultXmlSigner.signDocument(documentoXml, docId);
