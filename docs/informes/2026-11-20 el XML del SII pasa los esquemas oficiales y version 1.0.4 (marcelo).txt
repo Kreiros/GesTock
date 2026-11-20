@@ -41,7 +41,14 @@ Los errores, todos anteriores a esta semana
     firma              la firma del documento y la del sobre no las habria
                        aceptado ningun verificador: el digest se calculaba sin
                        el espacio de nombres que el documento hereda. Ahora
-                       usa la forma canonica que pide la norma XMLDSig
+                       usa la forma canonica de XMLDSig para lo que arma
+                       GesTock. Ademas, el archivo de folios que entrega el
+                       SII trae saltos de linea: se aplana al timbrar, porque
+                       con folios reales la firma y el timbre habrian fallado
+    timbre             se firmaba sobre los bytes en UTF-8, y con una tilde
+                       en la razon social o en el primer item no habria
+                       verificado. Ahora se firma sobre ISO-8859-1, que es lo
+                       que recibe el SII
     tildes y la ene    el sobre se declara ISO-8859-1 pero se enviaba en
                        UTF-8, y una comilla tipografica pegada desde Word lo
                        dejaba mal formado. Ahora se entrega en ISO-8859-1 y
@@ -56,13 +63,16 @@ backend/tests/fixtures/sii-xsd, y hay una prueba nueva
 documentos desde el codigo y valida cada sobre: boletas, boleta exenta,
 facturas, notas de credito y guias, con exentos, impuesto adicional, cliente
 identificado, textos largos, cantidad fraccionaria y precio cero. Todos pasan
-sin errores ni advertencias. Ahora son dieciseis: agregue una factura con
-tildes, ene y texto pegado de Word.
+sin errores ni advertencias. Ahora son diecisiete: agregue una factura con
+tildes, ene y texto pegado de Word, y una guia con un precio tan chico que
+redondea a cero. Otra prueba carga un archivo de folios con saltos de linea,
+como el del SII, y comprueba la firma y el timbre.
 
 Las firmas las verifica .NET por su cuenta (System.Security.Cryptography.Xml,
 script verificar_firmas.ps1 en la misma carpeta): recalcula cada digest y
 comprueba la firma del documento y la del sobre. Si se altera un monto, falla.
-La firma del timbre se verifica con la clave del folio.
+La firma del timbre se verifica con la clave del folio, sobre los bytes del
+archivo tal como se envian.
 
 El validador y el verificador son los de .NET que trae Windows, asi que esas
 partes corren en Windows; en otro sistema figuran como omitidas.
@@ -79,19 +89,24 @@ La caja
     devolucion         con el RUT del emisor invalido no se devuelve el
                        dinero, porque no se podria emitir la nota de credito
     configuracion      no deja guardar un RUT de emisor con el digito
-                       equivocado
+                       equivocado ni un codigo de actividad que no sea de 6
+                       digitos (ACTECO_INVALIDO)
+    emision directa    /dte/emit y /dte/guias/emitir responden 400 con
+    y guia             RUT_RECEPTOR_INVALIDO o RUT_CHOFER_INVALIDO en vez de
+                       un error 500 sin explicacion
 
-Esto si te puede interesar: la caja y Configuracion pueden recibir estos
-errores nuevos con el codigo en el campo error y el texto en message. Hoy
+Esto si te puede interesar: la caja, Configuracion y la emision de guias
+pueden recibir estos errores nuevos con el codigo en el campo error y el texto en message. Hoy
 obtenerMensajeError muestra el message de un 400, asi que no hace falta cambiar
 nada; si quieres un texto propio, ya sabes el codigo.
 
 Lo comprobe al reves tambien: con el atributo viejo del timbre, el transporte
 fuera del encabezado, IndServicio en la factura, el precio cero y la caratula
 con puntos, la prueba falla. Y lo mismo con cada correccion de la revision:
-sin el digito verificador, sin la forma canonica, con el sobre en UTF-8, sin
-las revisiones de la caja o con el RUT del chofer despues del folio, alguna
-prueba falla.
+sin el digito verificador, sin la forma canonica, con el archivo de folios
+sin aplanar, con el timbre en UTF-8, con el sobre en UTF-8 en la descarga o en
+la subida, sin las revisiones de la caja y de las rutas o con el RUT del chofer
+despues del folio, alguna prueba falla.
 
 
 Lo que el esquema no prueba
@@ -104,8 +119,8 @@ documentos ya emitidos guardan su XML como estaba.
 
 Pruebas
 
-    servidor, unitarias     382 de 382 (371 del servidor y 11 de contrato)
-    servidor, integracion   223 de 223, mas 1 omitida que ya lo estaba
+    servidor, unitarias     383 de 383 (372 del servidor y 11 de contrato)
+    servidor, integracion   231 de 231, mas 1 omitida que ya lo estaba
     front-end, vitest       284 de 284, sin cambios
     extremo a extremo       119 de 119, con 4 omitidas a proposito. Cuantas se
                             omiten depende de los datos de la base
