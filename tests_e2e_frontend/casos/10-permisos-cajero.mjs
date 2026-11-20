@@ -1,5 +1,5 @@
 // casos/10-permisos-cajero.mjs
-import { autenticarSiEsNecesario, enviar, guardarToken, obtener } from '../lib/cliente.mjs'
+import { autenticarSiEsNecesario, enviar, guardarToken, obtener, pedir } from '../lib/cliente.mjs'
 
 export const nombre = 'Permisos: lo que puede y no puede el cajero'
 
@@ -67,6 +67,23 @@ export async function ejecutar(b) {
     const respuesta = await obtener(ruta)
     b.comprobar(
       `no entra a ${ruta.replace('/api/v1', '')}`,
+      respuesta.estado === 403,
+      `llego ${respuesta.estado}`,
+    )
+  }
+
+  // dar de alta, editar precios y ajustar stock es del admin (rf-04); un id inexistente basta: el rol
+  // se revisa antes de buscar el producto, asi que nada se modifica
+  const ID = '00000000-0000-0000-0000-0000000000ff'
+  const escrituras = [
+    ['POST', '/api/v1/pos/products', { nombre: 'Intento del cajero', sku: `PERMISOS-${Date.now()}`, precio_venta: 1 }],
+    ['PUT', `/api/v1/pos/products/${ID}`, { precio_venta: 1 }],
+    ['PATCH', `/api/v1/pos/products/${ID}/stock`, { nuevo_stock: 1, motivo: 'intento' }],
+  ]
+  for (const [metodo, ruta, cuerpo] of escrituras) {
+    const respuesta = await pedir(metodo, ruta, cuerpo)
+    b.comprobar(
+      `no puede ${metodo} ${ruta.replace('/api/v1', '').replace(ID, ':id')}`,
       respuesta.estado === 403,
       `llego ${respuesta.estado}`,
     )

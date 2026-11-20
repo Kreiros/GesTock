@@ -101,7 +101,7 @@ export function CajaTecnica() {
       {ventaLista && (
         <DialogoComprobante
           venta={ventaLista.venta}
-          ajusteRedondeo={ventaLista.ajusteRedondeo}
+          totalCobrado={ventaLista.venta.total}
           onCerrar={cerrarComprobante}
         />
       )}
