@@ -34,21 +34,40 @@ documento. Ahora:
                    adicional + exento da el total exacto. En la factura con
                    impuesto adicional, el neto de esas lineas se separa por
                    linea y el IVA tambien cierra por diferencia
-    XML            agregue MntExe cuando hay exento, IndExe en la linea
-                   exenta, y MntBruto=1 en factura, nota de credito y guia,
-                   porque el detalle lleva precios con IVA. Tambien movi
-                   CodImpAdic al lugar que pide el esquema, justo antes de
-                   MontoItem
+    XML            agregue MntExe cuando hay exento e IndExe en la linea
+                   exenta. La boleta ya no lleva TasaIVA en los totales, y
+                   la boleta exenta no lleva neto ni IVA. CodImpAdic quedo
+                   justo antes de MontoItem, como pide el esquema
+    montos         MntBruto=1 solo en factura y nota de credito sin
+    brutos         impuesto adicional. En la guia y en los documentos con
+                   impuesto adicional el detalle va en neto (precio y monto
+                   de la linea sin IVA ni adicional) y MntNeto es su suma
+    precio         el precio unitario viaja con sus decimales (hasta 6), asi
+                   cantidad por precio da el monto de la linea
     una fuente     el monto de cada linea es cantidad por precio, redondeado
-                   una vez. El cobro, la devolucion y el documento usan lo
-                   mismo
+                   una vez, con la misma funcion (montoLinea) en el cobro, la
+                   devolucion, la guia y el documento
+    adicional      solo cuenta si el producto tiene codigo y tasa: con uno
+                   solo de los dos el documento no cuadraba
+    negativos      /dte/emit y /dte/guias/emitir rechazan con 400 cantidades
+                   y precios negativos
     efectivo       la venta guarda lo cobrado (1.230) y la boleta declara la
                    venta (1.234). El cierre Z suma lo cobrado y el F29 los
-                   documentos: la diferencia es la suma de los redondeos
+                   documentos: la diferencia es la suma de los redondeos. La
+                   prueba lo comprueba consultando el resumen de caja y el
+                   F29 antes y despues de una venta
 
-La prueba lee el XML firmado, no solo el calculo: para boleta, boleta con
-linea exenta, boleta exenta y factura con impuesto adicional comprueba que la
-cabecera cuadra y que coincide con la suma del detalle.
+Lo de MntBruto, TasaIVA y los decimales del precio lo confirme en los
+formatos oficiales del SII, no de memoria: el formato DTE (febrero de 2026)
+dice que MntBruto es "solo para documentos sin impuestos adicionales" y no lo
+admite en la guia, y el formato de boleta (version 4.2) define sus totales
+como MntNeto, MntExe, IVA y MntTotal.
+
+La prueba lee el XML firmado, no solo el calculo, en ocho casos: boleta,
+boleta con linea exenta, boleta exenta, factura y nota de credito con y sin
+impuesto adicional, y guia. Comprueba que la cabecera cuadra, que el detalle
+suma lo que corresponde, donde va y donde no va MntBruto, que cada linea
+cumple cantidad por precio, y el orden de IndExe y CodImpAdic.
 
 Lo que no puedo asegurar sin el SII: en la factura de varias lineas el IVA
 puede quedar a un peso de neto x 19 %. Para la boleta es la regla del formato.
@@ -79,13 +98,17 @@ cambiarlos.
         recibe totalCobrado en vez de ajusteRedondeo. El redondeo es lo
         cobrado menos el total del documento. Con redondeo muestra TOTAL,
         LEY REDONDEO y TOTAL A PAGAR; sin el, una sola linea. Una devolucion
-        o un documento anterior a la 1.0.3 no inventan un ajuste
+        o un documento anterior a la 1.0.3 no inventan un ajuste. La boleta
+        nunca muestra impuesto adicional: antes, una boleta 1.0.2 redondeada
+        hacia arriba habria mostrado "ILA $4"
     front-end/src/features/pos/components/compartidos/DialogoComprobante.tsx
+        le pasa al ticket venta.total, lo que devolvio el servidor
     front-end/src/features/pos/components/visual/CajaVisual.tsx
     front-end/src/features/pos/components/tecnico/CajaTecnica.tsx
-        pasan venta.total, lo que devolvio el servidor
+        pasan la venta, sin el redondeo calculado aparte
     front-end/src/features/pos/hooks/useCobrarVenta.ts
-        ya no recalcula el redondeo con los precios del carrito
+        ya no recalcula el redondeo con los precios del carrito; guarda la
+        venta tal como la devolvio el servidor
     front-end/src/features/ventas/components/compartidos/DialogoTicketVenta.tsx
         la reimpresion pasa venta.total; antes iba con redondeo 0 y habria
         mostrado otro monto que el cobrado
@@ -128,25 +151,32 @@ Rehice las de todos los documentos desde una sola corrida, hoy, despues de
 compilar:
 
     unitarias      377 en 31 suites (366 del servidor y 11 de contrato)
-    integracion    167 en 22 suites, mas 1 omitida: migraciones
+    integracion    178 en 22 suites, mas 1 omitida: migraciones
                    concurrentes, que necesita PostgreSQL real
-    Jest           544 aprobadas y 1 omitida
-    interfaz       282 en 40 archivos
-    extremo a      122 de 122, con 5 omitidas a proposito (las que crearian
-    extremo        datos reales, emitirian documentos o necesitan la nube)
+    Jest           555 aprobadas y 1 omitida
+    interfaz       284 en 40 archivos
+    extremo a      126 de 126, con 3 omitidas a proposito (las que crearian
+    extremo        datos reales, emitirian documentos o necesitan la nube).
+                   Cuantas se omiten depende de los datos de la base: en una
+                   corrida anterior de hoy fueron 5
 
 Los documentos ya no dicen 100 por ciento sin mas: declaran las omitidas. Las
-corregi en README, docs/README, estado actual, arquitectura (incluida la
-tabla del 72/72, que ahora es 81/81), el informe del servidor y el de la
-interfaz, con sus Word. La cobertura (78 % de sentencias) sigue siendo la
+corregi en README, docs/README, estado actual (su tabla de metricas decia
+72/72 endpoints y ahora 81/81), arquitectura, el informe del servidor y el de
+la interfaz, con sus Word. La cobertura (78 % de sentencias) sigue siendo la
 medida el 15-11; no la volvi a medir.
 
 
  Como lo comprobe
 
-Cada prueba nueva la comprobe quitando el cambio que cubre: con el IVA
-calculado como antes, sin MntExe, sin MntBruto, sin la regla del cajero, con
-el redondeo en cero y con los botones visibles, fallan.
+Quite uno por uno los cambios y corri sus pruebas: con el IVA calculado como
+antes, sin MntExe, con MntBruto en todos los documentos o en ninguno, con
+TasaIVA en la boleta, con el precio redondeado, con el adicional contando sin
+codigo, aceptando negativos, sin la regla del cajero, con el redondeo del
+ticket en cero, con el impuesto adicional en la boleta y con los botones
+visibles, fallan. Antes de programar, la lista de tareas paso por una revision
+independiente, y despues el diff por otra, que encontro catorce puntos mas;
+los corregi todos.
 
 
  Lo que queda

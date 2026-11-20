@@ -6,15 +6,10 @@ import { tieneAlcohol } from '@/features/pos/utils/alcohol'
 import type { ItemCheckout, VentaRegistrada } from '@/features/pos/types'
 import { tenantActual, usuarioActualId } from '@/features/auth/utils/identidad'
 
-// la venta cobrada: su total es lo que se cobro, con el redondeo de la ley 20.956 si fue en efectivo
-export type VentaCobrada = {
-  venta: VentaRegistrada
-}
-
 // cobrar venta (lo usan los dos modos)
 export function useCobrarVenta() {
   const registrarVenta = useRegistrarVenta()
-  const [ventaLista, setVentaLista] = useState<VentaCobrada | null>(null)
+  const [ventaLista, setVentaLista] = useState<VentaRegistrada | null>(null)
 
   // enviar venta al backend
   function cobrar() {
@@ -52,7 +47,7 @@ export function useCobrarVenta() {
       },
       {
         onSuccess: (venta) => {
-          setVentaLista({ venta }) // mostrar comprobante
+          setVentaLista(venta) // mostrar comprobante
           limpiar() // ticket nuevo
         },
       },

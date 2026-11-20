@@ -100,8 +100,7 @@ export function CajaTecnica() {
 
       {ventaLista && (
         <DialogoComprobante
-          venta={ventaLista.venta}
-          totalCobrado={ventaLista.venta.total}
+          venta={ventaLista}
           onCerrar={cerrarComprobante}
         />
       )}

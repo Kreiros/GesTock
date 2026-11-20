@@ -52,14 +52,29 @@ describe('TicketImpreso', () => {
   })
 
   // reimpresion desde el historial de una devolucion: lo cobrado viene en negativo
-  it('una devolucion, o un documento anterior ya redondeado, no inventa un ajuste', () => {
+  it('una devolucion no inventa un ajuste', () => {
     expect(textoDel(boleta(), -1234)).not.toContain('LEY REDONDEO')
-    expect(textoDel(boleta({ neto: 1034, iva: 196, total: 1230 }), 1230)).not.toContain('LEY REDONDEO')
+  })
+
+  // asi guardo la 1.0.2 una boleta de 1.236 en efectivo: el total ya traia el redondeo hacia arriba
+  it('una boleta anterior a la 1.0.3 no inventa ni ajuste ni impuesto adicional', () => {
+    const texto = textoDel(boleta({ neto: 1039, iva: 197, total: 1240 }), 1240)
+
+    expect(texto).not.toContain('LEY REDONDEO')
+    expect(texto).not.toContain('ILA')
+    expect(texto).toMatch(/TOTAL A PAGAR:\s*\$1\.240/)
   })
 
   it('el impuesto adicional de una factura se deduce sin descuadrarse', () => {
-    const texto = textoDel(boleta({ neto: 4105, iva: 780, total: 5970 }), 5970, 'Tarjeta')
+    const factura = { ...boleta({ neto: 4105, iva: 780, total: 5970 }), tipoDte: 33 }
+    const texto = textoDel(factura, 5970, 'Tarjeta')
 
     expect(texto).toMatch(/IMPUESTO ADICIONAL ILA:\s*\$1\.085/)
+  })
+
+  it('una nota de credito anterior con el redondeo hacia arriba no muestra impuesto adicional', () => {
+    const nota = { ...boleta({ neto: 1039, iva: 197, total: 1240 }), tipoDte: 61 }
+
+    expect(textoDel(nota, -1240)).not.toContain('ILA')
   })
 })

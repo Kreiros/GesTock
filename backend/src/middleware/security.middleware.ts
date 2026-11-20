@@ -191,7 +191,7 @@ function isCashierDteRoute(method: string | undefined, fullPath: string): boolea
  * ajustar stock. El cajero consulta el catalogo y registra mermas (RF-04). La barra final opcional
  * importa: Express atiende /products/ igual que /products.
  */
-export function isAdminCatalogWrite(method: string | undefined, fullPath: string): boolean {
+function isAdminCatalogWrite(method: string | undefined, fullPath: string): boolean {
   const metodo = (method || '').toUpperCase();
   if (metodo === 'POST') return /^\/api\/v1\/pos\/products\/?$/.test(fullPath);
   if (metodo === 'PUT') return /^\/api\/v1\/pos\/products\/[^/]+\/?$/.test(fullPath);

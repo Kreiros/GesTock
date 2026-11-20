@@ -40,8 +40,11 @@ export function TicketImpreso({ comprobante, emisor, metodoPago, totalCobrado }:
   const { neto, iva, exento, total } = comprobante.totales
 
   // el documento declara el monto real de la venta; lo que sobra despues de neto, iva y exento es el
-  // impuesto adicional
-  const ila = Math.max(0, total - neto - iva - exento)
+  // impuesto adicional. la boleta nunca lo lleva (dl 825, art. 43), y una nota de credito anterior a la
+  // 1.0.3 puede traer hasta 5 pesos de redondeo que no son impuesto
+  const resto = Math.max(0, total - neto - iva - exento)
+  const tipo = comprobante.tipoDte
+  const ila = tipo === 33 || (tipo === 61 && resto > 5) ? resto : 0
   // el redondeo es la diferencia entre lo cobrado y el documento. una devolucion se cobra en negativo
   // y un documento anterior a la 1.0.3 ya traia el total redondeado: en los dos casos no hay ajuste
   const diferencia = Math.abs(totalCobrado) - total
