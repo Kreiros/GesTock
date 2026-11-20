@@ -225,6 +225,7 @@ export class DteEmitterService {
     // consume folio, y el XML firmado nunca se reescribe despues
     const rutEmisor = rutSii(emisor.rut);
     const rutReceptor = rutSii(receptor.rut);
+    const rutChofer = tipoDte === TipoDTE.GUIA_DESPACHO && req.transporte ? rutSii(req.transporte.choferRut || emisor.rut) : '';
 
     // 1. Asignar folio correlativo atómico con el CAF activo
     const { folio, caf } = defaultCafManager.consumeNextFolio(req.tenantId, tipoDte);
@@ -315,14 +316,13 @@ export class DteEmitterService {
     // Nodo Transporte para Guía de Despacho (Tipo 52)
     let transporteXml = '';
     if (tipoDte === TipoDTE.GUIA_DESPACHO && req.transporte) {
-      const rutChofer = rutSii(req.transporte.choferRut || emisor.rut);
       transporteXml = `<Transporte><Patente>${textoSii(req.transporte.patente || 'ABCD12', 8)}</Patente><RUTTrans>${rutChofer}</RUTTrans><Chofer><RUTChofer>${rutChofer}</RUTChofer><NombreChofer>${textoSii(req.transporte.choferNombre || 'Chofer Asignado', 30)}</NombreChofer></Chofer><DirDest>${textoSii(req.transporte.direccionDestino || receptor.direccion || 'Local Destino', 70)}</DirDest><CmnaDest>${textoSii(req.transporte.comunaDestino || receptor.comuna || emisor.comuna, 20)}</CmnaDest></Transporte>`;
     }
 
     const documentoXml = `<Documento ID="${docId}"><Encabezado><IdDoc><TipoDTE>${tipoDte}</TipoDTE><Folio>${folio}</Folio><FchEmis>${fecha}</FchEmis>${idDocExtra}</IdDoc>${emisorXml}${receptorXml}${transporteXml}<Totales>${totalesAfectosXml}${ilaTotalesXml}<MntTotal>${totales.montoTotal}</MntTotal></Totales></Encabezado>${itemsXml}${referenciaXml}${tedResult.tedXml}<TmstFirma>${tmstFirma}</TmstFirma></Documento>`;
 
     // 4. Firmar el XML con XMLDSig
-    const signatureXml = defaultXmlSigner.signDocument(documentoXml, docId);
+    const signatureXml = defaultXmlSigner.signDocument(documentoXml, docId, undefined, 'http://www.sii.cl/SiiDte');
     const fullDteXml = `<DTE version="1.0" xmlns="http://www.sii.cl/SiiDte">${documentoXml}${signatureXml}</DTE>`;
 
     // 5. Construir URL QR oficial de verificación fiscal del SII (Res. Ex. N° 53)

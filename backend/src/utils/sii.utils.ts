@@ -31,18 +31,25 @@ export function rutValido(rut: string): boolean {
 /**
  * RUT como lo pide el XML del SII (RUTType): cuerpo y digito verificador separados por guion, sin
  * puntos ni espacios y con la K en mayuscula. Acepta lo que el usuario haya escrito (76.123.456-0,
- * 761234560, 76123456-k). No revisa el digito verificador: eso lo valida el SII al recibir.
- * Lanza un error si no queda un RUT con cuerpo y digito, para no gastar un folio en un documento
- * que el SII va a rechazar.
+ * 761234560, 76123456-k), o null si no es un RUT con su digito verificador correcto: un RUT sin
+ * digito pasaria por el de otro contribuyente.
  */
-export function rutSii(rut: string | null | undefined): string {
+export function rutSiiSeguro(rut: string | null | undefined): string | null {
   const limpio = String(rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase();
   const cuerpo = limpio.slice(0, -1);
   const dv = limpio.slice(-1);
-  if (!/^\d{1,8}$/.test(cuerpo) || !/^[0-9K]$/.test(dv)) {
-    throw new Error(`El RUT "${rut ?? ''}" no tiene un formato valido para el SII`);
+  if (!/^\d{1,8}$/.test(cuerpo) || !/^[0-9K]$/.test(dv)) return null;
+  const rut2 = `${cuerpo}-${dv}`;
+  return rutValido(rut2) ? rut2 : null;
+}
+
+/** Como rutSiiSeguro, pero lanza un error: se usa antes de gastar un folio. */
+export function rutSii(rut: string | null | undefined): string {
+  const normalizado = rutSiiSeguro(rut);
+  if (!normalizado) {
+    throw new Error(`El RUT "${rut ?? ''}" no es valido para el SII: revise el numero y el digito verificador`);
   }
-  return `${cuerpo}-${dv}`;
+  return normalizado;
 }
 
 /**
@@ -50,5 +57,18 @@ export function rutSii(rut: string | null | undefined): string {
  * permite el esquema, que rechaza el documento si se pasa.
  */
 export function textoSii(valor: unknown, largoMaximo: number): string {
-  return String(valor ?? '').replace(/[<>&'"]/g, '').trim().substring(0, largoMaximo);
+  return String(valor ?? '')
+    .normalize('NFC')
+    // lo que se pega desde otros programas: el sobre viaja en ISO-8859-1 y estos no existen ahi
+    .replace(/[\u2018\u2019\u201A\u2032]/g, '')
+    .replace(/[\u201C\u201D\u201E\u2033]/g, '')
+    .replace(/\u2026/g, '...')
+    .replace(/[\u2013\u2014\u2212]/g, '-')
+    .replace(/\u20AC/g, 'EUR')
+    .replace(/\u00A0/g, ' ')
+    // fuera de ISO-8859-1 o de control: el XML quedaria mal formado
+    .replace(/[^\x20-\x7E\xA1-\xFF]/g, '')
+    .replace(/[<>&'"]/g, '')
+    .trim()
+    .substring(0, largoMaximo);
 }

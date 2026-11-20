@@ -25,6 +25,11 @@ export interface DocumentoPendiente {
 
 export type TipoSobre = 'EnvioDTE' | 'EnvioBOLETA';
 
+/** El sobre declara ISO-8859-1: se entrega en esos bytes, no en UTF-8, o el SII lee mal las tildes y la ñ. */
+export function bytesDelSobre(sobreXml: string): Buffer {
+  return Buffer.from(sobreXml, 'latin1');
+}
+
 export interface SobrePreparado {
   envioId: string;
   tipoSobre: TipoSobre;
@@ -237,7 +242,7 @@ export class SiiEnvioService {
       `</Caratula>`;
 
     const setDte = `<SetDTE ID="${setId}">${caratula}${cuerpos}</SetDTE>`;
-    const firma = this.signer.signDocument(setDte, setId);
+    const firma = this.signer.signDocument(setDte, setId, undefined, 'http://www.sii.cl/SiiDte');
     const sobreXml =
       `<?xml version="1.0" encoding="ISO-8859-1"?>` +
       `<${tipoSobre} version="1.0" xmlns="http://www.sii.cl/SiiDte">${setDte}${firma}</${tipoSobre}>`;

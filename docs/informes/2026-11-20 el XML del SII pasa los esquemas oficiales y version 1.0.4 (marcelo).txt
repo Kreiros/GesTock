@@ -34,8 +34,18 @@ Los errores, todos anteriores a esta semana
                        hacian rechazar el documento. Ahora se recortan al largo
                        del esquema, la cantidad va con hasta 6 decimales y un
                        item sin valor va sin precio
-    RUT invalido       un RUT que no se puede leer ya no gasta un folio: la
-                       emision se rechaza antes
+    RUT invalido       se revisa el digito verificador. Un RUT que no se
+                       puede leer, o con el digito equivocado, ya no gasta un
+                       folio: la emision se rechaza antes, tambien el del
+                       chofer de la guia
+    firma              la firma del documento y la del sobre no las habria
+                       aceptado ningun verificador: el digest se calculaba sin
+                       el espacio de nombres que el documento hereda. Ahora
+                       usa la forma canonica que pide la norma XMLDSig
+    tildes y la ene    el sobre se declara ISO-8859-1 pero se enviaba en
+                       UTF-8, y una comilla tipografica pegada desde Word lo
+                       dejaba mal formado. Ahora se entrega en ISO-8859-1 y
+                       esos caracteres se reemplazan
 
 
 Como queda probado
@@ -46,15 +56,42 @@ backend/tests/fixtures/sii-xsd, y hay una prueba nueva
 documentos desde el codigo y valida cada sobre: boletas, boleta exenta,
 facturas, notas de credito y guias, con exentos, impuesto adicional, cliente
 identificado, textos largos, cantidad fraccionaria y precio cero. Todos pasan
-sin errores ni advertencias. Tambien verifica que la firma del timbre y el
-digest de la firma siguen valiendo sobre el documento final.
+sin errores ni advertencias. Ahora son dieciseis: agregue una factura con
+tildes, ene y texto pegado de Word.
 
-El validador es el de .NET que trae Windows, asi que esa parte corre en
-Windows; en otro sistema figura como omitida.
+Las firmas las verifica .NET por su cuenta (System.Security.Cryptography.Xml,
+script verificar_firmas.ps1 en la misma carpeta): recalcula cada digest y
+comprueba la firma del documento y la del sobre. Si se altera un monto, falla.
+La firma del timbre se verifica con la clave del folio.
+
+El validador y el verificador son los de .NET que trae Windows, asi que esas
+partes corren en Windows; en otro sistema figuran como omitidas.
+
+
+La caja
+
+    venta              si el RUT del emisor guardado en Configuracion no es
+                       valido, la caja no cobra: responde con el error
+                       EMISOR_RUT_INVALIDO antes de descontar stock. La
+                       factura a un RUT invalido da RUT_RECEPTOR_INVALIDO
+    boleta             un RUT de cliente que no se puede leer, como S/R, sale
+                       como cliente anonimo en vez de fallar
+    devolucion         con el RUT del emisor invalido no se devuelve el
+                       dinero, porque no se podria emitir la nota de credito
+    configuracion      no deja guardar un RUT de emisor con el digito
+                       equivocado
+
+Esto si te puede interesar: la caja y Configuracion pueden recibir estos
+errores nuevos con el codigo en el campo error y el texto en message. Hoy
+obtenerMensajeError muestra el message de un 400, asi que no hace falta cambiar
+nada; si quieres un texto propio, ya sabes el codigo.
 
 Lo comprobe al reves tambien: con el atributo viejo del timbre, el transporte
 fuera del encabezado, IndServicio en la factura, el precio cero y la caratula
-con puntos, la prueba falla.
+con puntos, la prueba falla. Y lo mismo con cada correccion de la revision:
+sin el digito verificador, sin la forma canonica, con el sobre en UTF-8, sin
+las revisiones de la caja o con el RUT del chofer despues del folio, alguna
+prueba falla.
 
 
 Lo que el esquema no prueba
@@ -67,14 +104,15 @@ documentos ya emitidos guardan su XML como estaba.
 
 Pruebas
 
-    servidor, unitarias     380 de 380 (369 del servidor y 11 de contrato)
-    servidor, integracion   200 de 200, mas 1 omitida que ya lo estaba
+    servidor, unitarias     382 de 382 (371 del servidor y 11 de contrato)
+    servidor, integracion   223 de 223, mas 1 omitida que ya lo estaba
     front-end, vitest       284 de 284, sin cambios
     extremo a extremo       119 de 119, con 4 omitidas a proposito. Cuantas se
                             omiten depende de los datos de la base
 
 Actualice cuatro afirmaciones de pruebas antiguas que esperaban el RUT con
-puntos o el atributo alg.
+puntos o el atributo alg, y cambie los RUT de prueba que tenian el digito
+verificador equivocado.
 
 
 Version

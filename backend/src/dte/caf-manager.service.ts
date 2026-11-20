@@ -9,7 +9,7 @@ import { defaultSqliteClient } from '../database/sqlite/client';
 import { logger } from '../utils/logger';
 import { TipoDTE, SiiCafRecord, TedResult } from './types';
 import { fechaLocal, marcaLocal } from '../utils/fecha-local';
-import { rutSii } from '../utils/sii.utils';
+import { rutSii, textoSii } from '../utils/sii.utils';
 
 export class CafManagerService {
   /**
@@ -97,9 +97,8 @@ export class CafManagerService {
       rawCaf = rawCaf.substring(startIdx, endIdx);
     }
 
-    // Normalizar datos para evitar caracteres incompatibles en XML
-    const cleanItem = params.primerItem.replace(/[<>&'"]/g, '').substring(0, 40);
-    const cleanRSR = params.receptorRazonSocial.replace(/[<>&'"]/g, '').substring(0, 40);
+    const cleanItem = textoSii(params.primerItem, 40);
+    const cleanRSR = textoSii(params.receptorRazonSocial, 40);
 
     // Estructura oficial del nodo Datos del Documento (<DD>)
     const ddXml = `<DD><RE>${rutSii(params.emisorRut)}</RE><TD>${params.tipoDte}</TD><F>${params.folio}</F><FE>${params.fechaEmision}</FE><RR>${rutSii(params.receptorRut)}</RR><RSR>${cleanRSR}</RSR><MNT>${Math.round(params.montoTotal)}</MNT><IT1>${cleanItem}</IT1>${rawCaf}<TSTED>${timestamp}</TSTED></DD>`;
