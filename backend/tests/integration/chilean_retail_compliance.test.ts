@@ -189,7 +189,7 @@ describe('Chilean Retail & Tax Compliance Pack Integration Tests', () => {
       expect(dteFactura.tipoDocumento).toBe('FACTURA');
       expect(dteFactura.tipoDte).toBe(33);
       expect(dteFactura.xmlDte).toContain('<TipoDTE>33</TipoDTE>');
-      expect(dteFactura.xmlDte).toContain('<RUTRecep>77.888.999-0</RUTRecep>');
+      expect(dteFactura.xmlDte).toContain('<RUTRecep>77888999-0</RUTRecep>');
       expect(dteFactura.xmlDte).toContain('<RznSocRecep>CONSTRUCTORA LOS ANDES SPA</RznSocRecep>');
       expect(dteFactura.xmlDte).toContain('<GiroRecep>CONSTRUCCION Y OBRAS MENORES</GiroRecep>');
       expect(dteFactura.xmlDte).toContain('<DirRecep>CALLE INDUSTRIAL 456</DirRecep>');
@@ -269,7 +269,7 @@ describe('Chilean Retail & Tax Compliance Pack Integration Tests', () => {
       expect(guia.xmlDte).toContain('<IndTraslado>5</IndTraslado>');
       expect(guia.xmlDte).toContain('<Transporte>');
       expect(guia.xmlDte).toContain('<Patente>JJXX88</Patente>');
-      expect(guia.xmlDte).toContain('<RUTChofer>15.234.567-8</RUTChofer>');
+      expect(guia.xmlDte).toContain('<RUTChofer>15234567-8</RUTChofer>');
       expect(guia.xmlDte).toContain('<NombreChofer>Mario González Chofer</NombreChofer>');
     });
   });

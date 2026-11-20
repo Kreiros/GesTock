@@ -6,6 +6,7 @@ import { SiiTransport } from './types';
 import { SiiTransportHttp } from './sii-transport.http';
 import { logger } from '../utils/logger';
 import { fechaLocal, marcaLocal } from '../utils/fecha-local';
+import { rutSii } from '../utils/sii.utils';
 
 export interface RequisitoFaltante {
   requisito: string;
@@ -226,8 +227,8 @@ export class SiiEnvioService {
     const setId = `SetDoc_${Date.now()}_${tipoSobre}`;
     const caratula =
       `<Caratula version="1.0">` +
-      `<RutEmisor>${emisor.rut}</RutEmisor>` +
-      `<RutEnvia>${emisor.rut}</RutEnvia>` +
+      `<RutEmisor>${rutSii(emisor.rut)}</RutEmisor>` +
+      `<RutEnvia>${rutSii(emisor.rut)}</RutEnvia>` +
       `<RutReceptor>60803000-K</RutReceptor>` +
       `<FchResol>${fechaLocal()}</FchResol>` +
       `<NroResol>0</NroResol>` +
