@@ -1,0 +1,167 @@
+20-11-2026
+Respuesta a tu revision independiente: los criticos corregidos y la version 1.0.3
+
+
+David, lei tu informe del 19 y revise cada punto contra el codigo. Los cuatro
+criticos eran reales. Traje tus dos commits (el redondeo y el setup de las
+pruebas de interfaz) y no los toque: estan bien. Lo demas lo corregi yo. Antes
+de programar paso por una revision de la especificacion y, al final, quedo
+probado en las tres baterias y en la de extremo a extremo.
+
+Todavia no esta subido: queda en mi copia local hasta que pase la revision del
+diff.
+
+
+ 1. El redondeo
+
+Tu correccion esta bien y la deje como esta. Corregi la frase en los
+documentos (arquitectura RF-09 y 5.3, informe de pruebas, mapa de procesos y
+sus Word) y en dos comentarios de codigo que todavia decian que el 5 sube:
+
+    backend/src/utils/pricing.ts
+    front-end/src/shared/utils/redondeoChileno.ts
+
+
+ 2 y 3. El documento tributario
+
+Segui tu lectura: el redondeo es un ajuste del pago en efectivo, no del
+documento. Ahora:
+
+    total          el documento declara siempre el monto real de la venta,
+                   con tarjeta y con efectivo
+    neto e IVA     en la boleta el neto se saca una vez sobre el total
+                   (total / 1,19) y el IVA es lo que falta. Asi neto + IVA +
+                   adicional + exento da el total exacto. En la factura con
+                   impuesto adicional, el neto de esas lineas se separa por
+                   linea y el IVA tambien cierra por diferencia
+    XML            agregue MntExe cuando hay exento, IndExe en la linea
+                   exenta, y MntBruto=1 en factura, nota de credito y guia,
+                   porque el detalle lleva precios con IVA. Tambien movi
+                   CodImpAdic al lugar que pide el esquema, justo antes de
+                   MontoItem
+    una fuente     el monto de cada linea es cantidad por precio, redondeado
+                   una vez. El cobro, la devolucion y el documento usan lo
+                   mismo
+    efectivo       la venta guarda lo cobrado (1.230) y la boleta declara la
+                   venta (1.234). El cierre Z suma lo cobrado y el F29 los
+                   documentos: la diferencia es la suma de los redondeos
+
+La prueba lee el XML firmado, no solo el calculo: para boleta, boleta con
+linea exenta, boleta exenta y factura con impuesto adicional comprueba que la
+cabecera cuadra y que coincide con la suma del detalle.
+
+Lo que no puedo asegurar sin el SII: en la factura de varias lineas el IVA
+puede quedar a un peso de neto x 19 %. Para la boleta es la regla del formato.
+Para la factura hay que confirmarlo enviando al ambiente de certificacion, que
+nunca hemos hecho.
+
+
+ 4. El cajero
+
+El servidor exige administrador para dar de alta (POST /pos/products), editar
+(PUT /pos/products/:id) y ajustar stock (PATCH /pos/products/:id/stock). Revisa
+metodo y ruta, tambien con barra al final, y deja abiertas las consultas del
+catalogo.
+
+Las mermas y las devoluciones las deje abiertas al cajero. Es lo que dicen el
+RF-04 ("Inventario, consulta y mermas") y el manual, que pone las devoluciones
+entre las pantallas de todo el personal. Si prefieres cerrarle tambien las
+notas de credito, se agrega a la misma regla, pero cambia el diseño
+documentado y obliga a que el administrador este en cada devolucion.
+
+No agregue historial de cambios de precio: con esto el cajero ya no puede
+cambiarlos.
+
+
+ Lo que toque en tu parte
+
+    front-end/src/features/pos/components/compartidos/TicketImpreso.tsx
+        recibe totalCobrado en vez de ajusteRedondeo. El redondeo es lo
+        cobrado menos el total del documento. Con redondeo muestra TOTAL,
+        LEY REDONDEO y TOTAL A PAGAR; sin el, una sola linea. Una devolucion
+        o un documento anterior a la 1.0.3 no inventan un ajuste
+    front-end/src/features/pos/components/compartidos/DialogoComprobante.tsx
+    front-end/src/features/pos/components/visual/CajaVisual.tsx
+    front-end/src/features/pos/components/tecnico/CajaTecnica.tsx
+        pasan venta.total, lo que devolvio el servidor
+    front-end/src/features/pos/hooks/useCobrarVenta.ts
+        ya no recalcula el redondeo con los precios del carrito
+    front-end/src/features/ventas/components/compartidos/DialogoTicketVenta.tsx
+        la reimpresion pasa venta.total; antes iba con redondeo 0 y habria
+        mostrado otro monto que el cobrado
+    front-end/src/shared/utils/impuestos.ts
+        misma regla que el documento, para que la pantalla de cobro muestre
+        el mismo IVA que la boleta
+    front-end/src/shared/utils/redondeoChileno.ts
+        solo el comentario
+    front-end/src/features/pos/components/compartidos/AvisoErrorVenta.tsx
+        sin stock suficiente, le pide al cajero avisar al administrador
+    front-end/src/features/inventario/components/compartidos/AccionesProducto.tsx
+    front-end/src/features/inventario/components/visual/BarraHerramientasInventario.tsx
+    front-end/src/features/inventario/components/tecnico/BarraHerramientasInventarioTecnico.tsx
+        el cajero no ve Editar producto, Ajustar stock, Añadir producto,
+        Alta de producto ni Recepcion mercaderia. Usa usePuedeAdministrar,
+        como PanelSugerenciaPedido
+    tests_e2e_frontend/casos/10-permisos-cajero.mjs
+        tres comprobaciones nuevas: el cajero recibe 403 al dar de alta,
+        editar y ajustar stock
+
+Pruebas nuevas en tu parte
+
+    front-end/src/features/pos/components/compartidos/TicketImpreso.test.tsx
+    front-end/src/features/inventario/components/compartidos/permisosInventario.test.tsx
+    front-end/src/features/pos/utils/lineasImpuesto.test.ts (tres casos)
+
+
+ Las dos cosas que ya me habias mencionado
+
+    binding-mock   declarado en devDependencies, version 10.2.2, con el lock
+    dist/          la prueba de empaquetado ahora figura como omitida si no
+                   hay dist/, en vez de pasar sin verificar. dist:win ya
+                   compila antes de empaquetar, asi que el instalador nunca
+                   salio sin la 023; el que estaba desactualizado era tu dist
+
+
+ Las cifras
+
+Rehice las de todos los documentos desde una sola corrida, hoy, despues de
+compilar:
+
+    unitarias      377 en 31 suites (366 del servidor y 11 de contrato)
+    integracion    167 en 22 suites, mas 1 omitida: migraciones
+                   concurrentes, que necesita PostgreSQL real
+    Jest           544 aprobadas y 1 omitida
+    interfaz       282 en 40 archivos
+    extremo a      122 de 122, con 5 omitidas a proposito (las que crearian
+    extremo        datos reales, emitirian documentos o necesitan la nube)
+
+Los documentos ya no dicen 100 por ciento sin mas: declaran las omitidas. Las
+corregi en README, docs/README, estado actual, arquitectura (incluida la
+tabla del 72/72, que ahora es 81/81), el informe del servidor y el de la
+interfaz, con sus Word. La cobertura (78 % de sentencias) sigue siendo la
+medida el 15-11; no la volvi a medir.
+
+
+ Como lo comprobe
+
+Cada prueba nueva la comprobe quitando el cambio que cubre: con el IVA
+calculado como antes, sin MntExe, sin MntBruto, sin la regla del cajero, con
+el redondeo en cero y con los botones visibles, fallan.
+
+
+ Lo que queda
+
+    SII            probar en el ambiente de certificacion la factura con
+                   impuesto adicional y la boleta con exento
+    documentos     los emitidos antes de la 1.0.3 con el total redondeado
+    viejos         quedan como estan. Una devolucion total de una venta
+                   anterior emite una nota de credito por el monto real,
+                   que puede diferir hasta en 5 pesos del documento que
+                   anula. Tomar los montos del original habria descuadrado
+                   la propia nota de credito contra su detalle
+    devolucion     una devolucion en efectivo de una venta redondeada
+                   devuelve el total del documento, no lo cobrado
+    version        la 1.0.3 esta construida e instalada en mi equipo;
+                   falta publicarla como Release
+
+Marcelo

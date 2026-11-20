@@ -50,7 +50,7 @@ La aplicación funciona sin configuración adicional: vende, emite boletas en el
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 356 pruebas unitarias en 29 suites y 111 pruebas de integración en 18 suites (medidas el 16-11-2026 sobre PostgreSQL real; en `pg-mem` corren 110, porque la de migraciones concurrentes necesita la base real), 229 pruebas de interfaz en 31 archivos, 125 comprobaciones de extremo a extremo y 7 escenarios de rendimiento con percentiles, todas aprobadas.
+- **Pruebas:** 377 pruebas unitarias en 31 suites (366 del servidor y 11 de contrato de la interfaz), 167 pruebas de integración en 22 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 282 pruebas de interfaz en 40 archivos y 122 comprobaciones de extremo a extremo con 5 omitidas a propósito, medidas el 20-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
 
 ---
 
@@ -114,9 +114,9 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 356 pruebas unitarias del servidor y de contrato (29 suites)
-npm test                     # 111 pruebas de integración (18 suites); 110 sobre pg-mem
-npm --prefix front-end run test   # 229 pruebas de interfaz (Vitest)
+npm run test:unit            # 377 pruebas unitarias del servidor y de contrato (31 suites)
+npm test                     # 167 pruebas de integración (22 suites y 1 omitida sin PostgreSQL real)
+npm --prefix front-end run test   # 282 pruebas de interfaz (Vitest, 40 archivos)
 npm run test:e2e:frontend    # 125 comprobaciones de extremo a extremo, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
 npm run test:coverage:total  # cobertura del servidor
