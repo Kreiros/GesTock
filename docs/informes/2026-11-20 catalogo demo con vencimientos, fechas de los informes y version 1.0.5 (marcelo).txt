@@ -1,0 +1,91 @@
+20-11-2026
+Catalogo demo con vencimientos, fechas de los informes y version 1.0.5
+
+
+David, respondo tus dos informes de hoy. Los dos tenian razon y quedaron
+resueltos.
+
+
+Tus commits
+
+Los traje y los revise contra el codigo. Estan bien los dos:
+
+    768764b    el ticket lee monto_ila del documento. La linea en
+               /dte/:id/receipt esta bien, y cambiar ponytail por Alcance
+               en el comentario tambien
+    da7e0b8    el panel. Este no venia en tu informe: el total de cada
+               venta se sumaba una vez por cada linea de la boleta, por el
+               join con el detalle. Ahora el total y las transacciones se
+               cuentan sobre la venta y las unidades y el costo sobre el
+               detalle. Bien visto
+
+Y tienes razon en lo de la Release: cuando escribi el informe de la 1.0.4
+ya estaba publicada. Esa frase quedo vieja; no lo reescribo porque ya lo
+tienes, pero aqui queda dicho.
+
+
+El catalogo demo
+
+Era como dijiste: solo el pisco traia fecha, y los lacteos nulo. Cambie la
+semilla para que guarde cuantos dias faltan para el vencimiento
+(vence_en_dias), y el cargador calcula la fecha desde el dia en que se carga
+el catalogo. Con una fecha fija la demostracion envejece: lo que hoy vence
+esta semana estaria vencido el dia de la defensa.
+
+    vencidos           COLUN Leche Entera 1 L (hace 2 dias) y NESTLE
+                       Yoghurt Griego (hace 1)
+    esta semana        SOPROLE Leche Semidescremada (3 dias), IDEAL Pan
+                       Blanco (4) y SOPROLE Mantequilla (6)
+    15 dias            COLUN Queso Rallado (12)
+    30 dias            QUILLAYES Queso Vegano (25)
+    vigentes           el resto, con meses por delante
+    sin fecha          el pisco, que no se vence, y la bolsa
+
+La fecha usa el mismo reloj que la caja y el semaforo, sobre la fecha local.
+Las pruebas unitarias ahora corren con la zona horaria de Chile fijada en la
+configuracion de Jest (tests_unitarias/jest.unit.config.js), porque ponerla
+dentro del archivo de prueba no surte efecto. La prueba fija el reloj a las
+23:30, que en UTC ya es el dia siguiente, y exige los dias exactos.
+
+Lo comprobe de verdad: levante el servidor sobre una carpeta de datos vacia
+con el catalogo, y el semaforo dio 2 vencidos, 3 de esta semana, 1 a 15
+dias, 1 a 30 y 16 vigentes. Vendi la leche Colun y la respuesta del cobro
+trajo productos_vencidos con la leche y su fecha.
+
+Dos cosas que conviene saber:
+
+    tu base y la mia     no cambian. El catalogo se carga una sola vez, en el
+                         primer inicio. Para verlo hay que instalar de cero
+    para la defensa      los dias avanzan desde la carga: si se instala tres
+                         dias antes, lo de esta semana ya sale vencido.
+                         Conviene instalar de cero el mismo dia
+
+La nube no recibe la fecha del catalogo demo, igual que hoy no recibe el
+impuesto adicional. La caja y el semaforo leen la base local, asi que no
+afecta lo que se muestra.
+
+
+Las fechas de los informes de pruebas
+
+Corregidas al 20 de noviembre en los dos informes, en el md y en el docx.
+
+
+Pruebas
+
+    servidor, unitarias     390 de 390 (379 del servidor y 11 de contrato)
+    servidor, integracion   231 de 231, mas 1 omitida que ya lo estaba
+    front-end, vitest       288 de 288 en 40 archivos, tus cifras
+    extremo a extremo       119 de 119, con 4 omitidas a proposito
+
+Las cuatro pruebas nuevas del catalogo las comprobe al reves: con la fecha
+calculada desde la hora UTC, con el reloj del sistema en vez del de la caja
+y sin fecha en la carga, fallan.
+
+
+Version
+
+1.0.5, con tus dos commits y esto. Construida e instalada en mi equipo
+sobre la anterior. La Release 1.0.5 se publica despues de subir estos
+commits, con el instalador adjunto.
+
+Marcelo

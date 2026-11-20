@@ -50,7 +50,7 @@ La aplicación funciona sin configuración adicional: vende, emite boletas en el
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 383 pruebas unitarias en 32 suites (372 del servidor y 11 de contrato de la interfaz), 231 pruebas de integración en 23 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 284 pruebas de interfaz en 40 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 20-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
+- **Pruebas:** 390 pruebas unitarias en 32 suites (379 del servidor y 11 de contrato de la interfaz), 231 pruebas de integración en 23 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 288 pruebas de interfaz en 40 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 20-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
 
 ---
 
@@ -98,6 +98,7 @@ npm run dev
 ```bash
 npm run datos:demo   # carga semillas/catalogo-demo.json; es aditivo y no pisa lo existente
 ```
+Los perecibles del catálogo vencen a una cantidad de días contada desde la carga: dos lácteos quedan vencidos y tres vencen esta semana, para mostrar el aviso de la caja y el semáforo de Inventario. Como esos días avanzan desde la carga, para una demostración conviene instalar de cero el mismo día.
 
 ---
 
@@ -114,9 +115,9 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 383 pruebas unitarias del servidor y de contrato (32 suites)
+npm run test:unit            # 390 pruebas unitarias del servidor y de contrato (32 suites)
 npm test                     # 231 pruebas de integración (23 suites y 1 omitida sin PostgreSQL real)
-npm --prefix front-end run test   # 284 pruebas de interfaz (Vitest, 40 archivos)
+npm --prefix front-end run test   # 288 pruebas de interfaz (Vitest, 40 archivos)
 npm run test:e2e:frontend    # 119 comprobaciones de extremo a extremo y 4 omitidas, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
 npm run test:coverage:total  # cobertura del servidor
