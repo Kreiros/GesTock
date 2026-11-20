@@ -1,0 +1,94 @@
+20-11-2026
+El XML del SII pasa los esquemas oficiales, y version 1.0.4
+
+
+David, esto no toca nada de tu parte: es solo el servidor. Te lo cuento porque
+cambia lo que se puede afirmar de los documentos tributarios en la defensa.
+
+
+Lo que hice
+
+No podemos probar en el ambiente de certificacion del SII: hace falta el
+certificado digital, una empresa inscrita y folios autorizados. Lo que si se
+puede es validar los documentos contra los esquemas oficiales que publica el
+SII (schema_dte.zip y schema_envio_bol.zip, bajados de sii.cl). Lo hice con los
+sobres reales que arma el sistema, y ninguno pasaba.
+
+
+Los errores, todos anteriores a esta semana
+
+    RUT con puntos     el SII lo exige sin puntos (76123456-0). Iba asi en el
+                       emisor, el receptor, el chofer, el timbre y la caratula
+                       del sobre
+    timbre             FRMT y FRMA usaban el atributo alg; el esquema exige
+                       algoritmo
+    boleta             el emisor usaba los nombres de la factura (RznSoc,
+                       GiroEmis, Acteco); la boleta pide RznSocEmisor y
+                       GiroEmisor, sin actividad economica. Y el receptor
+                       llevaba GiroRecep, que la boleta no admite
+    guia               el transporte iba fuera del encabezado
+    factura            llevaba IndServicio=3, que significa factura de
+                       servicios. Un almacen vende mercaderia: ahora va sin el
+    datos reales       un giro de mas de 40 caracteres, un item con precio
+                       cero, cantidades con muchos decimales o nombres largos
+                       hacian rechazar el documento. Ahora se recortan al largo
+                       del esquema, la cantidad va con hasta 6 decimales y un
+                       item sin valor va sin precio
+    RUT invalido       un RUT que no se puede leer ya no gasta un folio: la
+                       emision se rechaza antes
+
+
+Como queda probado
+
+Los esquemas del SII y el validador quedaron en el repositorio, en
+backend/tests/fixtures/sii-xsd, y hay una prueba nueva
+(backend/tests/integration/xml_sii_esquemas.test.ts) que genera quince
+documentos desde el codigo y valida cada sobre: boletas, boleta exenta,
+facturas, notas de credito y guias, con exentos, impuesto adicional, cliente
+identificado, textos largos, cantidad fraccionaria y precio cero. Todos pasan
+sin errores ni advertencias. Tambien verifica que la firma del timbre y el
+digest de la firma siguen valiendo sobre el documento final.
+
+El validador es el de .NET que trae Windows, asi que esa parte corre en
+Windows; en otro sistema figura como omitida.
+
+Lo comprobe al reves tambien: con el atributo viejo del timbre, el transporte
+fuera del encabezado, IndServicio en la factura, el precio cero y la caratula
+con puntos, la prueba falla.
+
+
+Lo que el esquema no prueba
+
+La forma del documento si; las reglas de negocio que el SII revisa al recibir
+(firma, folios autorizados, cuadratura segun sus reglas) solo se confirman en
+certificacion. Los folios provisionales siguen sin firma real del SII y los
+documentos ya emitidos guardan su XML como estaba.
+
+
+Pruebas
+
+    servidor, unitarias     380 de 380 (369 del servidor y 11 de contrato)
+    servidor, integracion   200 de 200, mas 1 omitida que ya lo estaba
+    front-end, vitest       284 de 284, sin cambios
+    extremo a extremo       119 de 119, con 4 omitidas a proposito. Cuantas se
+                            omiten depende de los datos de la base
+
+Actualice cuatro afirmaciones de pruebas antiguas que esperaban el RUT con
+puntos o el atributo alg.
+
+
+Version
+
+1.0.4, construida e instalada en mi equipo sobre la anterior. Falta publicar
+la Release en los dos repositorios.
+
+
+Fuera de este cambio
+
+    consumo de     el reporte de consumo de folios no pasaria su esquema.
+    folios         Lo deje fuera porque hay que confirmar si el SII lo sigue
+                   exigiendo
+    RutEnvia       deberia ser el RUT de la persona del certificado; se
+                   resuelve cuando haya certificado
+
+Marcelo

@@ -50,7 +50,7 @@ La aplicación funciona sin configuración adicional: vende, emite boletas en el
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 377 pruebas unitarias en 31 suites (366 del servidor y 11 de contrato de la interfaz), 178 pruebas de integración en 22 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 284 pruebas de interfaz en 40 archivos y 126 comprobaciones de extremo a extremo con 3 omitidas a propósito, medidas el 20-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
+- **Pruebas:** 380 pruebas unitarias en 32 suites (369 del servidor y 11 de contrato de la interfaz), 200 pruebas de integración en 23 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 284 pruebas de interfaz en 40 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 20-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
 
 ---
 
@@ -114,10 +114,10 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 377 pruebas unitarias del servidor y de contrato (31 suites)
-npm test                     # 178 pruebas de integración (22 suites y 1 omitida sin PostgreSQL real)
+npm run test:unit            # 380 pruebas unitarias del servidor y de contrato (32 suites)
+npm test                     # 200 pruebas de integración (23 suites y 1 omitida sin PostgreSQL real)
 npm --prefix front-end run test   # 284 pruebas de interfaz (Vitest, 40 archivos)
-npm run test:e2e:frontend    # 126 comprobaciones de extremo a extremo y 3 omitidas, con el servidor levantado
+npm run test:e2e:frontend    # 119 comprobaciones de extremo a extremo y 4 omitidas, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
 npm run test:coverage:total  # cobertura del servidor
 ```
