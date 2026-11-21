@@ -77,9 +77,10 @@ Pruebas
     front-end, vitest       288 de 288 en 40 archivos, tus cifras
     extremo a extremo       119 de 119, con 4 omitidas a proposito
 
-Las cuatro pruebas nuevas del catalogo las comprobe al reves: con la fecha
-calculada desde la hora UTC, con el reloj del sistema en vez del de la caja
-y sin fecha en la carga, fallan.
+Las pruebas nuevas del catalogo las comprobe al reves. Las tres de las fechas
+fallan con la fecha calculada desde la hora UTC, con el reloj del sistema en
+vez del de la caja y sin fecha en la carga. La cuarta exige la zona de Chile:
+sin la linea de la configuracion y con la zona del equipo en UTC, falla.
 
 
 Version
