@@ -98,7 +98,7 @@ npm run dev
 ```bash
 npm run datos:demo   # carga semillas/catalogo-demo.json; es aditivo y no pisa lo existente
 ```
-Los perecibles del catálogo vencen a una cantidad de días contada desde la carga: dos lácteos quedan vencidos y tres vencen esta semana, para mostrar el aviso de la caja y el semáforo de Inventario. Como esos días avanzan desde la carga, para una demostración conviene instalar de cero el mismo día.
+Los perecibles del catálogo vencen a una cantidad de días contada desde la carga: dos lácteos quedan vencidos y tres vencen esta semana, para mostrar el aviso de la caja y el semáforo de Inventario. Como esos días avanzan desde la carga, para una demostración conviene cargarlo el mismo día. El catálogo se ofrece solo en el primer inicio: para verlo en un equipo donde GesTock ya se usó, cierre la aplicación, borre la carpeta de datos (menú Archivo → Carpeta de datos, en `%APPDATA%\GesTock\datos`) y ábrala de nuevo: pide la cuenta de administrador y ofrece el catálogo. Desinstalar no basta, porque la carpeta de datos se conserva. Borrarla elimina las ventas y las cuentas de esa base.
 
 ---
 

@@ -42,10 +42,15 @@ esta semana estaria vencido el dia de la defensa.
     sin fecha          el pisco, que no se vence, y la bolsa
 
 La fecha usa el mismo reloj que la caja y el semaforo, sobre la fecha local.
-Las pruebas unitarias ahora corren con la zona horaria de Chile fijada en la
-configuracion de Jest (tests_unitarias/jest.unit.config.js), porque ponerla
-dentro del archivo de prueba no surte efecto. La prueba fija el reloj a las
-23:30, que en UTC ya es el dia siguiente, y exige los dias exactos.
+La prueba fija el reloj a una hora en que el dia local y el de UTC no
+coinciden (las 23:30 en Chile, o las 00:30 en un equipo al este de UTC) y
+exige los dias exactos. Asi detecta una fecha calculada con la hora UTC en
+cualquier zona. La corri completa en la zona de Chile, en UTC y en la de
+Tokio: 390 de 390 en las tres.
+
+No fije la zona horaria en la configuracion de Jest, aunque lo intente: en
+Windows, SQLite no lee esa asignacion y queda con la hora del sistema, y en un
+equipo fuera de Chile tu prueba del panel (la venta de anoche) fallaba.
 
 Lo comprobe de verdad: levante el servidor sobre una carpeta de datos vacia
 con el catalogo, y el semaforo dio 2 vencidos, 3 de esta semana, 1 a 15
@@ -54,11 +59,16 @@ trajo productos_vencidos con la leche y su fecha.
 
 Dos cosas que conviene saber:
 
-    tu base y la mia     no cambian. El catalogo se carga una sola vez, en el
-                         primer inicio. Para verlo hay que instalar de cero
-    para la defensa      los dias avanzan desde la carga: si se instala tres
+    tu base y la mia     no cambian. El catalogo se ofrece solo en el primer
+                         inicio, y desinstalar no borra la carpeta de datos.
+                         Para verlo: cerrar GesTock, borrar la carpeta de
+                         datos (menu Archivo, Carpeta de datos, en
+                         %APPDATA%\GesTock\datos) y abrirlo de nuevo. Pide la
+                         cuenta y ofrece el catalogo. Ojo, eso borra las
+                         ventas y las cuentas de esa base
+    para la defensa      los dias avanzan desde la carga: si se carga tres
                          dias antes, lo de esta semana ya sale vencido.
-                         Conviene instalar de cero el mismo dia
+                         Conviene cargarlo el mismo dia
 
 La nube no recibe la fecha del catalogo demo, igual que hoy no recibe el
 impuesto adicional. La caja y el semaforo leen la base local, asi que no
@@ -77,10 +87,10 @@ Pruebas
     front-end, vitest       288 de 288 en 40 archivos, tus cifras
     extremo a extremo       119 de 119, con 4 omitidas a proposito
 
-Las pruebas nuevas del catalogo las comprobe al reves. Las tres de las fechas
-fallan con la fecha calculada desde la hora UTC, con el reloj del sistema en
-vez del de la caja y sin fecha en la carga. La cuarta exige la zona de Chile:
-sin la linea de la configuracion y con la zona del equipo en UTC, falla.
+Las pruebas nuevas del catalogo las comprobe al reves, en la zona de Chile y
+en la de Tokio. Con la fecha calculada desde la hora UTC, y con el reloj del
+sistema en vez del de la caja, fallan las de los dias exactos y del semaforo.
+Sin fecha en la carga fallan esas dos y la de lo que no se vence.
 
 
 Version

@@ -1,6 +1,3 @@
-// zona de Chile: las fechas locales (vencimientos, dia de la caja) se prueban igual en cualquier equipo
-process.env.TZ = 'America/Santiago';
-
 /**
  * Cobertura de las DOS baterias sobre el codigo del servidor.
  *
