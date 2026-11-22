@@ -85,3 +85,12 @@ docs/GUIA-ARRANQUE-LIMPIO-DAVID.md
 
 # Instaladores comprimidos para entregar
 *.rar
+
+# Certificados, llaves y configuracion local con secretos
+*.pem
+*.p12
+*.pfx
+*.key
+pagos.json
+configuracion.json
+clave-sesion

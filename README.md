@@ -15,14 +15,14 @@ La aplicación de escritorio para Windows se descarga desde las publicaciones de
 1. Ejecute `GesTock-1.0.7-instalador.exe`. Windows muestra un aviso azul porque el instalador no está firmado: elija «Más información» y luego «Ejecutar de todas formas».
 2. En el primer arranque, cree la cuenta de administrador y marque la casilla del catálogo de demostración (25 productos y 5 proveedores).
 
-La aplicación funciona sin configuración adicional: vende, emite boletas en el ambiente de certificación y cobra con tarjeta en modo simulado. El correo, la lectura de facturas con inteligencia artificial y el ambiente de prueba de las máquinas de pago necesitan los archivos de configuración del local, que se entregan aparte.
+La aplicación funciona sin configuración adicional: vende, emite boletas con folios provisionales (sin validez ante el SII hasta cargar los folios que autoriza el SII) y cobra con tarjeta en modo simulado. El correo, la lectura de facturas con inteligencia artificial y el ambiente de prueba de las máquinas de pago necesitan los archivos de configuración del local, que se entregan aparte.
 
 ---
 
 ## 1. Características Principales
 
 * **Arquitectura dual nube y caja**: PostgreSQL 16 en la nube como base central multi-comercio y SQLite en cada caja. La venta se registra primero en el equipo, sin esperar a la nube.
-* **Funcionamiento sin internet y sincronización**: las operaciones quedan marcadas con `is_dirty` y suben al sincronizar, con reintentos escalonados (*Exponential Backoff* con *Jitter*) y un *Circuit Breaker* que evita esperar a una nube caída. Productos y proveedores se reconocen por su clave natural (SKU y RUT) entre la caja y la nube.
+* **Funcionamiento sin internet y sincronización**: las operaciones quedan marcadas con `is_dirty` y suben cuando el usuario sincroniza, con hasta 5 intentos por venta y un *Circuit Breaker* que evita esperar a una nube caída. Productos y proveedores se reconocen por su clave natural (SKU y RUT) entre la caja y la nube.
 * **Aplicación de escritorio**: Electron con instalador NSIS. Los datos del local viven en una carpeta aparte, de modo que reinstalar o actualizar no los borra.
 * **Interfaz React** en `front-end/` con **React 19 + TypeScript + Vite + Material UI**, en modo visual (tarjetas, para el mostrador) y modo técnico (tablas y atajos de teclado). `backend/public/` conserva un POS de respaldo que el servidor entrega solo si la interfaz React no está construida.
 * **Facturación electrónica DTE (SII)**: emisión y timbrado (TED) con firma RSA-SHA1 de Boletas (39/41), Facturas (33/34), Guías de Despacho (52) y Notas de Crédito (61), con RCOF diario, pre-cálculo del F29 y armado del sobre de envío (ambiente de certificación).
@@ -50,7 +50,7 @@ La aplicación funciona sin configuración adicional: vende, emite boletas en el
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 392 pruebas unitarias en 32 suites (381 del servidor y 11 de contrato de la interfaz), 255 pruebas de integración en 24 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 377 pruebas de interfaz en 49 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 22-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
+- **Pruebas:** 398 pruebas unitarias en 33 suites (387 del servidor y 11 de contrato de la interfaz), 264 pruebas de integración en 25 suites (24 ejecutadas y 1 omitida, la de migraciones concurrentes, que necesita PostgreSQL real), 377 pruebas de interfaz en 49 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 22-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
 
 ---
 
@@ -79,7 +79,7 @@ docker compose up --build
 npm install
 cp .env.example .env
 
-# Migraciones secuenciales 001 a 023 (el servidor también las aplica al arrancar)
+# Migraciones secuenciales 001 a 024 (el servidor también las aplica al arrancar)
 npm run migrate:sqlite   # caja local SQLite
 npm run migrate:pg       # nube PostgreSQL, si está levantada
 
@@ -115,8 +115,8 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 392 pruebas unitarias del servidor y de contrato (32 suites)
-npm test                     # 255 pruebas de integración (24 suites y 1 omitida sin PostgreSQL real)
+npm run test:unit            # 398 pruebas unitarias del servidor y de contrato (33 suites)
+npm test                     # 264 pruebas de integración (25 suites: 24 ejecutadas y 1 omitida sin PostgreSQL real)
 npm --prefix front-end run test   # 377 pruebas de interfaz (Vitest, 49 archivos)
 npm run test:e2e:frontend    # 119 comprobaciones de extremo a extremo y 4 omitidas, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
@@ -159,7 +159,7 @@ Las pruebas usan una base propia, `gestock_test_db` (configurable con `PGDATABAS
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, iterativa e incremental, organizada en tres fases académicas:
 1. **Incepción y Elaboración (Fase 1 - 20%):** alcance, caso de negocio, análisis de los 62 RF y 31 RNF (ISO/IEC 25010), artefactos UML y modelo relacional inicial (15 tablas).
-2. **Construcción (Fase 2 - 50%):** backend Node.js/TypeScript con persistencia dual, esquema de **29 tablas** (migraciones 001-023 más la tabla de control `_migrations`), frontend React 19 con roles, ingreso de facturas con IA, normativas chilenas (redondeo, DTE con timbre TED) y **434 pruebas automatizadas** del servidor (Jest) más 198 de interfaz (Vitest).
+2. **Construcción (Fase 2 - 50%):** backend Node.js/TypeScript con persistencia dual, esquema de **31 tablas** (30 de las migraciones 001-024 más la tabla de control `_migrations`), frontend React 19 con roles, ingreso de facturas con IA, normativas chilenas (redondeo, DTE con timbre TED) y **651 pruebas automatizadas** del servidor (Jest) más 377 de interfaz (Vitest).
 3. **Transición (Fase 3 - 30%):** ejecución del plan de pruebas, pruebas de rendimiento, operación sin conexión en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa.
 
 ---
@@ -168,7 +168,7 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
 
 Los documentos formales se publican en Word en la carpeta [`docs/`](./docs):
 1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: arquitectura 4+1 de Kruchten, requisitos, resiliencia y catálogo de los 83 endpoints.
-2. **[docs/base_de_datos.docx](./docs/base_de_datos.docx)**: modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y las banderas de sincronización.
+2. **[docs/base_de_datos.docx](./docs/base_de_datos.docx)**: modelo relacional dual (PostgreSQL + SQLite), las 31 tablas y las banderas de sincronización.
 3. **[docs/guia_de_despliegue.docx](./docs/guia_de_despliegue.docx)**: instalación, variables de entorno, Docker Compose y aplicación de escritorio.
 4. **[docs/manual_de_funcionalidades.docx](./docs/manual_de_funcionalidades.docx)**: manual de uso por pantalla y por rol, lo que el sistema hace solo y los límites declarados.
 5. **[docs/estado_actual_proyecto.docx](./docs/estado_actual_proyecto.docx)**: informe de avance, carta Gantt y métricas.

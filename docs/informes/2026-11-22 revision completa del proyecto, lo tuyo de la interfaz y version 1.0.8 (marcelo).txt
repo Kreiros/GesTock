@@ -1,0 +1,160 @@
+22-11-2026
+Revision completa del proyecto, lo tuyo de la interfaz y version 1.0.8
+
+
+David, hice una revision de todo el proyecto con seis revisores que no
+conocian el codigo: dinero, documentos tributarios, datos y escritorio,
+seguridad, interfaz y documentos contra el codigo. Salieron 72 hallazgos.
+Comprobe en el codigo los mas graves de cada area antes de repartirlos.
+
+Lo del servidor y los documentos lo corregi yo y va en la 1.0.8. Lo de la
+interfaz es tuyo: va abajo, con el archivo, lo que pasa y la correccion mas
+chica que encontro el revisor. No toque tus pantallas.
+
+
+1. Lo tuyo que se ve en la demostracion (P1)
+
+    F4 vuelve a     useCobrarVenta.ts:16-27 y CajaTecnica.tsx:48. Con
+    cobrar          tarjeta, si la venta no se guarda y el servidor no
+                    alcanza a devolver el cobro, responde 500 COBRO_SIN_VENTA:
+                    el boton Cobrar queda bloqueado y sale el aviso "No
+                    vuelvas a cobrar", pero el carrito sigue lleno y F4 llama
+                    a cobrar() directo. cobrar() no revisa ese error ni
+                    faltaElMontoRecibido, asi que F4 cobra dos veces la
+                    tarjeta y cierra una venta en efectivo sin el monto.
+                    Correccion: que cobrar() salga si
+                    cobroSinVenta(registrarVenta.error) o si falta el monto,
+                    igual que el boton.
+
+    el lector en    CajaVisual.tsx:37, de tu commit 63db7aa. Al escanear el
+    la caja visual  primer producto, hayVenta && !verCatalogo cambia
+                    CatalogoProductos (el unico campo que recibe el Enter
+                    del lector) por TicketVisual, que no tiene campo. El
+                    segundo escaneo no hace nada y no avisa. Correccion:
+                    dejar el buscador, o un campo de escaneo, siempre montado
+                    arriba del ticket, o escuchar el lector en la ventana.
+
+
+2. Lo tuyo que da un resultado equivocado en uso real (P2)
+
+    el carrito      PanelTicket.tsx:89, useAtajosTeclado.ts:58-65 y
+    durante el      useCobrarVenta.ts:52. Mientras se espera la maquina (hasta
+    cobro           150 s) se puede escanear al siguiente cliente o apretar
+                    Escape; al aprobarse, onSuccess vacia el carrito y lo
+                    agregado se pierde. Correccion: bloquear agregar, limpiar
+                    y los atajos mientras cobrando.
+
+    la cache        usePos.ts:41-45 invalida solo productos y estado. Quedan
+                    viejos Ventas, el resumen de caja, inventario,
+                    vencimientos, reposicion, panel y la lista de documentos:
+                    vendes la ultima unidad y no sale la alerta, o vas a
+                    Ventas y no esta la venta. Lo mismo en useInvoices.ts
+                    (27-32 y 62-66, sin inventario ni reposicion) y en
+                    useCaja.ts:39-46 (sin el historial de cierres).
+
+    el dialogo de   DialogoDevolucion.tsx:122 y 288. Mientras la maquina
+    devolucion      anula (hasta 150 s) se puede cerrar con Cancelar, la X,
+                    Escape o el clic afuera; la devolucion sigue sola y se
+                    pierde el aviso "Falta entregarle la plata". Correccion:
+                    onClose y Cancelar desactivados mientras isPending.
+
+    el modo ciego   EncabezadoTurno.tsx:29-32 dice que el arqueo es ciego,
+                    pero KpisBalanceTurno.tsx:76-81 muestra "Efectivo en
+                    gaveta" desde el principio. Y arqueoStore no vuelve
+                    cuadraturaRevelada a false al cambiar una cantidad: se
+                    revela, se ajusta hasta que cuadre y se cierra.
+
+    el lector y     useAtajosTeclado.ts:69-71. Si el foco queda fuera del
+    los digitos     buscador (despues del comprobante o de elegir medio),
+                    cada digito del 1 al 5 de un codigo cambia el medio de
+                    pago y el Enter final aprieta el boton con foco. Es
+                    sospecha fuerte, no se probo con un lector real.
+                    Correccion: devolver el foco al buscador.
+
+
+3. Menores (P3)
+
+    PanelTicket.tsx:106-125: en factura, "Subtotal" ya incluye el ILA y
+    debajo aparece el ILA: parece que 10.000 + 1.500 = 10.000. Rotularlo
+    "incluido" o mostrar el neto.
+
+    useAuth.ts:73-80 y httpClient.ts:35: al cerrar sesion no se limpian el
+    carrito ni el arqueo, y el siguiente cajero los encuentra cargados.
+
+    Botones sin aria-label: TablaTicket.tsx:92, DialogoDevolucion.tsx:59 y
+    67, AccionesProducto.tsx:35, FilaItemFactura.tsx:98,
+    FilaConciliacionTecnica.tsx:106, SeccionUsuarios.tsx:106,
+    TarjetaProveedor.tsx:115 y TablaProveedoresTecnica.tsx:161.
+
+
+4. Lo que cambio en el servidor y toca tus pantallas
+
+    devolucion      Sin documento original, o si la nota de credito falla,
+                    la devolucion se registra igual y responde 200 con
+                    folio_nc, nota_credito y dte_nc en null, mas
+                    aviso_nota_credito con el motivo. Tu dialogo muestra
+                    "Nota de credito N {folio_nc}" (linea 147): con null diria
+                    "N null". El message ya trae el texto correcto.
+
+                    La nota de credito ahora dice "anula" (codigo 1) solo si
+                    una devolucion deja la venta entera sin efecto; las
+                    parciales dicen "corrige montos" (codigo 3). El aviso de
+                    las lineas 161-163, "anula el documento original", ya no
+                    es cierto para una parcial.
+
+    cobro           Un metodo_pago fuera de EFECTIVO, TRANSBANK, MERCADOPAGO,
+                    SUMUP y RUTPAY responde 400 METODO_PAGO_INVALIDO. Antes se
+                    cobraba en Transbank y se grababa como efectivo. Tu
+                    interfaz siempre manda uno de esos.
+
+    correo del      POST /dte/send-email sigue respondiendo success true, pero
+    comprobante     el message dice que no se mando ningun correo. Tus dos
+                    dialogos ya dicen que es simulado.
+
+    envio al SII    Sin requisitos, POST /dte/envio ya no arma sobre: responde
+                    enviado false, sobres vacio y sin envio_id, y los
+                    documentos siguen en la cola. Tu boton ya esta
+                    desactivado en ese caso.
+
+    sincronizacion  POST /sync/push ahora es solo de administrador. Tu
+                    interfaz no la usa.
+
+    docker-compose  PGPASSWORD es obligatoria y el puerto de PostgreSQL se
+                    publica solo en 127.0.0.1. .env.example ya no trae la
+                    clave: si levantas la nube con Docker, define PGPASSWORD
+                    en tu .env o compose no arranca.
+
+    escritorio      La aplicacion solo abre afuera enlaces https y mailto.
+
+
+5. Lo que quedo como limite declarado
+
+Va en el manual, seccion de limites: la firma y el envio real al SII con
+certificado, el IVA por diferencia en facturas con ILA, el F29 sin el ILA de
+las facturas, el RCOF incompleto, la sincronizacion de cambios de catalogo y
+del stock de la nube, pagos y cierres que no suben despues, dos cajas que
+venden la ultima unidad a la vez, Ventas que resume las ultimas 100 (eso
+necesita un filtro de fecha en el servidor) y los rankings del panel, que
+todavia no descuentan devoluciones.
+
+
+Pruebas
+
+    servidor, unitarias     398 de 398 (387 del servidor y 11 de contrato)
+    servidor, integracion   264 de 264, mas 1 omitida que ya lo estaba
+    front-end, vitest       377 de 377 en 49 archivos, sin cambios
+    extremo a extremo       119 de 119, con 4 omitidas a proposito
+
+Rompi a proposito cada correccion (30 en total: la nota de credito, el
+turno, el panel, el RCOF y el F29, el envio, los folios, el set de prueba,
+los permisos, la ruta del documento, los enlaces de Electron, el SKU y el
+usuario en la sincronizacion): alguna prueba falla en cada caso.
+
+
+Version
+
+1.0.8, sin migracion. Construida e instalada en mi equipo sobre la
+anterior. Se publica despues de subir estos commits, con el instalador
+adjunto.
+
+Marcelo
