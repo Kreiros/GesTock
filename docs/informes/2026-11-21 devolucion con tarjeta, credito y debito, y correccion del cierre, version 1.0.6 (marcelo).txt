@@ -9,8 +9,12 @@ propia seccion). Los tres pendientes que me dejaste estan hechos en el
 servidor. Abajo va el contrato para que armes la parte de pantalla.
 
 Lo primero: la 1.0.6 funciona con tu pantalla actual. Si no mandas los campos
-nuevos, todo se comporta exactamente como antes. Puedes hacer la pantalla con
-calma.
+nuevos, la devolucion se comporta como antes salvo en dos cosas: lo devuelto en
+efectivo se redondea sobre lo cobrado (devolver de a una nunca entrega mas de
+lo que entro: la ultima devolucion entrega lo que queda), y una segunda
+devolucion de la misma venta mientras la primera esta en curso recibe 409
+DEVOLUCION_EN_CURSO. Tu pantalla muestra el message de ese 409. Puedes hacer la
+pantalla nueva con calma.
 
 
 1. Devolucion: como se devolvio el dinero
@@ -58,6 +62,11 @@ total, asi que el total sigue siendo la suma del desglose. El cierre lo guarda
 y el historial de cierres lo devuelve. En el panel, el desglose por medio de
 pago tiene un rubro TRANSFERENCIA.
 
+Ojo con el signo: en el resumen y en el cierre, devoluciones_transferencia
+viene positivo (lo que salio). En el panel, el rubro TRANSFERENCIA viene con
+total y porcentaje negativos, como toda devolucion en ese desglose. Hoy tu
+grafico de medios de pago lo dibuja sin porcion y con una fila negativa.
+
 Sugerencia de pantalla: en el dialogo de devolucion, si la venta fue con
 tarjeta, un selector con "En la maquina", "En efectivo" y "Por transferencia",
 con la maquina por omision. Si llega el 409 REVERSO_MANUAL, mostrar el motivo
@@ -101,9 +110,14 @@ cada correccion queda en un rastro que solo crece.
     GET /api/v1/caja/cierres/:id/correcciones?tenant_id=...
         el rastro completo, en orden. Tambien solo el administrador
 
-GET /api/v1/caja/historial ahora trae las columnas de la correccion. En la
-lista de cierres convendria mostrar el conteo original y, al lado, el
-corregido con su motivo.
+GET /api/v1/caja/historial ahora trae las columnas de la correccion, mas
+motivo_correccion (el de la ultima) y corregido_por_nombre. En la lista de
+cierres convendria mostrar el conteo original y, al lado, el corregido con su
+motivo y quien lo corrigio. El rastro completo sale de /correcciones.
+
+El respaldo contable (GET /dte/backup/export) incluye las correcciones, y un
+usuario que corrigio un cierre se desactiva en vez de borrarse, igual que uno
+con ventas.
 
 
 Lo que arregle en tu parte
@@ -139,7 +153,7 @@ Pruebas
 
     servidor, unitarias     392 de 392 (381 del servidor y 11 de contrato), en
                             la zona del equipo y con TZ=UTC
-    servidor, integracion   245 de 245, mas 1 omitida que ya lo estaba
+    servidor, integracion   253 de 253, mas 1 omitida que ya lo estaba
     front-end, vitest       325 de 325 en 43 archivos: las tuyas mas la prueba
                             nueva de la calculadora
     extremo a extremo       119 de 119, con 4 omitidas a proposito
@@ -147,8 +161,8 @@ Pruebas
 Hay una prueba nueva, correccion_cierre_caja.test.ts, y casos nuevos en
 venta_transbank_sdk.test.ts (con el terminal simulado a nivel de protocolo),
 sync_engine_push.test.ts y all_endpoints.unit.test.ts, que ahora cubre los 83
-endpoints. Rompi a proposito cada parte del cambio, 22 en total, y alguna
-prueba falla con cada una.
+endpoints. Rompi a proposito cada parte del cambio, 31 en total entre las
+dos rondas, y alguna prueba falla con cada una.
 
 
 Version
