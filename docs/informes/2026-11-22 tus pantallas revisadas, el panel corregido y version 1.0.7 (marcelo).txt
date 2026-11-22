@@ -17,14 +17,17 @@ Te escribi que en el desglose por medio de pago "toda devolucion" venia en
 negativo. No era asi: el servidor solo separaba la devolucion por
 transferencia. Una devolucion en efectivo o en la maquina se restaba dentro de
 la misma fila que las ventas de ese medio. Con una venta de $10.000 en
-efectivo y una devolucion en efectivo de $2.000, tu torta mostraba "Efectivo
-$8.000" bajo "lo cobrado", y no aparecia ninguna linea de devuelto.
+efectivo y una devolucion en efectivo de $2.000, la torta mostraba EFECTIVO
+$8.000 como lo cobrado, y no aparecia ninguna linea de devuelto.
 
 Lo corregi en el servidor, sin tocar tu pantalla: ahora cada medio trae su
 fila de lo cobrado (positiva) y, si hubo devoluciones, otra fila con el mismo
 metodo y el total en negativo. Tu repartirMediosPago las separa bien por signo
 y las claves no se repiten dentro de cada lista. La transferencia sigue en su
-rubro propio. Hay una prueba con ventas y devoluciones en efectivo.
+rubro propio. El porcentaje de cada medio, el que usas para el medio preferido
+en GraficoEvolucion, ahora se calcula sobre lo cobrado: antes se dividia por el
+neto y podia pasar de 100 %. Hay una prueba con ventas y devoluciones en
+efectivo.
 
 
 2. El nombre en el rastro de correcciones
@@ -47,8 +50,7 @@ debito y la caja cerrada pasaba esto:
        maquina, y pulsar repite el 409
 
 Ahora el dialogo recuerda que la maquina fallo (un estado maquinaFallo que se
-fija en el onError del mutate, y que pasa el medio a efectivo) y no la vuelve a
-ofrecer. El aviso del reverso sale solo cuando el error actual es ese, y el de
+fija en el onError del mutate) y no la vuelve a ofrecer. El aviso del reverso sale solo cuando el error actual es ese, y el de
 caja cerrada se muestra como cualquier otro error. Agregue una prueba con esa
 secuencia: sin el arreglo, falla. Ajuste tus tres aserciones de mutate para el
 segundo argumento (las opciones con onError).
@@ -73,7 +75,8 @@ Pruebas
 
 Tu interfaz compila con tsc -b y el lint queda limpio. Rompi a proposito el
 nombre del rastro (sin la union, con INNER JOIN, uniendo por quien abrio el
-turno o sin el comercio), el panel (sumando lo devuelto con lo cobrado) y tu
+turno o sin el comercio), el panel (sumando lo devuelto con lo cobrado, o sacando el porcentaje sobre
+el neto) y tu
 dialogo (sin recordar el fallo de la maquina): alguna prueba falla en cada
 caso.
 
