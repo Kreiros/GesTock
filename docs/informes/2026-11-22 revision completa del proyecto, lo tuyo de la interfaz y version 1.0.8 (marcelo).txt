@@ -127,28 +127,60 @@ chica que encontro el revisor. No toque tus pantallas.
     escritorio      La aplicacion solo abre afuera enlaces https y mailto.
 
 
-5. Lo que quedo como limite declarado
+5. Lo que agregue despues en el servidor, y lo que te toca
 
-Va en el manual, seccion de limites: la firma y el envio real al SII con
-certificado, el IVA por diferencia en facturas con ILA, el F29 sin el ILA de
-las facturas, el RCOF incompleto, la sincronizacion de cambios de catalogo y
-del stock de la nube, pagos y cierres que no suben despues, dos cajas que
-venden la ultima unidad a la vez, Ventas que resume las ultimas 100 (eso
-necesita un filtro de fecha en el servidor) y los rankings del panel, que
-todavia no descuentan devoluciones.
+Corregi tambien diez limites que habia dejado declarados. Tres te tocan:
+
+    id de la venta  POST /pos/checkout acepta venta_id (un UUID). Si la venta
+                    ya existe, responde 200 con duplicada: true y la venta en
+                    la misma forma que el 201 (saleId, folio, total, dte),
+                    sin cobrar ni descontar. Si esa venta se esta cobrando,
+                    responde 409 COBRO_EN_CURSO. Un venta_id que no es UUID es
+                    400 VENTA_ID_INVALIDO. Generalo por ticket y conservalo
+                    solo si no llego respuesta (se corto, se agoto el tiempo).
+                    Despues de cualquier respuesta (402, 409, 500
+                    COBRO_DEVUELTO) usa uno nuevo: Mercado Pago y SumUp no
+                    vuelven a cobrar con el mismo.
+
+    otra caja       Si mientras la tarjeta espera otra caja vende la ultima
+                    unidad o cierra el turno, el cobro se devuelve y responde
+                    409 STOCK_INSUFICIENTE (con productos, en la forma que ya
+                    lee tu errorVenta.ts) o 400 TURNO_CERRADO, con
+                    cobro_devuelto: true. Solo pasa con tarjeta.
+
+    historial       GET /pos/transactions ya no corta en 100: sin parametros
+                    trae todas las ventas de los ultimos 31 dias (y como
+                    minimo las 100 mas recientes), y con desde y hasta
+                    (AAAA-MM-DD) exactamente ese rango. Trae ademas total,
+                    las ventas del comercio. "hoy", "semana" y "mes" ya
+                    cuadran sin tocar nada; para "todo", avisa cuando count
+                    es menor que total, o pide el rango con desde.
+
+Los otros siete no te tocan: los rankings del panel descuentan
+devoluciones, el F29 suma el ILA de las facturas, Mercado Pago revisa la
+orden despues de cancelarla por tiempo, un precio cambiado sin conexion ya
+no se revierte al sincronizar, la nube recibe el stock de la caja, los
+pagos y los turnos de caja, y el folio se graba con su documento.
+
+Quedan declarados en el manual: la firma y el envio real al SII, el IVA
+por diferencia en facturas con ILA, el RCOF incompleto, el corte de la nube
+a mitad de una sincronizacion y el lote que una devolucion no repone.
 
 
 Pruebas
 
-    servidor, unitarias     398 de 398 (387 del servidor y 11 de contrato)
-    servidor, integracion   264 de 264, mas 1 omitida que ya lo estaba
+    servidor, unitarias     403 de 403 (392 del servidor y 11 de contrato)
+    servidor, integracion   278 de 278, mas 1 omitida que ya lo estaba
     front-end, vitest       377 de 377 en 49 archivos, sin cambios
     extremo a extremo       119 de 119, con 4 omitidas a proposito
 
 Rompi a proposito cada correccion (30 en total: la nota de credito, el
 turno, el panel, el RCOF y el F29, el envio, los folios, el set de prueba,
 los permisos, la ruta del documento, los enlaces de Electron, el SKU y el
-usuario en la sincronizacion): alguna prueba falla en cada caso.
+usuario en la sincronizacion), y despues otras 28 en los diez limites (el
+precio sin conexion, el stock, los pagos y la caja en la nube, las dos cajas,
+el id de la venta, el historial, el panel, el F29, Mercado Pago y el folio):
+alguna prueba falla en cada caso.
 
 
 Version

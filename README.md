@@ -50,7 +50,7 @@ La aplicación funciona sin configuración adicional: vende, emite boletas con f
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 398 pruebas unitarias en 33 suites (387 del servidor y 11 de contrato de la interfaz), 264 pruebas de integración en 25 suites (24 ejecutadas y 1 omitida, la de migraciones concurrentes, que necesita PostgreSQL real), 377 pruebas de interfaz en 49 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 22-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
+- **Pruebas:** 403 pruebas unitarias en 33 suites (392 del servidor y 11 de contrato de la interfaz), 278 pruebas de integración en 26 suites (25 ejecutadas y 1 omitida, la de migraciones concurrentes, que necesita PostgreSQL real), 377 pruebas de interfaz en 49 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 22-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
 
 ---
 
@@ -115,8 +115,8 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 398 pruebas unitarias del servidor y de contrato (33 suites)
-npm test                     # 264 pruebas de integración (25 suites: 24 ejecutadas y 1 omitida sin PostgreSQL real)
+npm run test:unit            # 403 pruebas unitarias del servidor y de contrato (33 suites)
+npm test                     # 278 pruebas de integración (26 suites: 25 ejecutadas y 1 omitida sin PostgreSQL real)
 npm --prefix front-end run test   # 377 pruebas de interfaz (Vitest, 49 archivos)
 npm run test:e2e:frontend    # 119 comprobaciones de extremo a extremo y 4 omitidas, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
@@ -159,7 +159,7 @@ Las pruebas usan una base propia, `gestock_test_db` (configurable con `PGDATABAS
 ## 5. Metodología de Trabajo
 El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)**, iterativa e incremental, organizada en tres fases académicas:
 1. **Incepción y Elaboración (Fase 1 - 20%):** alcance, caso de negocio, análisis de los 62 RF y 31 RNF (ISO/IEC 25010), artefactos UML y modelo relacional inicial (15 tablas).
-2. **Construcción (Fase 2 - 50%):** backend Node.js/TypeScript con persistencia dual, esquema de **31 tablas** (30 de las migraciones 001-024 más la tabla de control `_migrations`), frontend React 19 con roles, ingreso de facturas con IA, normativas chilenas (redondeo, DTE con timbre TED) y **651 pruebas automatizadas** del servidor (Jest) más 377 de interfaz (Vitest).
+2. **Construcción (Fase 2 - 50%):** backend Node.js/TypeScript con persistencia dual, esquema de **31 tablas** (30 de las migraciones 001-024 más la tabla de control `_migrations`), frontend React 19 con roles, ingreso de facturas con IA, normativas chilenas (redondeo, DTE con timbre TED) y **670 pruebas automatizadas** del servidor (Jest) más 377 de interfaz (Vitest).
 3. **Transición (Fase 3 - 30%):** ejecución del plan de pruebas, pruebas de rendimiento, operación sin conexión en terreno, auditoría de seguridad (PCI-DSS SAQ-A, Helmet CSP), empaquetado para producción y preparación de la defensa.
 
 ---
