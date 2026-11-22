@@ -1,0 +1,88 @@
+22-11-2026
+Tus pantallas revisadas, el panel corregido y version 1.0.7
+
+
+David, revise tus dos commits contra el contrato del 21-11: 3dfa46a (la
+devolucion con medio, credito y debito, y la correccion del cierre) y 63db7aa
+(la venta en grande en la caja visual). Estan bien: compila, el lint queda
+limpio y pasan tus pruebas. Mantuviste el arreglo de la calculadora. Van en la
+1.0.7.
+
+Encontre tres cosas, y la primera es error mio.
+
+
+1. El panel: mi contrato decia algo falso
+
+Te escribi que en el desglose por medio de pago "toda devolucion" venia en
+negativo. No era asi: el servidor solo separaba la devolucion por
+transferencia. Una devolucion en efectivo o en la maquina se restaba dentro de
+la misma fila que las ventas de ese medio. Con una venta de $10.000 en
+efectivo y una devolucion en efectivo de $2.000, tu torta mostraba "Efectivo
+$8.000" bajo "lo cobrado", y no aparecia ninguna linea de devuelto.
+
+Lo corregi en el servidor, sin tocar tu pantalla: ahora cada medio trae su
+fila de lo cobrado (positiva) y, si hubo devoluciones, otra fila con el mismo
+metodo y el total en negativo. Tu repartirMediosPago las separa bien por signo
+y las claves no se repiten dentro de cada lista. La transferencia sigue en su
+rubro propio. Hay una prueba con ventas y devoluciones en efectivo.
+
+
+2. El nombre en el rastro de correcciones
+
+Tu dialogo de correccion muestra usuario_nombre en cada linea del rastro, pero
+el servidor solo mandaba usuario_id (el contrato no lo incluia). Ahora
+GET /caja/cierres/:id/correcciones trae usuario_nombre. Viene nulo si el
+usuario no existe o es de otro comercio, y la correccion se ve igual.
+
+
+3. Lo que arregle en tu DialogoDevolucion.tsx
+
+Lo arregle yo para no frenar la 1.0.7, aunque es tu archivo. reversoFallado
+salia de devolucion.error, que cambia con cada intento. Con una venta con
+debito y la caja cerrada pasaba esto:
+
+    1. "En la maquina": el servidor responde 409 REVERSO_MANUAL
+    2. el dialogo ofrece efectivo; el servidor responde 400 TURNO_CERRADO
+    3. el aviso del reverso desaparece y el dialogo vuelve a ofrecer la
+       maquina, y pulsar repite el 409
+
+Ahora el dialogo recuerda que la maquina fallo (un estado maquinaFallo que se
+fija en el onError del mutate, y que pasa el medio a efectivo) y no la vuelve a
+ofrecer. El aviso del reverso sale solo cuando el error actual es ese, y el de
+caja cerrada se muestra como cualquier otro error. Agregue una prueba con esa
+secuencia: sin el arreglo, falla. Ajuste tus tres aserciones de mutate para el
+segundo argumento (las opciones con onError).
+
+
+Dos notas que no bloquean, por si quieres pulirlas
+
+    RutPay y debito    la devolucion parte en "En la maquina" aunque esas
+    Transbank          dos siempre terminan en 409. Con RutPay, ademas, la
+                       etiqueta "En la maquina" no corresponde
+    medio nulo u OTRO  una venta asi ofrece tarjeta y transferencia, pero el
+                       servidor la trata como efectivo y responde 400
+
+
+Pruebas
+
+    servidor, unitarias     392 de 392, en la zona del equipo y con TZ=UTC
+    servidor, integracion   255 de 255, mas 1 omitida que ya lo estaba
+    front-end, vitest       377 de 377 en 49 archivos: las tuyas mas la de la
+                            secuencia de la devolucion
+    extremo a extremo       119 de 119, con 4 omitidas a proposito
+
+Tu interfaz compila con tsc -b y el lint queda limpio. Rompi a proposito el
+nombre del rastro (sin la union, con INNER JOIN, uniendo por quien abrio el
+turno o sin el comercio), el panel (sumando lo devuelto con lo cobrado) y tu
+dialogo (sin recordar el fallo de la maquina): alguna prueba falla en cada
+caso.
+
+
+Version
+
+1.0.7, con tus pantallas, estos dos cambios del servidor y el arreglo del
+dialogo. No trae migracion. Construida e instalada en mi equipo sobre la
+anterior. Se publica despues de subir estos commits, con el instalador
+adjunto.
+
+Marcelo
