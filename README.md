@@ -43,14 +43,14 @@ La aplicación funciona sin configuración adicional: vende, emite boletas en el
 ## 2. Tecnologías Utilizadas
 
 - **Lenguajes:** TypeScript (modo estricto), JavaScript (Node.js 22.13 o superior, 24 recomendado: el módulo `node:sqlite` funciona sin opciones desde esa versión), SQL.
-- **Backend:** Express 4, con 81 endpoints REST.
+- **Backend:** Express 4, con 83 endpoints REST.
 - **Frontend:** React 19, TypeScript, Vite 8, Material UI 9, React Router 8, Zustand y TanStack Query.
 - **Bases de datos:** PostgreSQL 16 (nube) y SQLite (caja local, mediante el módulo nativo `node:sqlite` de Node).
 - **Escritorio:** Electron 44 y electron-builder con instalador NSIS.
 - **Seguridad y red:** Helmet con CSP, CORS, límite de peticiones por dispositivo (`X-Device-ID`), JWT (`jsonwebtoken`) y Bcrypt (`bcryptjs`).
 - **Servicios externos:** Google Gemini (lectura de facturas), Open Food Facts (fichas de productos) y un servidor SMTP para el correo.
 - **Infraestructura:** Docker y Docker Compose.
-- **Pruebas:** 390 pruebas unitarias en 32 suites (379 del servidor y 11 de contrato de la interfaz), 231 pruebas de integración en 23 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 288 pruebas de interfaz en 40 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 20-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
+- **Pruebas:** 392 pruebas unitarias en 32 suites (381 del servidor y 11 de contrato de la interfaz), 245 pruebas de integración en 24 suites más 1 omitida (la de migraciones concurrentes, que necesita PostgreSQL real), 324 pruebas de interfaz en 42 archivos y 119 comprobaciones de extremo a extremo con 4 omitidas a propósito, medidas el 21-11-2026 en una sola corrida. Los 7 escenarios de rendimiento con percentiles se midieron el 16-11-2026.
 
 ---
 
@@ -115,9 +115,9 @@ Reinstalar sobre la instalación existente conserva la carpeta de datos del usua
 
 ### Baterías de pruebas
 ```bash
-npm run test:unit            # 390 pruebas unitarias del servidor y de contrato (32 suites)
-npm test                     # 231 pruebas de integración (23 suites y 1 omitida sin PostgreSQL real)
-npm --prefix front-end run test   # 288 pruebas de interfaz (Vitest, 40 archivos)
+npm run test:unit            # 392 pruebas unitarias del servidor y de contrato (32 suites)
+npm test                     # 245 pruebas de integración (24 suites y 1 omitida sin PostgreSQL real)
+npm --prefix front-end run test   # 324 pruebas de interfaz (Vitest, 42 archivos)
 npm run test:e2e:frontend    # 119 comprobaciones de extremo a extremo y 4 omitidas, con el servidor levantado
 npm run test:rendimiento     # 7 escenarios con percentiles, con el servidor levantado
 npm run test:coverage:total  # cobertura del servidor
@@ -167,7 +167,7 @@ El proyecto se desarrolla bajo la metodología **RUP (Rational Unified Process)*
 ## 6. Documentación Oficial
 
 Los documentos formales se publican en Word en la carpeta [`docs/`](./docs):
-1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: arquitectura 4+1 de Kruchten, requisitos, resiliencia y catálogo de los 81 endpoints.
+1. **[docs/arquitectura_sistema.docx](./docs/arquitectura_sistema.docx)**: arquitectura 4+1 de Kruchten, requisitos, resiliencia y catálogo de los 83 endpoints.
 2. **[docs/base_de_datos.docx](./docs/base_de_datos.docx)**: modelo relacional dual (PostgreSQL + SQLite), las 29 tablas y las banderas de sincronización.
 3. **[docs/guia_de_despliegue.docx](./docs/guia_de_despliegue.docx)**: instalación, variables de entorno, Docker Compose y aplicación de escritorio.
 4. **[docs/manual_de_funcionalidades.docx](./docs/manual_de_funcionalidades.docx)**: manual de uso por pantalla y por rol, lo que el sistema hace solo y los límites declarados.

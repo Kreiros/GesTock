@@ -1,0 +1,135 @@
+21-11-2026
+Devolucion con tarjeta, credito y debito, y correccion del cierre. Version 1.0.6
+
+
+David, respondo tu informe de la prueba con la duena de minimarket. Revise tu
+commit 883bb8f: es solo interfaz y esta bien. Los tres pendientes que me
+dejaste estan hechos en el servidor. Abajo va el contrato para que armes la
+parte de pantalla.
+
+Lo primero: la 1.0.6 funciona con tu pantalla actual. Si no mandas los campos
+nuevos, todo se comporta exactamente como antes. Puedes hacer la pantalla con
+calma.
+
+
+1. Devolucion: como se devolvio el dinero
+
+Tenia razon la duena, y era peor de lo que parecia: cuando una venta con
+tarjeta se devolvia en efectivo, el dinero salia de la gaveta pero el cierre
+no lo descontaba. La caja quedaba descuadrada.
+
+POST /api/v1/pos/devolucion acepta un campo nuevo, opcional:
+
+    medio_devolucion     TARJETA, EFECTIVO o TRANSFERENCIA
+
+    sin el campo         lo de siempre: si la maquina puede reversar, reversa;
+                         si no, 200 con reverso_tarjeta.manual = true
+    venta en efectivo    solo EFECTIVO. TARJETA o TRANSFERENCIA dan 400
+                         MEDIO_DEVOLUCION_INVALIDO
+    TARJETA              intenta el reverso en la maquina. Si no se puede
+                         (debito en Transbank, devolucion parcial, RutPay, o
+                         la venta no tiene un pago aprobado), responde 409
+                         REVERSO_MANUAL con el motivo en message y NO registra
+                         nada: ni stock, ni nota de credito. Ahi le preguntas
+                         al cajero como devolvio y reenvias con EFECTIVO o
+                         TRANSFERENCIA
+    EFECTIVO             no toca la maquina. Exige el turno abierto (400
+                         TURNO_CERRADO). Lo devuelto sale de la gaveta
+                         redondeado por la Ley 20.956; la nota de credito
+                         queda por el monto exacto
+    TRANSFERENCIA        no toca la maquina ni la gaveta. Tambien es la opcion
+                         cuando se devuelve desde el portal de Transbank
+    valor desconocido    400 MEDIO_DEVOLUCION_INVALIDO
+    dos a la vez         si ya hay una devolucion de la misma venta en curso,
+                         la segunda recibe 409 DEVOLUCION_EN_CURSO
+
+La respuesta trae dos campos nuevos en data:
+
+    medio_devolucion       el que quedo registrado (puede ser null si fue un
+                           reverso manual sin declarar, como antes)
+    devuelto_al_cliente    lo que se le entrega al cliente (redondeado si fue
+                           en efectivo). total_devuelto sigue siendo el monto
+                           de la nota de credito
+
+GET /api/v1/caja/resumen trae devoluciones_transferencia: lo devuelto por
+transferencia en el turno. No resta del efectivo ni de la tarjeta, pero si del
+total, asi que el total sigue siendo la suma del desglose. El cierre lo guarda
+y el historial de cierres lo devuelve. En el panel, el desglose por medio de
+pago tiene un rubro TRANSFERENCIA.
+
+Sugerencia de pantalla: en el dialogo de devolucion, si la venta fue con
+tarjeta, un selector con "En la maquina", "En efectivo" y "Por transferencia",
+con la maquina por omision. Si llega el 409 REVERSO_MANUAL, mostrar el motivo
+y dejar elegir entre efectivo y transferencia.
+
+
+2. Credito y debito
+
+POST /api/v1/pos/checkout acepta tipo_tarjeta: CREDITO o DEBITO (opcional).
+
+    manda la maquina      si el terminal informa el tipo (Transbank CR/DB,
+                          Mercado Pago credit_card/debit_card), queda ese
+                          aunque el cajero diga otra cosa
+    si no informa         queda lo que mando el cajero. SumUp solo informa la
+                          marca, asi que ahi vale lo del cajero
+    efectivo y RutPay     se ignora y queda nulo: no hay tarjeta
+    valor desconocido     400 TIPO_TARJETA_INVALIDO
+
+GET /api/v1/pos/transactions devuelve tipo_tarjeta y medio_devolucion en cada
+venta, para que el historial los muestre.
+
+
+3. Correccion del cierre de caja
+
+Solo el administrador. El conteo original y su diferencia no se tocan nunca:
+cada correccion queda en un rastro que solo crece.
+
+    POST /api/v1/caja/cierres/:id/correccion
+        cuerpo           tenant_id, usuario_id, monto_real_efectivo, motivo
+        usuario_id       mandalo siempre: el servidor lo reemplaza por el de
+                         la sesion, asi que el autor es quien corrige
+        200              data.cierre (con monto_corregido_efectivo,
+                         diferencia_corregida, corregido_por, corregido_at) y
+                         data.correccion (correlativo, monto_anterior,
+                         monto_nuevo, motivo, usuario_id, created_at)
+        400              MOTIVO_REQUERIDO, MONTO_INVALIDO o USUARIO_REQUERIDO
+        403              el cajero
+        404              CIERRE_NO_ENCONTRADO
+        409              TURNO_ABIERTO: se corrige despues de cerrar
+
+    GET /api/v1/caja/cierres/:id/correcciones?tenant_id=...
+        el rastro completo, en orden. Tambien solo el administrador
+
+GET /api/v1/caja/historial ahora trae las columnas de la correccion. En la
+lista de cierres convendria mostrar el conteo original y, al lado, el
+corregido con su motivo.
+
+
+La venta por kilo
+
+De acuerdo contigo: no antes de la defensa. Queda en el backlog como
+limitacion declarada, con lo que toca: unidad de venta, precio por kilo, stock
+y cobro con decimales, lotes, el documento y la pantalla.
+
+
+Pruebas
+
+    servidor, unitarias     392 de 392 (381 del servidor y 11 de contrato), en
+                            la zona del equipo y con TZ=UTC
+    servidor, integracion   245 de 245, mas 1 omitida que ya lo estaba
+    front-end, vitest       324 de 324 en 42 archivos, tus cifras
+    extremo a extremo       119 de 119, con 4 omitidas a proposito
+
+Hay una prueba nueva, correccion_cierre_caja.test.ts, y casos nuevos en
+venta_transbank_sdk.test.ts (con el terminal simulado a nivel de protocolo),
+sync_engine_push.test.ts y all_endpoints.unit.test.ts, que ahora cubre los 83
+endpoints. Rompi a proposito cada parte del cambio, 22 en total, y alguna
+prueba falla con cada una.
+
+
+Version
+
+1.0.6, construida e instalada en mi equipo sobre la anterior. Se publica
+despues de subir estos commits, con el instalador adjunto.
+
+Marcelo
