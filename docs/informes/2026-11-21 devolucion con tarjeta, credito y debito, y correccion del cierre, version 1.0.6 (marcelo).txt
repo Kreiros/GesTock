@@ -3,9 +3,10 @@ Devolucion con tarjeta, credito y debito, y correccion del cierre. Version 1.0.6
 
 
 David, respondo tu informe de la prueba con la duena de minimarket. Revise tu
-commit 883bb8f: es solo interfaz y esta bien. Los tres pendientes que me
-dejaste estan hechos en el servidor. Abajo va el contrato para que armes la
-parte de pantalla.
+commit 883bb8f: es solo interfaz y las tres correcciones estan bien, pero
+trae un error que tuve que arreglar en tu parte (lo explico abajo, en su
+propia seccion). Los tres pendientes que me dejaste estan hechos en el
+servidor. Abajo va el contrato para que armes la parte de pantalla.
 
 Lo primero: la 1.0.6 funciona con tu pantalla actual. Si no mandas los campos
 nuevos, todo se comporta exactamente como antes. Puedes hacer la pantalla con
@@ -105,6 +106,28 @@ lista de cierres convendria mostrar el conteo original y, al lado, el
 corregido con su motivo.
 
 
+Lo que arregle en tu parte
+
+Al construir el instalador, la interfaz no compilo:
+
+    CalculadoraVuelto.tsx:63   onClick={() => setRecibido((previo) => previo + valor)}
+
+Con tu cambio, setRecibido es fijarMontoRecibido del carrito, que recibe un
+numero, no una funcion. Ademas de romper tsc -b, en la caja visual cada
+billete o moneda dejaba el monto recibido en 0 en vez de sumar: fijarMontoRecibido
+hace Math.round de la funcion y eso da NaN. No se veia porque Vitest no revisa
+tipos y ninguna prueba tocaba esos botones.
+
+Lo arregle yo para no frenar el instalador, aunque es tu archivo. Quedo asi:
+
+    onClick={() => setRecibido(useCarritoStore.getState().montoRecibido + valor)}
+
+Lee el monto del carrito en el momento del clic, asi dos toques seguidos no se
+pisan. Agregue CalculadoraVuelto.test.tsx: suma dos billetes de mil y una
+moneda de 500 y espera 2.500; si el boton reemplaza en vez de sumar, falla.
+Revisalo cuando puedas, y si prefieres otra forma, cambialo.
+
+
 La venta por kilo
 
 De acuerdo contigo: no antes de la defensa. Queda en el backlog como
@@ -117,7 +140,8 @@ Pruebas
     servidor, unitarias     392 de 392 (381 del servidor y 11 de contrato), en
                             la zona del equipo y con TZ=UTC
     servidor, integracion   245 de 245, mas 1 omitida que ya lo estaba
-    front-end, vitest       324 de 324 en 42 archivos, tus cifras
+    front-end, vitest       325 de 325 en 43 archivos: las tuyas mas la prueba
+                            nueva de la calculadora
     extremo a extremo       119 de 119, con 4 omitidas a proposito
 
 Hay una prueba nueva, correccion_cierre_caja.test.ts, y casos nuevos en
@@ -129,7 +153,9 @@ prueba falla con cada una.
 
 Version
 
-1.0.6, construida e instalada en mi equipo sobre la anterior. Se publica
-despues de subir estos commits, con el instalador adjunto.
+1.0.6, construida e instalada en mi equipo sobre la anterior, con tus tres
+correcciones y el arreglo de la calculadora. Al abrirla se aplica la migracion
+024, que solo agrega columnas y una tabla; antes respalde mi carpeta de datos.
+Se publica despues de subir estos commits, con el instalador adjunto.
 
 Marcelo
